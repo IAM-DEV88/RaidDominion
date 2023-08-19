@@ -1,5 +1,4 @@
 # QuickName
-> [!IMPORTANTE]
 > WoW 335a Addon
 
 ## Descripción
@@ -40,5 +39,4 @@ Si tienes preguntas, sugerencias o encuentras algún problema con el addon, pued
 ### Notas finales
 Simplifica tus interacciones en el juego con QuickName. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
 
-> [!NOTA]
 > QuickName es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.
