@@ -17,9 +17,9 @@ QuickName agrega atajos de teclado para realizar nombrar rápidamente a los juga
 - ### Alt + Clic Izquierdo:
     - Si eres líder de banda y estás dentro de una instancia, agrega el nombre del jugador al chat de alerta de banda.
     - Si eres miembro de la banda y estás en una instancia, agrega el nombre del jugador al chat de banda.
-    - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
+        - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
     - Si eres miembro de un grupo y estás dentro de una instancia, agrega el nombre del jugador al chat de grupo.
-    - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
+        - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
 
 3. Agregar nombres al chat rápidamente
 Con QuickName, puedes agregar el nombre del jugador seleccionado al chat activo o a un chat específico con solo un clic. Esta función es especialmente útil para comunicarte con otros jugadores rápidamente sin tener que escribir el nombre completo.
