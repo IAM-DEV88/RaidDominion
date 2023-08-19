@@ -1,0 +1,10 @@
+## Interface: 30300
+## X-Compatible-With: 40000
+## Title: QuickName
+## Notes: Facilita obtener el nombre del objetivo
+## Version: 1.0
+## Author: Andres Muñoz
+## SavedVariables: skipHelpDialog, enableAddon
+## DefaultState: enabled
+
+QuickName.lua
