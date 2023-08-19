@@ -1,5 +1,5 @@
 # QuickName
-> [!IMPORTANT]
+> [!IMPORTANTE]
 > WoW 335a Addon
 
 ## Descripción
@@ -11,16 +11,16 @@ Al instalar QuickName, se te presentará un cuadro de ayuda y configuración la 
 
 2. Funcionalidad de nombre rapido
 QuickName agrega atajos de teclado para realizar nombrar rápidamente a los jugadores que se encuentran cerca tuyo, en tu grupo o banda. Al hacer clic izquierdo en el jugador, o en el botón del jugador en tu grupo o banda, puedes realizar una serie de acciones con tan solo presionar una tecla modificadora:
-
-2. Control (CTRL) + Clic Izquierdo: Realiza un susurro al jugador seleccionado.
-    - ### Shift + Clic Izquierdo:
-        Agrega el nombre del jugador al chat activo.
-    - ### Alt + Clic Izquierdo:
-        - Si eres líder de banda y estás dentro de una instancia, agrega el nombre del jugador al chat de alerta de banda.
-        - Si eres miembro de la banda y estás en una instancia, agrega el nombre del jugador al chat de banda.
-            - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
-        - Si eres miembro de un grupo y estás dentro de una instancia, agrega el nombre del jugador al chat de grupo.
-            - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
+- ### Control (CTRL) + Clic Izquierdo:
+    Realiza un susurro al jugador seleccionado.
+- ### Shift + Clic Izquierdo:
+    Agrega el nombre del jugador al chat activo.
+- ### Alt + Clic Izquierdo:
+    - Si eres líder de banda y estás dentro de una instancia, agrega el nombre del jugador al chat de alerta de banda.
+    - Si eres miembro de la banda y estás en una instancia, agrega el nombre del jugador al chat de banda.
+    - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
+    - Si eres miembro de un grupo y estás dentro de una instancia, agrega el nombre del jugador al chat de grupo.
+    - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
 
 3. Agregar nombres al chat rápidamente
 Con QuickName, puedes agregar el nombre del jugador seleccionado al chat activo o a un chat específico con solo un clic. Esta función es especialmente útil para comunicarte con otros jugadores rápidamente sin tener que escribir el nombre completo.
@@ -40,5 +40,5 @@ Si tienes preguntas, sugerencias o encuentras algún problema con el addon, pued
 ### Notas finales
 Simplifica tus interacciones en el juego con QuickName. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
 
-> [!NOTE]
+> [!NOTA]
 > QuickName es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.
