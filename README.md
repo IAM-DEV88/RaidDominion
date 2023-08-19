@@ -41,10 +41,13 @@ Extrae el archivo descargado en la carpeta de addons de World of Warcraft (norma
 Inicia el juego y asegúrate de habilitar el addon desde el menú de selección de personaje.
 
 Soporte y contribuciones
+
 Si tienes preguntas, sugerencias o encuentras algún problema con el addon, puedes visitar el repositorio de GitHub del proyecto. También puedes contribuir al desarrollo del addon mediante el apoyo via paypal paypal.me/iamdev88.
 
 Créditos
+
 QuickName es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.
 
 Notas finales
+
 Simplifica tus interacciones en el juego con QuickName. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
