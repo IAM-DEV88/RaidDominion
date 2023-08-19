@@ -1,11 +1,11 @@
 # QuickName
 WoW 335a Addon
 
-Descripción
+# Descripción
 
 El addon QuickName es una herramienta diseñada para facilitar la comunicación y la interacción en el juego World of Warcraft. Con una serie de funciones que se integran perfectamente en tu interfaz de usuario, QuickName simplifica la forma en que te comunicas con otros jugadores y te permite realizar acciones específicas de manera más eficiente durante encuentros en mazmorras y bandas.
 
-Características principales
+# Características principales
 
 1. Cuadro de ayuda y configuración
 Al instalar QuickName, se te presentará un cuadro de ayuda y configuración la primera vez que ingreses al juego con el addon habilitado. Este cuadro de diálogo te proporcionará información detallada sobre las funciones del addon y cómo utilizarlas. También te dará la opción de habilitar o deshabilitar el addon y de ocultar el cuadro de ayuda en el futuro.
@@ -30,7 +30,7 @@ Con QuickName, puedes agregar el nombre del jugador seleccionado al chat activo 
 4. Opciones de personalización
 QuickName te permite personalizar cómo interactúa con la interfaz de usuario y cómo se comporta en diferentes situaciones. Puedes habilitar o deshabilitar el addon según tus preferencias, y también puedes optar por ocultar el cuadro de ayuda después de haberlo revisado.
 
-Instrucciones de instalación
+# Instrucciones de instalación
 
 Asegúrate de tener World of Warcraft instalado y actualizado.
 
@@ -40,14 +40,14 @@ Extrae el archivo descargado en la carpeta de addons de World of Warcraft (norma
 
 Inicia el juego y asegúrate de habilitar el addon desde el menú de selección de personaje.
 
-Soporte y contribuciones
+# Soporte y contribuciones
 
 Si tienes preguntas, sugerencias o encuentras algún problema con el addon, puedes visitar el repositorio de GitHub del proyecto. También puedes contribuir al desarrollo del addon mediante el apoyo via paypal paypal.me/iamdev88.
 
-Créditos
+# Créditos
 
 QuickName es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.
 
-Notas finales
+# Notas finales
 
 Simplifica tus interacciones en el juego con QuickName. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
