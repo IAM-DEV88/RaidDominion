@@ -1,11 +1,12 @@
 # QuickName
 > WoW 335a Addon
+
 ![QuickNameUI](https://i.ibb.co/S0fG1Jf/Quick-Name-UI.png)
 ## Descripción
-El addon QuickName es una herramienta diseñada para facilitar la comunicación y la interacción en el juego World of Warcraft. QuickName simplifica la forma en que te comunicas con otros jugadores y te permite copiar el nombre de cualquier jugador en el chat rapidamente con un clic durante encuentros en mazmorras y bandas.
+QuickName es una herramienta diseñada para facilitar la comunicación y la interacción en el juego World of Warcraft. Te permite copiar el nombre de cualquier jugador en el chat rapidamente con un clic durante encuentros en mazmorras y bandas.
 
 ## Características principales
-### 1. Copiar el nombre de cualquier jugador en el chat rapidamente con un clic
+### 1. Copiar el nombre de cualquier jugador en el chat rapidamente con un clic:
 
 QuickName agrega atajos de teclado para nombrar rápidamente a los jugadores que se encuentran cerca tuyo, en tu grupo o banda. Al hacer clic izquierdo en el jugador, o en el botón del jugador en tu grupo o banda, puedes realizar una serie de acciones con tan solo presionar una tecla modificadora:
 - ### Control (CTRL) + Clic Izquierdo:
