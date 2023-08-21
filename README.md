@@ -1,6 +1,6 @@
 # QuickName
 > WoW 335a Addon
-![QuickNameUI]("https://i.ibb.co/S0fG1Jf/Quick-Name-UI.png")
+![QuickNameUI](https://i.ibb.co/S0fG1Jf/Quick-Name-UI.png)
 ## Descripción
 El addon QuickName es una herramienta diseñada para facilitar la comunicación y la interacción en el juego World of Warcraft. QuickName simplifica la forma en que te comunicas con otros jugadores y te permite copiar el nombre de cualquier jugador en el chat rapidamente con un clic durante encuentros en mazmorras y bandas.
 
@@ -28,16 +28,16 @@ Al instalar QuickName, se te presentará un cuadro de ayuda y configuración la 
 ### 4. Opciones de personalización:
 QuickName te permite personalizar cómo interactúa con la interfaz de usuario y cómo se comporta en diferentes situaciones. Puedes habilitar o deshabilitar el addon según tus preferencias, y también puedes optar por ocultar el cuadro de ayuda después de haberlo revisado.
 
-### Instrucciones de instalación
+## Instrucciones de instalación
 - Asegúrate de tener World of Warcraft instalado y actualizado.
 - Descarga el archivo del addon QuickName desde GitHub.
 - Extrae el archivo descargado en la carpeta de addons de World of Warcraft (normalmente ubicada en C:\Program Files\World of Warcraft\_retail_\Interface\AddOns en Windows o en la carpeta Interface\AddOns en macOS).
 - Inicia el juego y asegúrate de habilitar el addon desde el menú de selección de personaje.
 
-### Soporte y contribuciones
+## Soporte y contribuciones
 Si tienes preguntas, sugerencias o encuentras algún problema con el addon, puedes visitar el repositorio de GitHub del proyecto. También puedes contribuir al desarrollo del addon mediante el apoyo via paypal.me/iamdev88.
 
-### Notas finales
+## Notas finales
 Simplifica tus interacciones en el juego con QuickName. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
 
 > QuickName es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.
