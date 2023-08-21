@@ -33,6 +33,7 @@ QuickName te permite personalizar cómo interactúa con la interfaz de usuario y
 - Asegúrate de tener World of Warcraft instalado y actualizado.
 - Descarga el archivo del addon QuickName desde GitHub.
 - Extrae el archivo descargado en la carpeta de addons de World of Warcraft (normalmente ubicada en C:\Program Files\World of Warcraft\_retail_\Interface\AddOns en Windows o en la carpeta Interface\AddOns en macOS).
+- Asegurate que el nombre de la carpeta de addon sea "QuickName" (Remover "-main" del nombre de la carpeta del zip)
 - Inicia el juego y asegúrate de habilitar el addon desde el menú de selección de personaje.
 
 ## Soporte y contribuciones
