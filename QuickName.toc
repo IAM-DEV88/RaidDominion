@@ -1,6 +1,6 @@
 ## Interface: 30300
-## Title: QuickName
-## Version: 1.0
+## Title: QuickName-1.0.0
+## Version: 1.0.0
 ## Author: Andres Muñoz
 ## SavedVariables: enabledPanel, enabledAddon, raidInfo
 ## DefaultState: enabled
