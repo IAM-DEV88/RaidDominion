@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: QuickName-1.0.0
 ## Version: 1.0.0
-## Author: Andres Muñoz
+## Author: Ioan Andres Muñoz Martínez - https://lambent-sundae-83e53b.netlify.app/
 ## SavedVariables: enabledPanel, enabledAddon, raidInfo
 ## DefaultState: enabled
 
