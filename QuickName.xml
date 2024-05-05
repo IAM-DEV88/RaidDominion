@@ -1,0 +1,44 @@
+<!-- QuickName.xml -->
+<Ui xmlns="http://www.blizzard.com/wow/ui/"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
+  <Frame name="QuickNameFrame" parent="UIParent" inherits="UIPanelDialogTemplate">
+    <Size x="200" y="100"/>
+    <Anchors>
+      <Anchor point="CENTER"/>
+    </Anchors>
+    <Backdrop>
+      <BackgroundInsets>
+        <AbsInset all="12"/>
+      </BackgroundInsets>
+    </Backdrop>
+    <Button name="$parentCloseButton" inherits="UIPanelCloseButtonTemplate"/>
+    <TitleRegion>
+      <Texture name="$parentTitleBG" setAllPoints="true" file="Interface\DialogFrame\UI-DialogBox-Header"/>
+      <FontString name="$parentTitle" inherits="GameFontNormal" text="Simple Addon" justifyH="CENTER">
+        <Anchors>
+          <Anchor point="CENTER"/>
+        </Anchors>
+      </FontString>
+    </TitleRegion>
+    <Frame name="$parentContent" parent="$parent" inherits="UIPanelScrollFrameTemplate">
+      <Size x="180" y="60"/>
+      <Anchors>
+        <Anchor point="TOPLEFT" relative="$parent" x="5" y="-22"/>
+      </Anchors>
+      <Backdrop>
+        <BackdropEdgeTexture edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+          <EdgeSize val="16"/>
+        </BackdropEdgeTexture>
+        <BackdropBackgroundTexture bgFile="Interface\Tooltips\UI-Tooltip-Background"/>
+      </Backdrop>
+      <ScrollChild>
+        <FontString name="$parentText" inherits="GameFontHighlight" text="¡Hola, mundo!" justifyH="LEFT">
+          <Anchors>
+            <Anchor point="TOPLEFT" relative="$parent" x="8" y="-8"/>
+          </Anchors>
+        </FontString>
+      </ScrollChild>
+    </Frame>
+  </Frame>
+</Ui>

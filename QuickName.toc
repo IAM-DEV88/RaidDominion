@@ -1,10 +1,20 @@
 ## Interface: 30300
-## X-Compatible-With: 40000
 ## Title: QuickName
-## Notes: Facilita obtener el nombre del objetivo
 ## Version: 1.0
 ## Author: Andres Muñoz
-## SavedVariables: skipHelpDialog, enableAddon
+## SavedVariables: enabledPanel, enabledAddon, raidInfo
 ## DefaultState: enabled
 
 QuickName.lua
+About.lua
+Wow.lua
+Utils.lua
+Panel.lua
+RulesAndMechanics.lua
+TabContainer.lua
+RoleSelection.lua
+PlayerRolesTab.lua
+PrimarySelection.lua
+BuffSelection.lua
+SkillSelection.lua
+SecondarySelection.lua
