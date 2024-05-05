@@ -206,7 +206,7 @@ function WpLoot()
     local _, channel = getPlayerInitialState()
 
     local guildRaid = (channel == "RAID_WARNING") and
-                          {"{rt1} Atentos quienes se quedan a lotear", "{rt8} [Culto del Osario] {rt8}"} or
+                          {"{rt1} Atentos quienes se quedan a lotear", "{rt8} [https://github.com/IAM-DEV88/QuickName] {rt8}"} or
                           {"Nos vemos ^^"}
 
     local messages = {"Gracias a todos!", tankMessage, healerMessage, dpsMessage}

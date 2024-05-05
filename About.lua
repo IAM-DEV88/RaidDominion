@@ -29,7 +29,7 @@ function aboutContent()
     githubLink:SetPoint("TOP", leftSideText, "BOTTOM", 0, 0)
     githubLink:SetSize(200, 20)
     githubLink:SetAutoFocus(false)
-    githubLink:SetText("https://github.com/IAM-DEV88")
+    githubLink:SetText("https://github.com/IAM-DEV88/QuickName")
     githubLink:SetFontObject("ChatFontNormal")
 
     local paypalLink = CreateFrame("EditBox", nil, content, "InputBoxTemplate")
