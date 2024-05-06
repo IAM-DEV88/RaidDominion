@@ -137,7 +137,7 @@ function PlayerRolesTabContainerInit()
 
     xOffset = 205
 
-    local alertPlayersBtn = CreateFrame("Button", "AlertFarPlayers", PlayerRolesTabContainer, "UIPanelButtonTemplate")
+    alertPlayersBtn = CreateFrame("Button", "AlertFarPlayers", PlayerRolesTabContainer, "UIPanelButtonTemplate")
     alertPlayersBtn:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE") -- Estableciendo la fuente y el tamaño
     alertPlayersBtn:SetPoint("LEFT", xOffset + buttonWidth + buttonSpacing, -30)
     alertPlayersBtn:SetSize(60, 25)
@@ -156,7 +156,7 @@ function PlayerRolesTabContainerInit()
     end)
     xOffset = xOffset + buttonWidth + buttonSpacing
 
-    local reqBuffsBtn = CreateFrame("Button", "RequestBuffs", PlayerRolesTabContainer, "UIPanelButtonTemplate")
+    reqBuffsBtn = CreateFrame("Button", "RequestBuffs", PlayerRolesTabContainer, "UIPanelButtonTemplate")
     reqBuffsBtn:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE") -- Estableciendo la fuente y el tamaño
     reqBuffsBtn:SetPoint("LEFT", xOffset + buttonWidth + buttonSpacing, -30)
     reqBuffsBtn:SetSize(60, 25)
@@ -164,7 +164,7 @@ function PlayerRolesTabContainerInit()
     reqBuffsBtn:SetScript("OnClick", RequestBuffs)
     xOffset = xOffset + buttonWidth + buttonSpacing
 
-    local wpLootBtn = CreateFrame("Button", "WpLoot", PlayerRolesTabContainer, "UIPanelButtonTemplate")
+    wpLootBtn = CreateFrame("Button", "WpLoot", PlayerRolesTabContainer, "UIPanelButtonTemplate")
     wpLootBtn:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE") -- Estableciendo la fuente y el tamaño
     wpLootBtn:SetPoint("LEFT", xOffset + buttonWidth + buttonSpacing, -30)
     wpLootBtn:SetSize(60, 25)

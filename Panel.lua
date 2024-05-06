@@ -2,7 +2,7 @@ function QuickNamePanelInit()
     -- Crear la ventana principal
     QuickNamePanel = CreateFrame("Frame", "QuickName_MainFrame", UIParent)
     QuickNamePanel:SetSize(440, 210)
-    QuickNamePanel:SetPoint("CENTER")
+    QuickNamePanel:SetPoint("LEFT")
     QuickNamePanel:EnableMouse(true)
     QuickNamePanel:SetMovable(true)
     QuickNamePanel:RegisterForDrag("LeftButton")
@@ -23,7 +23,7 @@ function QuickNamePanelInit()
     })
     QuickNamePanel:SetBackdropBorderColor(0.4, 0.4, 0.4)
     QuickNamePanel:SetFrameStrata("MEDIUM")
-    QuickNamePanel:SetFrameLevel(10)
+    QuickNamePanel:SetFrameLevel(100)
 
     -- Crear el título de la ventana
     local title = QuickNamePanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")

@@ -6,6 +6,7 @@
 ## DefaultState: enabled
 
 QuickName.lua
+MinimapButton.lua
 About.lua
 Wow.lua
 Utils.lua

@@ -50,7 +50,7 @@ function QuickNameTabContainerInit()
     roleSelectionContainer()
     -- aboutContainer()
 
-    local setRaidButton = CreateFrame("Button", "setRaidButton", QuickNameTabContainer, "UIPanelButtonTemplate")
+    setRaidButton = CreateFrame("Button", "setRaidButton", QuickNameTabContainer, "UIPanelButtonTemplate")
     setRaidButton:SetPoint("LEFT", 71, 16)
     setRaidButton:SetSize(60, 25)
     setRaidButton:SetText("RAID")
