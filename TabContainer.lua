@@ -48,6 +48,7 @@ function QuickNameTabContainerInit()
     end
     -- Inicialmente, mostrar el contenido de la pestaña "Roles del grupo"
     roleSelectionContainer()
+    -- aboutContainer()
 
     local setRaidButton = CreateFrame("Button", "setRaidButton", QuickNameTabContainer, "UIPanelButtonTemplate")
     setRaidButton:SetPoint("LEFT", 71, 16)

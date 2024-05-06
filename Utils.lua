@@ -16,25 +16,36 @@ end
 
 function getPlayersInfo()
     local numberOfPlayers, channel = getPlayerInitialState()
+
     if numberOfPlayers == 0 then
-        raidInfo = {} -- Reinicializar raidInfo
-        addonCache = {} -- Reinicializar addonCache
+        -- Reinicializar las estructuras de datos si no hay jugadores en el grupo
+        raidInfo = {}
+        addonCache = {}
         local _, englishClass = UnitClass("player")
         addonCache[UnitName("player")] = {
             class = englishClass,
             rol = {}
-        } -- Reinicializar Cache
+        }
+        updateAllButtons()
     else
+        -- Actualizar addonCache con la información del grupo
         addonCache = raidInfo
 
+        -- Lista de jugadores actualmente en el grupo
+        local currentPlayers = {}
+
+        -- Actualizar addonCache con los jugadores actuales
         for i = 1, numberOfPlayers do
             local unit = GetNumRaidMembers() ~= 0 and "raid" .. i or "party" .. i
             local playerName = UnitName(unit)
-            local playerClass = select(2, UnitClass(unit)) -- Cambiado para obtener solo el nombre de la clase
+
             if playerName then
+                currentPlayers[playerName] = true
+
                 if addonCache[playerName] then
                     addonCache[playerName].rol = addonCache[playerName].rol or {}
                 else
+                    local playerClass = select(2, UnitClass(unit))
                     addonCache[playerName] = {
                         class = playerClass,
                         rol = {}
@@ -43,7 +54,18 @@ function getPlayersInfo()
             end
         end
 
-        -- Ahora asegurémonos de que el jugador actual tenga roles asignados
+        -- Limpiar addonCache de jugadores que ya no están en el grupo
+        for playerName, playerData in pairs(addonCache) do
+            if not currentPlayers[playerName] then
+                -- Imprimir mensaje informando sobre el jugador que se fue y los roles que dejó vacantes
+                print(playerName .. " se fue del grupo. Roles liberados: " .. table.concat(getPlayerRoles(playerData.rol), ", "))
+
+                -- Eliminar el jugador de addonCache
+                addonCache[playerName] = nil
+            end
+        end
+
+        -- Asegurarse de que el jugador actual tenga roles asignados
         local _, englishClass = UnitClass("player")
         local playerName = UnitName("player")
         if addonCache[playerName] then
@@ -54,9 +76,46 @@ function getPlayersInfo()
                 rol = {}
             }
         end
-
+        updateAllButtons()
     end
+end
 
+-- Función para obtener una lista de roles asignados de un jugador
+function getPlayerRoles(playerRoles)
+    local roles = {}
+    for roleName, _ in pairs(playerRoles) do
+        table.insert(roles, roleName)
+    end
+    return roles
+end
+
+function updateAllButtons()
+    updateButtonsForRoleType("PRIMARY")
+    updateButtonsForRoleType("SECONDARY")
+    updateButtonsForRoleType("BUFF")
+    updateButtonsForRoleType("SKILL")
+end
+
+function updateButtonsForRoleType(roleType)
+    local roles = playerRoles[roleType]
+    roleType = string.lower(roleType)
+    for i, roleName in ipairs(roles) do
+        local button = _G[roleType .. "Rol" .. i]
+        if button then
+            local assignedPlayer = getAssignedPlayer(roleName)
+            if assignedPlayer then
+                local playerData = addonCache[assignedPlayer]
+                if playerData then
+                    local playerClass = string.upper(string.sub(playerData.class, 1, 1)) .. string.lower(string.sub(playerData.class, 2))
+                    button:SetText(playerClass .. " " .. assignedPlayer .. "\n" .. roleName)
+                    button:SetAttribute("player", assignedPlayer)
+                end
+            else
+                button:SetText(roleName)
+                button:SetAttribute("player", nil)
+            end
+        end
+    end
 end
 
 function SendSplitMessage(message)
@@ -146,77 +205,20 @@ StaticPopupDialogs["CONFIRM_PULL_COUNTDOWN"] = {
 }
 
 function WpLoot()
-    local raidMembers = {
-        ["MAIN TANK"] = {},
-        ["OFF TANK"] = {},
-        ["HEALER"] = {},
-        ["DPS"] = {}
-    }
-    local nonDpsMembers = {}
-
-    -- Recoger a los miembros de la raid y sus roles
-    for playerName, playerData in pairs(raidInfo) do
-        local playerClass = playerData.class or ""
-        local roles = playerData.rol or {"DPS"} -- Assume DPS if not specified
-        playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
-        local isDps = true
-        for role, _ in pairs(roles) do
-            local formattedName = playerClass .. " " .. playerName
-            if role == "MAIN TANK" or role == "OFF TANK" then
-                raidMembers[role][formattedName] = true
-                nonDpsMembers[formattedName] = true
-                isDps = false
-            elseif role:find("^HEALER ") then
-                raidMembers["HEALER"][formattedName] = true
-                nonDpsMembers[formattedName] = true
-                isDps = false
-            end
-        end
-        if isDps and not nonDpsMembers[playerName] then
-            raidMembers["DPS"][playerClass .. " " .. playerName] = true
-        end
-    end
-
-    function keysToArray(inputTable)
-        local array = {}
-        for key, _ in pairs(inputTable) do
-            table.insert(array, key)
-        end
-        return array
-    end
-
-    -- Construir mensajes por cada grupo de roles
-    local tankMessage = ""
-    local healerMessage = ""
-    local dpsMessage = ""
-    if next(raidMembers["MAIN TANK"]) then
-        tankMessage = "MAIN TANK: " .. table.concat(keysToArray(raidMembers["MAIN TANK"]), ", ")
-    end
-    if next(raidMembers["OFF TANK"]) then
-        local offTankMsg = "OFF TANK: " .. table.concat(keysToArray(raidMembers["OFF TANK"]), ", ")
-        tankMessage = (tankMessage ~= "" and tankMessage .. " - " or "") .. offTankMsg
-    end
-    if next(raidMembers["HEALER"]) then
-        healerMessage = "HEALER: " .. table.concat(keysToArray(raidMembers["HEALER"]), ", ")
-    end
-    if next(raidMembers["DPS"]) then
-        dpsMessage = "DPS: " .. table.concat(keysToArray(raidMembers["DPS"]), ", ")
-    end
-
     local _, channel = getPlayerInitialState()
 
-    local guildRaid = (channel == "RAID_WARNING") and
-                          {"{rt1} Atentos quienes se quedan a lotear", "{rt8} [https://github.com/IAM-DEV88/QuickName] {rt8}"} or
+    local signatureMessage = (channel == "RAID_WARNING") and
+                          {"{rt8} Invitados a la Hermandad Culto del Osario {rt8}", "{rt1} https://github.com/IAM-DEV88/QuickName/archive/refs/heads/main.zip {rt1}", "{rt1} Atentos quienes se quedan a lotear"} or
                           {"Nos vemos ^^"}
 
-    local messages = {"Gracias a todos!", tankMessage, healerMessage, dpsMessage}
-    if channel == "RAID_WARNING" then
-        for _, msg in ipairs(guildRaid) do
-            table.insert(messages, msg)
+    local thanksMessage = {"Gracias a todos!"}
+    if channel == "RAID_WARNING" or channel == "PARTY" then
+        for _, msg in ipairs(signatureMessage) do
+            table.insert(thanksMessage, msg)
         end
     end
 
-    SendDelayedMessages(messages)
+    SendDelayedMessages(thanksMessage)
 end
 
 function RequestBuffs()
@@ -252,7 +254,7 @@ function RequestBuffs()
                 if #playerRoles > 1 then
                     rolesString = rolesString:gsub(", ([^,]+)$", " y %1") -- Reemplazar la última coma por "y"
                 end
-                table.insert(raidMembers["BUFF"], playerClass .. " " .. playerName .. " [" .. rolesString .. "]")
+                table.insert(raidMembers["BUFF"], "{rt8} " .. playerClass .. " " .. playerName .. " [" .. rolesString .. "]")
             end
         end
     end

@@ -12,35 +12,31 @@ function aboutContent()
 
     contentScrollFrame:SetScrollChild(content)
 
-    local leftSideText = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    leftSideText:SetPoint("TOP", -15, 10)
-    leftSideText:SetSize(380, 270) -- Asegúrate de que el tamaño permita mostrar todo el texto
-    leftSideText:SetJustifyH("LEFT") -- Alinear el texto a la izquierda
-    leftSideText:SetText(
-        "Utilizar [MODIFICADOR] + [CLIC IZQ]\n\n" .. "[CONTROL] + ... : Para susurrar al objetivo\n\n" ..
-            "[SHIFT] + ... : Agrega el nombre del objetivo al chat activo\n\n" ..
-            "[ALT] + ... : Dentro de instancia como líder de raid, agrega el nombre del objetivo al chat Raid[ALT]\n\n[ALT] + ... : Dentro de mazmorra, agrega el nombre del objetivo al chat Grupo\n\n" ..
-            "[ALT] + ... : Fuera de instancia, agrega el nombre del objetivo al chat Gritar\n\n" ..
-            "Puedes ocultar este cuadro de ayuda y tambien desactivar las acciones del addon, esto devolvera al los modificadores sus funciones habituales\n\n" ..
-            "QuickName v1")
-
     -- Los enlaces pueden necesitar también estar en el área desplazable si deseas que se desplacen
     local githubLink = CreateFrame("EditBox", "githubLink", content, "InputBoxTemplate")
-    githubLink:SetPoint("TOP", leftSideText, "BOTTOM", 0, 0)
-    githubLink:SetSize(200, 20)
+    githubLink:SetPoint("TOP", 30, -10)
+    githubLink:SetSize(250, 20)
     githubLink:SetAutoFocus(false)
     githubLink:SetText("https://github.com/IAM-DEV88/QuickName")
     githubLink:SetFontObject("ChatFontNormal")
 
+    local label = githubLink:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    label:SetPoint("LEFT", githubLink, "LEFT", -90, 0)
+    label:SetText("Actualizaciones")
+
     local paypalLink = CreateFrame("EditBox", nil, content, "InputBoxTemplate")
     paypalLink:SetPoint("TOP", githubLink, "BOTTOM", 0, -10)
-    paypalLink:SetSize(200, 20)
+    paypalLink:SetSize(250, 20)
     paypalLink:SetAutoFocus(false)
     paypalLink:SetText("paypal.me/iamdev88")
     paypalLink:SetFontObject("ChatFontNormal")
 
-    enabledPanelCheckbox = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
-    enabledPanelCheckbox:SetPoint("BOTTOMLEFT", 10, 10)
+    local label = paypalLink:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    label:SetPoint("LEFT", paypalLink, "LEFT", -90, 0)
+    label:SetText("Donaciones")
+
+    local enabledPanelCheckbox = CreateFrame("CheckButton", nil, paypalLink, "UICheckButtonTemplate")
+    enabledPanelCheckbox:SetPoint("LEFT", -100, -30)
 
     enabledPanelCheckbox:SetSize(20, 20)
     enabledPanelCheckbox:SetChecked(enabledPanel)
@@ -52,8 +48,8 @@ function aboutContent()
     enabledPanelCheckboxLabel:SetPoint("LEFT", enabledPanelCheckbox, "RIGHT", 5, 0)
     enabledPanelCheckboxLabel:SetText("Mostrar panel al cargar")
 
-    enabledAddonCheckbox = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
-    enabledAddonCheckbox:SetPoint("BOTTOMRIGHT", -40, 10)
+    local enabledAddonCheckbox = CreateFrame("CheckButton", nil, paypalLink, "UICheckButtonTemplate")
+    enabledAddonCheckbox:SetPoint("RIGHT", 20, -30)
     enabledAddonCheckbox:SetSize(20, 20)
     enabledAddonCheckbox:SetChecked(enabledAddon)
     enabledAddonCheckbox:SetScript("OnClick", function(self)
@@ -77,6 +73,18 @@ function aboutContent()
     local enabledAddonCheckboxLabel = enabledAddonCheckbox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     enabledAddonCheckboxLabel:SetPoint("RIGHT", enabledAddonCheckbox, "RIGHT", -25, 0)
     enabledAddonCheckboxLabel:SetText("Modificadores activos")
+
+    local leftSideText = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    leftSideText:SetPoint("BOTTOM", -15, -10)
+    leftSideText:SetSize(380, 270) -- Asegúrate de que el tamaño permita mostrar todo el texto
+    leftSideText:SetJustifyH("LEFT") -- Alinear el texto a la izquierda
+    leftSideText:SetText(
+        "Utilizar [MODIFICADOR] + [CLIC IZQ]\n\n" .. "[CONTROL] + ... : Para susurrar al objetivo\n\n" ..
+            "[SHIFT] + ... : Agrega el nombre del objetivo al chat activo\n\n" ..
+            "[ALT] + ... : Dentro de instancia como líder de raid, agrega el nombre del objetivo al chat Raid[ALT]\n\n[ALT] + ... : Dentro de mazmorra, agrega el nombre del objetivo al chat Grupo\n\n" ..
+            "[ALT] + ... : Fuera de instancia, agrega el nombre del objetivo al chat Gritar\n\n" ..
+            "Puedes ocultar este cuadro de ayuda y tambien desactivar las acciones del addon, esto devolvera al los modificadores sus funciones habituales\n\n" ..
+            "QuickName v1")
 
     return aboutFrame
 end

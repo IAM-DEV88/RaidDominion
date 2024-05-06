@@ -91,7 +91,7 @@ function ResetRoleAssignment(roleName, button)
                 button:SetAttribute("player", targetName)
                 button:SetText(playerClass .. " " .. targetName .. "\n" .. roleName) -- Concatenar el nombre del jugador al texto del label
             end
-            SendChatMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]", channel)
+            print(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
         else
             SendChatMessage("No tenemos [" .. roleName .. "]", channel)
         end
