@@ -57,9 +57,11 @@ function getPlayersInfo()
         -- Limpiar addonCache de jugadores que ya no están en el grupo
         for playerName, playerData in pairs(addonCache) do
             if not currentPlayers[playerName] then
-                -- Imprimir mensaje informando sobre el jugador que se fue y los roles que dejó vacantes
-                print(playerName .. " se fue del grupo. Roles liberados: " .. table.concat(getPlayerRoles(playerData.rol), ", "))
-
+                if playerName ~= "Entidad desconocida" and playerData.rol ~= {} then
+                    -- Imprimir mensaje informando sobre el jugador que se fue y los roles que dejó vacantes
+                    print(playerName .. " se fue del grupo. Roles liberados: " ..
+                    table.concat(getPlayerRoles(playerData.rol), ", "))
+                end
                 -- Eliminar el jugador de addonCache
                 addonCache[playerName] = nil
             end
@@ -106,7 +108,8 @@ function updateButtonsForRoleType(roleType)
             if assignedPlayer then
                 local playerData = addonCache[assignedPlayer]
                 if playerData then
-                    local playerClass = string.upper(string.sub(playerData.class, 1, 1)) .. string.lower(string.sub(playerData.class, 2))
+                    local playerClass = string.upper(string.sub(playerData.class, 1, 1)) ..
+                                            string.lower(string.sub(playerData.class, 2))
                     button:SetText(playerClass .. " " .. assignedPlayer .. "\n" .. roleName)
                     button:SetAttribute("player", assignedPlayer)
                 end
@@ -207,9 +210,9 @@ StaticPopupDialogs["CONFIRM_PULL_COUNTDOWN"] = {
 function WpLoot()
     local _, channel = getPlayerInitialState()
 
-    local signatureMessage = (channel == "RAID_WARNING") and
-                          {"{rt8} Invitados a la Hermandad Culto del Osario {rt8}", "{rt1} https://github.com/IAM-DEV88/QuickName/archive/refs/heads/main.zip {rt1}", "{rt1} Atentos quienes se quedan a lotear"} or
-                          {"Nos vemos ^^"}
+    local signatureMessage = (channel == "RAID_WARNING") and {"{rt8} https://github.com/IAM-DEV88/QuickName/archive/refs/heads/main.zip {rt8}",
+                                                              "{rt1} Atentos quienes se quedan a lotear"} or
+                                 {"Nos vemos ^^"}
 
     local thanksMessage = {"Gracias a todos!"}
     if channel == "RAID_WARNING" or channel == "PARTY" then
@@ -225,16 +228,6 @@ function RequestBuffs()
     local raidMembers = {
         ["BUFF"] = {}
     }
-
-    -- Verificar si el jugador actual está en addonCache y agregarlo si no está presente
-    local playerName = UnitName("player")
-    if not addonCache[playerName] then
-        local _, englishClass = UnitClass("player")
-        addonCache[playerName] = {
-            class = englishClass,
-            rol = addonCache[playerName].rol or {}
-        }
-    end
 
     -- Recoger a los miembros de la raid y sus roles de addonCache
     for playerName, playerData in pairs(addonCache) do
@@ -254,31 +247,45 @@ function RequestBuffs()
                 if #playerRoles > 1 then
                     rolesString = rolesString:gsub(", ([^,]+)$", " y %1") -- Reemplazar la última coma por "y"
                 end
-                table.insert(raidMembers["BUFF"], "{rt8} " .. playerClass .. " " .. playerName .. " [" .. rolesString .. "]")
+                -- Seleccionar aleatoriamente el ícono
+                local icon = math.random(2,8)
+
+                -- Convertir la tabla de roles a una cadena para usar find
+                local rolesStr = table.concat(playerRoles, ",")
+                
+                -- Asignar el ícono como marcador de objetivo para el jugador
+                if rolesStr:find("MAIN TANK") or rolesStr:find("OFF TANK") or rolesStr:find("^HEALER ") then
+                    SetRaidTarget(playerName, icon)
+                end
+
+                table.insert(raidMembers["BUFF"],
+                    "{rt".. icon .."}"  .. " " .. playerClass .. " " .. playerName .. " [" .. rolesString .. "]")
             end
         end
     end
 
     -- Construir mensaje
-    local buffMessage = ""
-  
+    local buffMessages = {}
+
     if #raidMembers["BUFF"] > 0 then
-        buffMessage = table.concat(raidMembers["BUFF"], ", ")
+        buffMessages = raidMembers["BUFF"]
     end
 
     local _, channel = getPlayerInitialState()
 
-    local guildRaid = (channel == "RAID_WARNING") and {"{rt1} Todos confirman check y go"} or {""}
+    local guildRaid = (channel == "RAID_WARNING") and {"{rt1} Todos confirman check y go"} or {}
 
-    local messages = {"Atentos!", buffMessage}
-    if channel == "RAID_WARNING" then
-        -- Si estamos en el canal de aviso de la banda, agregamos el mensaje de la banda a los mensajes
-        for _, msg in ipairs(guildRaid) do
-            table.insert(messages, msg)
-        end
+    local messages = {"Atentos!"}
+    for _, playerInfo in ipairs(buffMessages) do
+        table.insert(messages, playerInfo)
     end
 
-    SendDelayedMessages(messages,true)
+    -- Agregar los mensajes de la banda si es necesario
+    for _, msg in ipairs(guildRaid) do
+        table.insert(messages, msg)
+    end
+
+    SendDelayedMessages(messages, true)
 end
 
 function GetDistanceBetweenUnits(unit1, unit2)
@@ -355,6 +362,29 @@ function HandleClick(playerName, modifierPressed)
                 editBox:SetText("/w " .. playerName .. " " .. currentText)
             elseif modifierPressed == "SHIFT" then
                 editBox:SetText(newText .. " ")
+            end
+        end
+    end
+end
+
+function reorderRaidMembers()
+    if GetNumRaidMembers ~= 0 then
+        local numberOfPlayers, _ = getPlayerInitialState()
+        local subgroupForHeal = numberOfPlayers > 10 and 5 or 2
+        local subgroupForTank = numberOfPlayers > 10 and 4 or 2
+        for i = 1, numberOfPlayers do
+            local unit = "raid" .. i
+            local role = addonCache[UnitName(unit)].rol
+            if role then
+                for roleName, _ in pairs(role) do
+                    if roleName:match("^HEALER %d$") then
+                        SetRaidSubgroup(i, subgroupForHeal)
+                        break
+                    elseif roleName == "MAIN TANK" or roleName == "OFF TANK" then
+                        SetRaidSubgroup(i, subgroupForTank)
+                        break
+                    end
+                end
             end
         end
     end

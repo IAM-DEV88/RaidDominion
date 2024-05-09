@@ -8,7 +8,7 @@ function aboutContent()
     contentScrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
 
     local content = CreateFrame("Frame", nil, contentScrollFrame)
-    content:SetSize(440, 350) -- Aumentar la altura para permitir desplazamiento
+    content:SetSize(440, 700) -- Aumentar la altura para permitir desplazamiento
 
     contentScrollFrame:SetScrollChild(content)
 
@@ -75,11 +75,21 @@ function aboutContent()
     enabledAddonCheckboxLabel:SetText("Modificadores activos")
 
     local leftSideText = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    leftSideText:SetPoint("BOTTOM", -15, -10)
-    leftSideText:SetSize(380, 270) -- Asegúrate de que el tamaño permita mostrar todo el texto
+    leftSideText:SetPoint("BOTTOM", -15, -25)
+    leftSideText:SetSize(380, 700) -- Asegúrate de que el tamaño permita mostrar todo el texto
     leftSideText:SetJustifyH("LEFT") -- Alinear el texto a la izquierda
     leftSideText:SetText(
-        "Utilizar [MODIFICADOR] + [CLIC IZQ]\n\n" .. "[CONTROL] + ... : Para susurrar al objetivo\n\n" ..
+            
+    "Quickname permite transformar el grupo en raid rapidamente y asignar roles seleccionando al jugador del grupo y dando clic en [x].\n\n" ..
+    "Puede alertar reglas especificas y mecanicas en los menus desplegables segun se requiera.\n\n" ..
+    "ROLES: Lista por categoria, asigna y alerta los roles asignados a la banda.\n\n" ..
+    "Cada boton de rol puede alertar quien ocupa cada rol o si aun no hay ningun jugador asignado en el.\n\n" ..
+    "Al dar clic decrecho en los botones de roles primarios se alerta para resucitar a esa unidad.\n\n" ..
+    "RAID: Permite convertir el grupo en raid o hacer checks de raid rapidos con opcion de pull de 10s.\n\n" ..
+    "AFK/OFF: Alerta quien esta lejos del grupo o ha estado demasiado tiempo AFK/OFF seleccionando la unidad.\n\n" ..
+    "WP/LOOT: Indica el final de la raid y el inicio del loteo.\n\n" ..
+    "MODIFICADORES - CTRL / SHIFT / ALT\n\n" ..
+    "Utilizar [MODIFICADOR] + [CLIC IZQ]\n\n" .. "[CONTROL] + ... : Para susurrar al objetivo\n\n" ..
             "[SHIFT] + ... : Agrega el nombre del objetivo al chat activo\n\n" ..
             "[ALT] + ... : Dentro de instancia como líder de raid, agrega el nombre del objetivo al chat Raid[ALT]\n\n[ALT] + ... : Dentro de mazmorra, agrega el nombre del objetivo al chat Grupo\n\n" ..
             "[ALT] + ... : Fuera de instancia, agrega el nombre del objetivo al chat Gritar\n\n" ..

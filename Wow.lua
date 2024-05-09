@@ -24,11 +24,11 @@ rulesAndMechanics = {
         ["RULES"] = {
             ["SHARED"] = {"PRIORIDAD DE LOTEO: Por función MAIN > DUAL > ENCHANT > CODICIA.", "DBM y Discord son obligatorios, DC se comparte antes de iniciar Tuetano; la falta de alguno conllevará a la expulsión de la raid",},
             ["10"] = {},
-            ["25"] = {"MARCAS: Para lotear marca debe tener 4 t10 engemados/encantados. Caster 14k dps(3% bestias) Meles 14k dps en Libra (3% bestias). Heals top3 de Lady y Reina.",
-                      "TESTAMENTO: top5 daño inflingido en Libra cerrado con 5% en bestias, al igual que Tarro . (Testa palas sólo con agonía).",
+            ["25"] = {"MARCAS: Para lotear marca debe tener 2 t10 engemados/encantados. Caster 7k dps(3% bestias) Meles 7k dps en Libra (3% bestias). Heals top3 de Lady y Reina.",
+                      "TESTAMENTO: top5 daño inflingido en Libra cerrado con 3% en bestias, al igual que Tarro . (Testa palas sólo con agonía).",
                       "ABACO: top3 heal en Reina, si no cae se toma el recuento de Panzachancro. Trauma igual.",
-                      "FILACTERIA: top2 cerrado daño inflingido en Libramorte con 5% en bestias.",
-                      "OBJETO: top3 cerrado daño inflingido en Libramorte con 5% en bestias."}
+                      "FILACTERIA: top2 cerrado daño inflingido en Libramorte con 3% en bestias.",
+                      "OBJETO: top3 cerrado daño inflingido en Libramorte con 3% en bestias."}
         },
         ["MECHANICS"] = {
             ["TUETANO"] = {"Tanques a la derecha, resto del grupo detras y debajo del boss, hunter alejado en costado opuesto a tanques",

@@ -96,6 +96,7 @@ function ResetRoleAssignment(roleName, button)
             SendChatMessage("No tenemos [" .. roleName .. "]", channel)
         end
     end
+    reorderRaidMembers()
 end
 
 function SendRoleAlert(roleName, button, resInCombatNow)
