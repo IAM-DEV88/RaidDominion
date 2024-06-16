@@ -11,9 +11,9 @@ function secondarySelection()
     content:SetSize(370, 175)
     contentScrollFrame:SetScrollChild(content)
 
-    local xOffset = 15
+    local xOffset = 29
     local yOffset = 0
-    local rowHeight = 30
+    local rowHeight = 27
     local columnWidth = 190
     local numColumns = 2
 
@@ -25,13 +25,13 @@ function secondarySelection()
         local row = math.floor((i - 1) / numColumns)
         local column = (i - 1) % numColumns
 
-        local button = CreateFrame("Button", "secondaryRol" .. i, content, "UIPanelButtonTemplate")
-        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth + 10), yOffset - row * (rowHeight - 3))
+        local button = CreateFrame("Button", "secondaryRol" .. i, content, "RaidAssistButtonTemplate")
+        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth+3), yOffset - row * (rowHeight + 1))
         button:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
-        button:SetSize(170, rowHeight)
+        button:SetSize(163, rowHeight)
         button:SetText(roleName)
 
-        -- Comprueba si el rol está asignado a un jugador en addonCache
+        -- Comprueba si el rol está asignado a un jugador en raidInfo
         local assignedPlayer = getAssignedPlayer(roleName) -- Debes implementar esta función
 
         if assignedPlayer then
@@ -43,10 +43,10 @@ function secondarySelection()
             SendRoleAlert(roleName, self)
         end)
 
-        local resetButton = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+        local resetButton = CreateFrame("Button", nil, content, "RaidAssistButtonTemplate")
         resetButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
         resetButton:SetText("X")
-        resetButton:SetPoint("LEFT", button, "RIGHT", -2, 0)
+        resetButton:SetPoint("LEFT", button, "RIGHT", 2, 0)
         resetButton:SetSize(26, 26)
         resetButton:SetScript("OnClick", function()
             ResetRoleAssignment(roleName, button)

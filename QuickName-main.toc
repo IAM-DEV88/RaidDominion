@@ -2,20 +2,22 @@
 ## Title: QuickName
 ## Version: 1.0.0
 ## Author: Ioan Andres Muñoz Martinez - https://lambent-sundae-83e53b.netlify.app/
-## SavedVariables: enabledPanel, enabledAddon, raidInfo
-## DefaultState: enabled
+## SavedVariables: enabledPanel, raidInfo
 
+Templates.xml
+Frame.xml
 QuickName.lua
+Panel.lua
+TabContainer.lua
+RulesAndMechanics.lua
+RoleSelection.lua
+PlayerRolesTab.lua
+PrimarySelection.lua
+SecondarySelection.lua
+BuffSelection.lua
+SkillSelection.lua
+ExtraSelection.lua
 MinimapButton.lua
 About.lua
 Wow.lua
 Utils.lua
-Panel.lua
-RulesAndMechanics.lua
-TabContainer.lua
-RoleSelection.lua
-PlayerRolesTab.lua
-PrimarySelection.lua
-BuffSelection.lua
-SkillSelection.lua
-SecondarySelection.lua

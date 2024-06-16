@@ -1,0 +1,268 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+
+    <Script file="QuickName.lua"/>
+    <Frame name="QuickNamePanel" inherits="UIPanelDialogTemplate" toplevel="true" frameStrata="MEDIUM" movable="true" enableMouse="true" hidden="false" parent="UIParent">
+        <Size>
+            <AbsDimension x="430" y="227"/>
+        </Size>
+        <Anchors>
+            <Anchor point="CENTER">
+                <Offset>
+                    <AbsDimension x="0" y="0"/>
+                </Offset>
+            </Anchor>
+        </Anchors>
+        <Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
+            <BackgroundInsets>
+                <AbsInset left="11" right="12" top="12" bottom="11"/>
+            </BackgroundInsets>
+            <TileSize>
+                <AbsValue val="32"/>
+            </TileSize>
+            <EdgeSize>
+                <AbsValue val="32"/>
+            </EdgeSize>
+        </Backdrop>
+        <!-- /dbm broadcast timer 1:00 Busando en posada... -->
+        <Layers>
+			<Layer level="ARTWORK">
+				<FontString inherits="GameFontNormalSmall" name="$parentTitle" text="RaidDominion Tools">
+					<Anchors>
+						<Anchor point="LEFT" relativeTo="$parentTitleBG" relativePoint="LEFT">
+							<Offset><AbsDimension x="5" y="1" /></Offset>
+						</Anchor>
+					</Anchors>
+				</FontString>
+			</Layer>
+		</Layers>
+        <Frames>
+            <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="RELOAD">
+                <Size>
+                    <AbsDimension x="50" y="14" />
+                </Size>
+                <Anchors>
+                    <Anchor point="TOPRIGHT" relativePoint="TOPRIGHT">
+                        <Offset>
+                            <AbsDimension x="-27" y="-8" />
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnClick>ReloadUI()</OnClick>
+                </Scripts>
+            </Button>
+            <Frame name="QuickNameRoleTab">
+                <Anchors>
+                    <Anchor point="TOPLEFT"/>
+                    <Anchor point="BOTTOMRIGHT"/>
+                </Anchors>
+                <Layers>
+                    <Layer level="ARTWORK">
+                        <FontString inherits="GameFontNormal" text="">
+                            <Anchors>
+                                <Anchor point="TOPLEFT" relativeTo="$parent">
+                                    <Offset>
+                                        <AbsDimension x="20" y="-17"/>
+                                    </Offset>
+                                </Anchor>
+                            </Anchors>
+                        </FontString>
+                    </Layer>
+                </Layers>
+                <Frames>
+                    <Button name="$parentRaidDifficultyBtn" inherits="RaidAssistButtonTemplate" text="RAID MODE">
+                        <Size>
+                            <AbsDimension x="65" y="20" />
+                        </Size>
+                        <Anchors>
+                            <Anchor point="BOTTOMLEFT" relativeTo="$parent">
+                                <Offset>
+                                    <AbsDimension x="11" y="12" />
+                                </Offset>
+                            </Anchor>
+                        </Anchors>
+                        <Scripts>
+                            <OnClick>
+                                    StaticPopup_Show("HEROIC_MODE_POPUP")
+                                if GetNumPartyMembers() ~= 0 then
+                                    ConvertToRaid()
+                                    SendSystemMessage("El grupo ahora es un raid.")
+                                else
+                                    SendSystemMessage("Debes estar en grupo para crear una raid.")
+                                end
+                            </OnClick>
+                        </Scripts>
+                    </Button>
+                    <Button name="$parentPvpCheckBtn" inherits="RaidAssistButtonTemplate" text="SET TIMER">
+                        <Size>
+                            <AbsDimension x="65" y="20" />
+                        </Size>
+                        <Anchors>
+                            <Anchor point="LEFT" relativeTo="$parentRaidDifficultyBtn" relativePoint="RIGHT">
+                                <Offset>
+                                    <AbsDimension x="3" y="0" />
+                                </Offset>
+                            </Anchor>
+                        </Anchors>
+                        <Scripts>
+                            <OnClick>
+                                nameTimer()
+                            </OnClick>
+                        </Scripts>
+                    </Button>
+                    <Button name="$parentTurnRaidCheckBtn" inherits="RaidAssistButtonTemplate" text="NAME / FAR">
+                        <Size>
+                            <AbsDimension x="65" y="20" />
+                        </Size>
+                        <Anchors>
+                            <Anchor point="LEFT" relativeTo="$parentPvpCheckBtn" relativePoint="RIGHT">
+                                <Offset>
+                                    <AbsDimension x="3" y="0" />
+                                </Offset>
+                            </Anchor>
+                        </Anchors>
+                        <Scripts>
+                            <OnClick>
+                            if arg1 == "RightButton" then
+                                AlertFarPlayers(true)
+                            else
+                                AlertFarPlayers(false)
+                            end
+                            </OnClick>
+                        </Scripts>
+                    </Button>
+                    <Button name="$parentLootModeBtn" inherits="RaidAssistButtonTemplate" text="LOOT MODE">
+                        <Size>
+                            <AbsDimension x="65" y="20" />
+                        </Size>
+                        <Anchors>
+                            <Anchor point="LEFT" relativeTo="$parentTurnRaidCheckBtn" relativePoint="RIGHT">
+                                <Offset>
+                                    <AbsDimension x="3" y="0" />
+                                </Offset>
+                            </Anchor>
+                        </Anchors>
+                        <Scripts>
+                            <OnClick>
+                            isMasterLooter = not isMasterLooter -- Cambiar el estado del maestro despojador
+                            if isMasterLooter then
+                                SetLootMethod("master", UnitName("player")) -- Establecer el método de botín a "Maestro despojador"
+                            else
+                                SetLootMethod("group") -- Establecer el método de botín a "Botín de grupo"
+                            end
+                            </OnClick>
+                        </Scripts>
+                    </Button>
+                    <Button name="$parentBuffRequestBtn" inherits="RaidAssistButtonTemplate" text="ROL WISP">
+                        <Size>
+                            <AbsDimension x="65" y="20" />
+                        </Size>
+                        <Anchors>
+                            <Anchor point="LEFT" relativeTo="$parentLootModeBtn" relativePoint="RIGHT">
+                                <Offset>
+                                    <AbsDimension x="3" y="0" />
+                                </Offset>
+                            </Anchor>
+                        </Anchors>
+                        <Scripts>
+                            <OnClick>
+                                RequestBuffs()
+                            </OnClick>
+                        </Scripts>
+                    </Button>
+                    <Button name="$parentPullCheckBtn" inherits="RaidAssistButtonTemplate" text="PULL CHECK">
+                        <Size>
+                            <AbsDimension x="65" y="20" />
+                        </Size>
+                        <Anchors>
+                            <Anchor point="LEFT" relativeTo="$parentBuffRequestBtn" relativePoint="RIGHT">
+                                <Offset>
+                                    <AbsDimension x="3" y="0" />
+                                </Offset>
+                            </Anchor>
+                        </Anchors>
+                        <Scripts>
+                            <OnClick>
+                            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 ¿TODOS LISTOS?")
+                                StaticPopup_Show("CONFIRM_READY_CHECK")
+                            </OnClick>
+                        </Scripts>
+                    </Button>
+                    
+                </Frames>
+            </Frame>
+            <Frame name="QuickNameOptionsTab">
+                <Anchors>
+                    <Anchor point="TOPLEFT"/>
+                    <Anchor point="BOTTOMRIGHT"/>
+                </Anchors>
+                <Layers>
+                    <Layer level="ARTWORK">
+                        <FontString inherits="GameFontNormal" text="OPCIONES">
+                            <Anchors>
+                                <Anchor point="TOPLEFT" relativeTo="$parent">
+                                    <Offset>
+                                        <AbsDimension x="20" y="-17"/>
+                                    </Offset>
+                                </Anchor>
+                            </Anchors>
+                        </FontString>
+                    </Layer>
+                </Layers>
+            </Frame>
+            <Frame name="QuickNameAboutTab">
+                <Anchors>
+                    <Anchor point="TOPLEFT"/>
+                    <Anchor point="BOTTOMRIGHT"/>
+                </Anchors>
+                <Layers>
+                    <Layer level="ARTWORK">
+                        <FontString inherits="GameFontNormal" text="RAID ASSIST">
+                            <Anchors>
+                                <Anchor point="TOPLEFT" relativeTo="$parent">
+                                    <Offset>
+                                        <AbsDimension x="20" y="-17"/>
+                                    </Offset>
+                                </Anchor>
+                            </Anchors>
+                        </FontString>
+                    </Layer>
+                </Layers>
+            </Frame>
+            <Button name="$parentTab1" inherits="CharacterFrameTabButtonTemplate" id="1" text="ROLES">
+                <Anchors>
+                    <Anchor point="CENTER" relativePoint="BOTTOM">
+                        <Offset>
+                            <AbsDimension x="0" y="-12"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+            </Button>
+            <Button name="$parentTab2" inherits="CharacterFrameTabButtonTemplate" id="2" text="OPCIONES">
+                <Anchors>
+                    <Anchor point="LEFT" relativeTo="$parentTab1">
+                        <Offset>
+                            <AbsDimension x="60" y="0"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+            </Button>
+            <Button name="$parentTab3" inherits="CharacterFrameTabButtonTemplate" id="3" text="INFO">
+                <Anchors>
+                    <Anchor point="BOTTOMRIGHT" relativeTo="QuickNamePanel" relativePoint="BOTTOMRIGHT">
+                        <Offset>
+                            <AbsDimension x="0" y="-28"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+            </Button>
+        </Frames>
+        <Scripts>
+            <OnLoad>
+                self:RegisterForDrag("LeftButton");
+            </OnLoad>
+            <OnDragStart>self:StartMoving();</OnDragStart>
+            <OnDragStop>self:StopMovingOrSizing();</OnDragStop>
+        </Scripts>
+    </Frame>
+</Ui>

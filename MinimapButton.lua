@@ -57,7 +57,7 @@ myMiniMapButton:SetSize(26, 26) -- Establecer el tamaño del botón
 myMiniMapButton:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 0, 0) -- Establecer la posición del botón
 
 -- Personalizar el aspecto del botón
-myMiniMapButton:SetNormalTexture("Interface\\Icons\\INV_Misc_Desecrated_PlateHelm") -- Establecer la textura del botón
+myMiniMapButton:SetNormalTexture("Interface\\Icons\\achievement_pvp_p_08") -- Establecer la textura del botón
 
 -- Asignar la función para manejar los clics en el botón
 myMiniMapButton:SetScript("OnMouseDown", MyMiniMapButton_OnMouseDown)

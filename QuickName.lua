@@ -1,16 +1,20 @@
 local addonName = "QuickName"
-local addonCache
+raidInfo = raidInfo
 
--- Función para manejar eventos de addon cargado
+-- Function to handle events
 local function OnEvent(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == addonName then
         -- print("ADDON_LOADED")
-    elseif event == "PLAYER_LOGIN" then
         getPlayersInfo()
-        -- print("PLAYER_LOGIN")
+        
+        
+    elseif event == "PLAYER_LOGIN" then
         QuickNamePanelInit()
-        if not enabledAddon and not enabledPanel then
-            print("QuickName esta desactivado, puedes usar /qname para ver las opciones")
+        getPlayersInfo()
+
+        -- print("PLAYER_LOGIN")
+        if not enabledPanel then
+            print("Puedes usar /qname para ver mostrar el panel de RaidAssist")
         end
         if enabledPanel then
             QuickNamePanel:Show()
@@ -19,19 +23,11 @@ local function OnEvent(self, event, arg1)
         end
         SLASH_QNAME1 = "/qname"
         SlashCmdList["QNAME"] = function()
-            QuickNamePanel:Show(not QuickNamePanel:IsShown())
-        end
-        if enabledAddon then
-            local initModifiers = CreateFrame("Frame")
-            initModifiers:RegisterEvent("PLAYER_TARGET_CHANGED")
-            initModifiers:SetScript("OnEvent", function(_, event, ...)
-                if event == "PLAYER_TARGET_CHANGED" then
-                    local targetName = UnitName("target")
-                    local modifierPressed = IsAltKeyDown() and "ALT" or
-                                                (IsControlKeyDown() and "CONTROL" or (IsShiftKeyDown() and "SHIFT"))
-                    HandleClick(targetName, modifierPressed)
-                end
-            end)
+            if QuickNamePanel:IsShown() then
+                QuickNamePanel:Hide()
+            else
+                QuickNamePanel:Show()
+            end
         end
     elseif event == "PARTY_MEMBERS_CHANGED" then
         -- print("PARTY_MEMBERS_CHANGED")
@@ -42,19 +38,18 @@ local function OnEvent(self, event, arg1)
     elseif event == "PLAYER_LOGOUT" then
         -- print("PLAYER_LOGOUT")
         enabledPanel = (enabledPanelCheckbox:GetChecked() == 1) and true or false
-        enabledAddon = (enabledAddonCheckbox:GetChecked() == 1) and true or false
         raidInfo = {}
-        for k, v in pairs(addonCache) do
+        for k, v in (raidInfo) do
             raidInfo[k] = v
         end
     end
 end
 
--- Crear un marco para manejar eventos
+-- Create a frame to handle events
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("PLAYER_LOGOUT")
-frame:RegisterEvent("PARTY_MEMBERS_CHANGED") -- Cambios en el grupo
-frame:RegisterEvent("RAID_ROSTER_UPDATE") -- Cambios en la raid
+frame:RegisterEvent("PARTY_MEMBERS_CHANGED") -- Group changes
+frame:RegisterEvent("RAID_ROSTER_UPDATE") -- Raid roster changes
 frame:SetScript("OnEvent", OnEvent)

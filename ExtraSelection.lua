@@ -1,8 +1,8 @@
-function buffSelection()
-    local buffRoleFrame = CreateFrame("Frame", nil, QuickNamePanel)
-    buffRoleFrame:SetSize(430, 175)
+function extraSelection()
+    local extraRoleFrame = CreateFrame("Frame", nil, QuickNamePanel)
+    extraRoleFrame:SetSize(430, 175)
 
-    local contentScrollFrame = CreateFrame("ScrollFrame", "buffRole_ContentScrollFrame", buffRoleFrame,
+    local contentScrollFrame = CreateFrame("ScrollFrame", "extraRole_ContentScrollFrame", extraRoleFrame,
         "UIPanelScrollFrameTemplate")
     contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
     contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
@@ -17,7 +17,7 @@ function buffSelection()
     local columnWidth = 190
     local numColumns = 2
 
-    local roles = playerRoles["BUFF"]
+    local roles = playerRoles["EXTRA"]
     local numRoles = #roles
     local numRows = math.ceil(numRoles / numColumns)
 
@@ -25,8 +25,8 @@ function buffSelection()
         local row = math.floor((i - 1) / numColumns)
         local column = (i - 1) % numColumns
 
-        local button = CreateFrame("Button", "buffRol" .. i, content, "RaidAssistButtonTemplate")
-        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth+3), yOffset - row * (rowHeight + 1))
+        local button = CreateFrame("Button", "extraRol" .. i, content, "RaidAssistButtonTemplate")
+        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth + 3), yOffset - row * (rowHeight +1))
         button:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
         button:SetSize(163, rowHeight)
         button:SetText(roleName)
@@ -58,5 +58,5 @@ function buffSelection()
     local scrollBar = _G[contentScrollFrame:GetName() .. "ScrollBar"]
     scrollBar:SetMinMaxValues(0, max(0, content:GetHeight() - contentScrollFrame:GetHeight()))
 
-    return buffRoleFrame
+    return extraRoleFrame
 end

@@ -10,9 +10,9 @@ function primarySelection()
     content:SetSize(370, 175)
     contentScrollFrame:SetScrollChild(content)
 
-    local xOffset = 15
+    local xOffset = 29
     local yOffset = 0
-    local rowHeight = 30
+    local rowHeight = 27
     local columnWidth = 190
     local numColumns = 2
 
@@ -24,14 +24,14 @@ function primarySelection()
         local row = math.floor((i - 1) / numColumns)
         local column = (i - 1) % numColumns
 
-        local button = CreateFrame("Button", "primaryRol" .. i, content, "UIPanelButtonTemplate")
-        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth + 10), yOffset - row * (rowHeight - 3))
+        local button = CreateFrame("Button", "primaryRol" .. i, content, "RaidAssistButtonTemplate")
+        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth+3), yOffset - row * (rowHeight + 1))
         button:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
-        button:SetSize(170, rowHeight)
+        button:SetSize(163, rowHeight)
         button:SetText(roleName)
 
-        -- Comprueba si el rol está asignado a un jugador en addonCache
-        local assignedPlayer = getAssignedPlayer(roleName) -- Debes implementar esta función
+        -- Comprueba si el rol está asignado a un jugador en raidInfo
+        local assignedPlayer = getAssignedPlayer(roleName) 
 
         if assignedPlayer then
             button:SetText(assignedPlayer .. "\n" .. roleName) -- Actualiza el texto del botón con el nombre del jugador y el rol
@@ -47,10 +47,10 @@ function primarySelection()
             end
         end)
 
-        local resetButton = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+        local resetButton = CreateFrame("Button", nil, content, "RaidAssistButtonTemplate")
         resetButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
         resetButton:SetText("X")
-        resetButton:SetPoint("LEFT", button, "RIGHT", -2, 0)
+        resetButton:SetPoint("LEFT", button, "RIGHT", 2, 0)
         resetButton:SetSize(26, 26)
         resetButton:SetScript("OnClick", function()
             ResetRoleAssignment(roleName, button)
@@ -69,44 +69,44 @@ function ResetRoleAssignment(roleName, button)
     local selectedPlayer = button:GetAttribute("player")
     local _, channel = getPlayerInitialState()
     if selectedPlayer then
-        if addonCache[selectedPlayer] and addonCache[selectedPlayer].rol then
-            addonCache[selectedPlayer].rol[roleName] = nil
-            local playerClass = addonCache[selectedPlayer].class
+        if raidInfo[selectedPlayer] and raidInfo[selectedPlayer].rol then
+            raidInfo[selectedPlayer].rol[roleName] = nil
+            local playerClass = raidInfo[selectedPlayer].class
             playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
-            print("Se retiro al " .. playerClass .. " " .. selectedPlayer .. " del rol de [" .. roleName .. "]")
+            SendSystemMessage("Se retiro al " .. playerClass .. " " .. selectedPlayer .. " del rol de [" .. roleName .. "]")
             button:SetText(roleName) -- Restaurar el texto original del button
             button:SetAttribute("player", nil)
         end
     else
         local hasTarget = UnitExists("target")
         local targetName = UnitName("target")
-        local targetInRaid = addonCache[targetName] and true or false
+        local targetInRaid = raidInfo[targetName] and true or false
 
         if hasTarget and targetInRaid then
-            addonCache[targetName].rol = addonCache[targetName].rol or {}
-            local playerClass = addonCache[targetName].class
+            raidInfo[targetName].rol = raidInfo[targetName].rol or {}
+            local playerClass = raidInfo[targetName].class
             playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
-            if not addonCache[targetName].rol[roleName] then
-                addonCache[targetName].rol[roleName] = true
+            if not raidInfo[targetName].rol[roleName] then
+                raidInfo[targetName].rol[roleName] = true
                 button:SetAttribute("player", targetName)
                 button:SetText(playerClass .. " " .. targetName .. "\n" .. roleName) -- Concatenar el nombre del jugador al texto del label
             end
-            print(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
+            SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
+            reorderRaidMembers()
         else
-            SendChatMessage("No tenemos [" .. roleName .. "]", channel)
+            local broadcastCommand = "broadcast timer 00:300 NEED " .. roleName
+            SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
         end
     end
-    reorderRaidMembers()
 end
 
 function SendRoleAlert(roleName, button, resInCombatNow)
-    print(resInCombatNow)
     local _, channel = getPlayerInitialState()
     local playerName = button:GetAttribute("player")
 
     local message = ""
     if playerName then
-        local playerClass = addonCache[playerName].class
+        local playerClass = raidInfo[playerName].class
         playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
         message = playerClass .. " " .. playerName ..  (resInCombatNow and "" or " [" .. roleName .. "]")
         if resInCombatNow then
@@ -117,7 +117,7 @@ function SendRoleAlert(roleName, button, resInCombatNow)
     else
         message = "Necesitamos " .. " [" .. roleName .. "]"
     end
-    SendChatMessage(message, channel)
+    SendChatMessage(message, (resInCombatNow and channel or "RAID"))
 end
 
 function table.contains(table, element)
@@ -130,10 +130,12 @@ function table.contains(table, element)
 end
 
 function getAssignedPlayer(roleName)
-    for playerName, playerData in pairs(addonCache) do
-        if playerData.rol and playerData.rol[roleName] then
-            return playerName
+        for playerName, playerData in pairs(raidInfo) do
+            -- print(playerName)
+            -- print(roleName)
+            -- print(playerData.rol[roleName])
+            if playerData.rol and playerData.rol[roleName] then
+                return playerName
+            end
         end
-    end
-    return nil
 end

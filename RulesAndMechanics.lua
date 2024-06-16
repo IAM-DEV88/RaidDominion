@@ -1,14 +1,14 @@
 function rulesAndMechanicsInit()
     -- Dropdown para rulesAndMechanics
-    local raidDropdown = CreateFrame("Frame", "RaidDropdown", QuickNamePanel, "UIDropDownMenuTemplate")
-    raidDropdown:SetPoint("TOPLEFT", QuickNamePanel, -4, -35)
-    UIDropDownMenu_SetWidth(raidDropdown, 120)
+    local raidDropdown = CreateFrame("Frame", "RaidDropdown", QuickNameRoleTab, "UIDropDownMenuTemplate")
+    raidDropdown:SetPoint("TOPLEFT", QuickNameRoleTab, -4, -55)
+    UIDropDownMenu_SetWidth(raidDropdown, 117)
     UIDropDownMenu_SetText(raidDropdown, "RULES")
 
     -- Dropdown para bosses
-    local bossDropdown = CreateFrame("Frame", "BossDropdown", QuickNamePanel, "UIDropDownMenuTemplate")
-    bossDropdown:SetPoint("TOPRIGHT", QuickNamePanel, -76, -35)
-    UIDropDownMenu_SetWidth(bossDropdown, 120)
+    local bossDropdown = CreateFrame("Frame", "BossDropdown", QuickNameRoleTab, "UIDropDownMenuTemplate")
+    bossDropdown:SetPoint("TOPRIGHT", QuickNameRoleTab, -73, -55)
+    UIDropDownMenu_SetWidth(bossDropdown, 117)
     UIDropDownMenu_SetText(bossDropdown, "MECHANICS")
 
     local rulesAndMechanics = rulesAndMechanics -- Asignamos el diccionario de rulesAndMechanics a una variable local
@@ -50,7 +50,7 @@ function rulesAndMechanicsInit()
     UIDropDownMenu_Initialize(bossDropdown, InitializeBossesDropdown)
 
     -- Botón de alerta para las reglas de la raid seleccionada
-    local alertRaidRulesButton = CreateFrame("Button", nil, QuickNamePanel, "UIPanelButtonTemplate")
+    local alertRaidRulesButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
     alertRaidRulesButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     alertRaidRulesButton:SetPoint("LEFT", RaidDropdown, "RIGHT", 15, 2)
     alertRaidRulesButton:SetText("!")
@@ -71,7 +71,7 @@ function rulesAndMechanicsInit()
 
             -- Combinar las reglas compartidas y específicas en un solo mensaje
             local combinedRules = {}
-            table.insert(combinedRules, "REGLAS DE " .. selectedRaid)
+            table.insert(combinedRules, selectedRaid)
             for _, rule in ipairs(sharedRules) do
                 table.insert(combinedRules, rule)
             end
@@ -82,14 +82,14 @@ function rulesAndMechanicsInit()
             end
 
             -- Enviar todas las reglas
-            SendDelayedMessages(combinedRules,true)
+            SendDelayedMessages(combinedRules)
         else
             print("La raid seleccionada no tiene reglas definidas.")
         end
     end)
 
     -- Botón de alerta para los detalles del boss seleccionado
-    local alertBossDetailsButton = CreateFrame("Button", nil, QuickNamePanel, "UIPanelButtonTemplate")
+    local alertBossDetailsButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
     alertBossDetailsButton:SetPoint("LEFT", bossDropdown, "RIGHT", 14, 2)
     alertBossDetailsButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     alertBossDetailsButton:SetText("!")
@@ -102,12 +102,12 @@ function rulesAndMechanicsInit()
             table.insert(howToBoss, 1, "MECANICAS DE " .. selectedBoss)
 
             -- Enviar las reglas, ahora incluyendo el nuevo elemento al inicio
-            SendDelayedMessages(howToBoss)
+            SendDelayedMessages(howToBoss,true)
         end
     end)
 
     -- Botón de reseteo para rulesAndMechanics
-    local resetRaidButton = CreateFrame("Button", nil, QuickNamePanel, "UIPanelButtonTemplate")
+    local resetRaidButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
     resetRaidButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     resetRaidButton:SetText("X")
     resetRaidButton:SetPoint("RIGHT", raidDropdown, 13, 2)
@@ -121,7 +121,7 @@ function rulesAndMechanicsInit()
     end)
 
     -- Botón de reseteo para bosses
-    local resetBossButton = CreateFrame("Button", nil, QuickNamePanel, "UIPanelButtonTemplate")
+    local resetBossButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
     resetBossButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     resetBossButton:SetText("X")
     resetBossButton:SetPoint("RIGHT", bossDropdown, 13, 2)

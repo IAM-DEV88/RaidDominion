@@ -1,44 +1,37 @@
+-- Function to initialize the QuickName panel
 function QuickNamePanelInit()
-    -- Crear la ventana principal
-    QuickNamePanel = CreateFrame("Frame", "QuickName_MainFrame", UIParent)
-    QuickNamePanel:SetSize(440, 210)
-    QuickNamePanel:SetPoint("LEFT")
-    QuickNamePanel:EnableMouse(true)
-    QuickNamePanel:SetMovable(true)
-    QuickNamePanel:RegisterForDrag("LeftButton")
-    QuickNamePanel:SetScript("OnDragStart", QuickNamePanel.StartMoving)
-    QuickNamePanel:SetScript("OnDragStop", QuickNamePanel.StopMovingOrSizing)
-    QuickNamePanel:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true,
-        tileSize = 32,
-        edgeSize = 32,
-        insets = {
-            left = 11,
-            right = 12,
-            top = 12,
-            bottom = 11
-        }
-    })
-    QuickNamePanel:SetBackdropBorderColor(0.4, 0.4, 0.4)
-    QuickNamePanel:SetFrameStrata("MEDIUM")
-    QuickNamePanel:SetFrameLevel(100)
+    -- SendSystemMessage("QuickNamePanelInit")
 
-    -- Crear el título de la ventana
-    local title = QuickNamePanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    title:SetPoint("TOP", 0, 2)
-    title:SetText("QuickName")
+    local panel = _G["QuickNamePanel"]
+    if not panel then return end
+    
+    PanelTemplates_SetNumTabs(panel, 3)
+    PanelTemplates_SetTab(panel, 1)
+    _G["QuickNameRoleTab"]:Show()
+    _G["QuickNameOptionsTab"]:Hide()
+    _G["QuickNameAboutTab"]:Hide()
 
-    -- Botón de cerrar
-    closeButton = CreateFrame("Button", nil, QuickNamePanel, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", QuickNamePanel, "TOPRIGHT", 10, 10)
-    closeButton:SetScript("OnClick", function()
-        QuickNamePanel:Hide()
+    _G["QuickNamePanelTab1"]:SetScript("OnClick", function()
+        PanelTemplates_SetTab(panel, 1)
+        _G["QuickNameRoleTab"]:Show()
+        _G["QuickNameAboutTab"]:Hide()
+        _G["QuickNameOptionsTab"]:Hide()
+    end)
+
+    _G["QuickNamePanelTab2"]:SetScript("OnClick", function()
+        PanelTemplates_SetTab(panel, 2)
+        _G["QuickNameRoleTab"]:Hide()
+        _G["QuickNameAboutTab"]:Hide()
+        _G["QuickNameOptionsTab"]:Show()
+    end)
+
+    _G["QuickNamePanelTab3"]:SetScript("OnClick", function()
+        PanelTemplates_SetTab(panel, 3)
+        _G["QuickNameRoleTab"]:Hide()
+        _G["QuickNameOptionsTab"]:Hide()
+        _G["QuickNameAboutTab"]:Show()
     end)
 
     QuickNameTabContainerInit()
-
     rulesAndMechanicsInit()
-
 end
