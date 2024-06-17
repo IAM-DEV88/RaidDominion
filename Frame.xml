@@ -25,16 +25,18 @@
         </Backdrop>
         <!-- /dbm broadcast timer 1:00 Busando en posada... -->
         <Layers>
-			<Layer level="ARTWORK">
-				<FontString inherits="GameFontNormalSmall" name="$parentTitle" text="RaidDominion Tools">
-					<Anchors>
-						<Anchor point="LEFT" relativeTo="$parentTitleBG" relativePoint="LEFT">
-							<Offset><AbsDimension x="5" y="1" /></Offset>
-						</Anchor>
-					</Anchors>
-				</FontString>
-			</Layer>
-		</Layers>
+            <Layer level="ARTWORK">
+                <FontString inherits="GameFontHighlightSmall" name="$parentTitle" text="RaidDominion Tools">
+                    <Anchors>
+                        <Anchor point="LEFT" relativeTo="$parentTitleBG" relativePoint="LEFT">
+                            <Offset>
+                                <AbsDimension x="5" y="1" />
+                            </Offset>
+                        </Anchor>
+                    </Anchors>
+                </FontString>
+            </Layer>
+        </Layers>
         <Frames>
             <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="RELOAD">
                 <Size>
@@ -56,21 +58,8 @@
                     <Anchor point="TOPLEFT"/>
                     <Anchor point="BOTTOMRIGHT"/>
                 </Anchors>
-                <Layers>
-                    <Layer level="ARTWORK">
-                        <FontString inherits="GameFontNormal" text="">
-                            <Anchors>
-                                <Anchor point="TOPLEFT" relativeTo="$parent">
-                                    <Offset>
-                                        <AbsDimension x="20" y="-17"/>
-                                    </Offset>
-                                </Anchor>
-                            </Anchors>
-                        </FontString>
-                    </Layer>
-                </Layers>
                 <Frames>
-                    <Button name="$parentRaidDifficultyBtn" inherits="RaidAssistButtonTemplate" text="RAID MODE">
+                    <Button name="$parentRaidModeBtn" inherits="RaidAssistButtonTemplate" text="RAID MODE">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>
@@ -98,7 +87,7 @@
                             <AbsDimension x="65" y="20" />
                         </Size>
                         <Anchors>
-                            <Anchor point="LEFT" relativeTo="$parentRaidDifficultyBtn" relativePoint="RIGHT">
+                            <Anchor point="LEFT" relativeTo="$parentRaidModeBtn" relativePoint="RIGHT">
                                 <Offset>
                                     <AbsDimension x="3" y="0" />
                                 </Offset>
@@ -188,52 +177,36 @@
                             </OnClick>
                         </Scripts>
                     </Button>
-                    
                 </Frames>
             </Frame>
             <Frame name="QuickNameOptionsTab">
                 <Anchors>
-                    <Anchor point="TOPLEFT"/>
+                    <Anchor point="TOPLEFT" x="-12" y="28"/>
                     <Anchor point="BOTTOMRIGHT"/>
                 </Anchors>
-                <Layers>
-                    <Layer level="ARTWORK">
-                        <FontString inherits="GameFontNormal" text="OPCIONES">
-                            <Anchors>
-                                <Anchor point="TOPLEFT" relativeTo="$parent">
-                                    <Offset>
-                                        <AbsDimension x="20" y="-17"/>
-                                    </Offset>
-                                </Anchor>
-                            </Anchors>
-                        </FontString>
-                    </Layer>
-                </Layers>
+                <Scripts>
+                    <OnLoad>
+                CreateQuickNameOptionsTabContent(self)
+                    </OnLoad>
+                </Scripts>
             </Frame>
             <Frame name="QuickNameAboutTab">
                 <Anchors>
-                    <Anchor point="TOPLEFT"/>
+                    <Anchor point="TOPLEFT" x="-12" y="28"/>
                     <Anchor point="BOTTOMRIGHT"/>
                 </Anchors>
-                <Layers>
-                    <Layer level="ARTWORK">
-                        <FontString inherits="GameFontNormal" text="RAID ASSIST">
-                            <Anchors>
-                                <Anchor point="TOPLEFT" relativeTo="$parent">
-                                    <Offset>
-                                        <AbsDimension x="20" y="-17"/>
-                                    </Offset>
-                                </Anchor>
-                            </Anchors>
-                        </FontString>
-                    </Layer>
-                </Layers>
+                <Scripts>
+                    <OnLoad>
+                CreateQuickNameAboutTabContent(self)
+                    </OnLoad>
+                </Scripts>
             </Frame>
+
             <Button name="$parentTab1" inherits="CharacterFrameTabButtonTemplate" id="1" text="ROLES">
                 <Anchors>
                     <Anchor point="CENTER" relativePoint="BOTTOM">
                         <Offset>
-                            <AbsDimension x="0" y="-12"/>
+                            <AbsDimension x="0" y="-10"/>
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -251,7 +224,7 @@
                 <Anchors>
                     <Anchor point="BOTTOMRIGHT" relativeTo="QuickNamePanel" relativePoint="BOTTOMRIGHT">
                         <Offset>
-                            <AbsDimension x="0" y="-28"/>
+                            <AbsDimension x="0" y="-25"/>
                         </Offset>
                     </Anchor>
                 </Anchors>

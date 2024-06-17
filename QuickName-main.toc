@@ -4,11 +4,12 @@
 ## Author: Ioan Andres Muñoz Martinez - https://lambent-sundae-83e53b.netlify.app/
 ## SavedVariables: enabledPanel, raidInfo
 
-Templates.xml
-Frame.xml
+Utils.lua
 QuickName.lua
 Panel.lua
 TabContainer.lua
+Templates.xml
+Frame.xml
 RulesAndMechanics.lua
 RoleSelection.lua
 PlayerRolesTab.lua
@@ -20,4 +21,3 @@ ExtraSelection.lua
 MinimapButton.lua
 About.lua
 Wow.lua
-Utils.lua

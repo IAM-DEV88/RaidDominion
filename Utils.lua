@@ -512,9 +512,11 @@ function AlertFarPlayers(AFKTimer)
         local playerNames = "" -- Inicializar la cadena para nombres
         local numberOfPlayers = GetNumRaidMembers() ~= 0 and GetNumRaidMembers() or GetNumPartyMembers()
         local groupType = GetNumRaidMembers() ~= 0 and "raid" or "party"
+        local AFKPlayerNum = 0
         for i = 1, numberOfPlayers do
             local unit = groupType .. i
             if not CheckDistance(unit) then
+                AFKPlayerNum = AFKPlayerNum + 1
                 local playerName = UnitName(unit)
                 local playerClass = UnitClass(unit)
                 playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2)) -- Capitalizar la primera letra de playerClass
@@ -528,9 +530,8 @@ function AlertFarPlayers(AFKTimer)
             end
         end
 
-        local messages = {"Jugadores AFK/OFF o lejos del grupo",playerNames,"Presentarse pronto"}
-
-        SendDelayedMessages(messages)
+        SendSystemMessage("Jugadores AFK/OFF o lejos del grupo: " .. AFKPlayerNum)
+        SendSystemMessage(playerNames)
     end
     if AFKTimer and hasTarget then
         StaticPopup_Show("BLACKLIST_POPUP", nil, nil, { targetName = targetName })
@@ -631,3 +632,113 @@ StaticPopupDialogs["PLAYER_NUMBER_POPUP"] = {
     hideOnEscape = true,
     preferredIndex = 3
 }
+
+function CreateQuickNameAboutTabContent(parent)
+    local contentScrollFrame = CreateFrame("ScrollFrame", "AboutTab_ContentScrollFrame", parent, "UIPanelScrollFrameTemplate")
+    contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
+    contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
+
+    local content = CreateFrame("Frame", nil, contentScrollFrame)
+    content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
+    contentScrollFrame:SetScrollChild(content)
+
+    local instructions = {
+        { "GameFontHighlightSmall", "1. RAID MODE:", 20 },
+        { "GameFontNormal", "Convierte el grupo en banda y configura la dificultad.", 20, 390 },
+        { "GameFontHighlightSmall", "2. SET TIMER:", 20 },
+        { "GameFontNormal", "Coloca un marcador de tiempo personalizado para los miembros de la raid. Si tienes un objetivo seleccionado añade el nombre al marcador de tiempo. Ejemplo: ´120 REARMO´", 20, 390 },
+        { "GameFontHighlightSmall", "3. NAME / FAR:", 20 },
+        { "GameFontNormal", "Lista a todos los jugadores que estén lejos de ti. Si tienes un objetivo seleccionado alertará su nombre. Si das clic derecho con objetivo seleccionado pedirá motivo para agregar a blacklist", 20, 390 },
+        { "GameFontHighlightSmall", "4. LOOT MODE:", 20 },
+        { "GameFontNormal", "Intercambia el modo de botín entre Maestro despojador y Botín de grupo.", 20, 390 },
+        { "GameFontHighlightSmall", "5. ROL WISP:", 20 },
+        { "GameFontNormal", "Susurra los roles asignados a los jugadores correspondientes.", 20, 390 },
+        { "GameFontHighlightSmall", "6. PULL CHECK:", 20 },
+        { "GameFontNormal", "Coloca indicadores de tiempo y según el caso, da inicio o cancelación de pull de 10s.", 20, 390 },
+        { "GameFontHighlightSmall", "7. BOTÓN DE NOMBRE DE ROL:", 20 },
+        { "GameFontNormal", "Indica el estado del rol si está asignado o no.", 20, 390 },
+        { "GameFontHighlightSmall", "8. BOTÓN X DE ROL:", 20 },
+        { "GameFontNormal", "Limpia la asignación de rol. Si ya está vacío inicia un marcador de tiempo con el nombre del rol.", 20, 390 },
+        { "GameFontHighlightSmall", "Actualizaciones:", 20 },
+        { "GameFontNormal", "Mantente actualizado con las últimas versiones y soporte del addon. Visita nuestra página oficial para más información y reportes de errores.", 20, 390 },
+        { "GameFontHighlightSmall", "Donaciones:", 20 },
+        { "GameFontNormal", "Apoya el desarrollo continuo del addon mediante donaciones. ¡Gracias por tu apoyo!", 20, 390 }
+    }
+
+    local currentYOffset = -5 -- Posición vertical inicial
+
+    for _, instruction in ipairs(instructions) do
+        local fontString = content:CreateFontString(nil, "ARTWORK", instruction[1])
+        fontString:SetText(instruction[2])
+        fontString:SetPoint("TOPLEFT", content, "TOPLEFT", instruction[3], currentYOffset)
+
+        if instruction[4] then
+            fontString:SetJustifyH("LEFT")
+            fontString:SetWidth(instruction[4])
+        end
+
+        local _, fontHeight = fontString:GetFont()
+        local numExtraLines = math.ceil(#instruction[2] / 70)
+        currentYOffset = currentYOffset - fontHeight * (numExtraLines + 1) - 5 -- Actualiza la posición vertical para la siguiente línea
+    end
+
+    -- Enlace de GitHub para actualizaciones
+    local githubTitle = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    githubTitle:SetText("GitHub:")
+    githubTitle:SetPoint("TOPLEFT", content, "TOPLEFT", 20, currentYOffset - 0)
+    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
+
+    local githubLink = CreateFrame("EditBox", "githubLink", content, "InputBoxTemplate")
+    githubLink:SetPoint("TOPLEFT", githubTitle, "BOTTOMLEFT", 0, -5)
+    githubLink:SetSize(250, 20)
+    githubLink:SetAutoFocus(false)
+    githubLink:SetText("https://github.com/IAM-DEV88/QuickName")
+    githubLink:SetFontObject("ChatFontNormal")
+    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
+
+    -- Enlace de PayPal para donaciones
+    local paypalTitle = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    paypalTitle:SetText("PayPal:")
+    paypalTitle:SetPoint("TOPLEFT", content, "TOPLEFT", 20, currentYOffset - 0)
+    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
+
+    local paypalLink = CreateFrame("EditBox", nil, content, "InputBoxTemplate")
+    paypalLink:SetPoint("TOPLEFT", paypalTitle, "BOTTOMLEFT", 0, -5)
+    paypalLink:SetSize(250, 20)
+    paypalLink:SetAutoFocus(false)
+    paypalLink:SetText("paypal.me/iamdev88")
+    paypalLink:SetFontObject("ChatFontNormal")
+    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
+end
+
+function CreateQuickNameOptionsTabContent(parent)
+    local contentScrollFrame = CreateFrame("ScrollFrame", "OptionsTab_ContentScrollFrame", parent, "UIPanelScrollFrameTemplate")
+    contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
+    contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
+
+    local content = CreateFrame("Frame", nil, contentScrollFrame)
+    content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
+    contentScrollFrame:SetScrollChild(content)
+
+    local instructions = {
+        { "GameFontHighlightSmall", "DISCORD", 20 },
+    }
+
+    local currentYOffset = -5 -- Posición vertical inicial
+
+    for _, instruction in ipairs(instructions) do
+        local fontString = content:CreateFontString(nil, "ARTWORK", instruction[1])
+        fontString:SetText(instruction[2])
+        fontString:SetPoint("TOPLEFT", content, "TOPLEFT", instruction[3], currentYOffset)
+
+        if instruction[4] then
+            fontString:SetJustifyH("LEFT")
+            fontString:SetWidth(instruction[4])
+        end
+
+        local _, fontHeight = fontString:GetFont()
+        local numExtraLines = math.ceil(#instruction[2] / 70)
+        currentYOffset = currentYOffset - fontHeight * (numExtraLines + 1) - 5 -- Actualiza la posición vertical para la siguiente línea
+    end
+end
+
