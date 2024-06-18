@@ -1,5 +1,4 @@
 local addonName = "QuickName"
-raidInfo = raidInfo
 
 -- Function to handle events
 local function OnEvent(self, event, arg1)
@@ -9,8 +8,8 @@ local function OnEvent(self, event, arg1)
         
         
     elseif event == "PLAYER_LOGIN" then
-        QuickNamePanelInit()
         getPlayersInfo()
+        QuickNamePanelInit()
 
         -- print("PLAYER_LOGIN")
         if not enabledPanel then

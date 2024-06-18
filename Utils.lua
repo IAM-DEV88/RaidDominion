@@ -14,10 +14,11 @@ function getPlayerInitialState()
     return numberOfPlayers, defaultChannel
 end
 
+local currentPlayers = {}
+local currentPlayers = {}
 function getPlayersInfo()
     local numberOfPlayers, channel = getPlayerInitialState()
     -- Lista de jugadores actualmente en el grupo
-    local currentPlayers = {}
 
     if numberOfPlayers == 0 then
         -- Reinicializar las estructuras de datos si no hay jugadores en el grupo
@@ -28,7 +29,6 @@ function getPlayersInfo()
             rol = {}
         }
         currentPlayers[UnitName("player")] = true
-        updateAllButtons()
     else
         -- Actualizar raidInfo con la información del grupo
 
@@ -53,22 +53,10 @@ function getPlayersInfo()
             end
         end
 
-        -- Limpiar raidInfo de jugadores que ya no están en el grupo
-        for playerName, playerData in pairs(raidInfo) do
-            -- Imprimir mensaje informando sobre el jugador que se fue y los roles que dejó vacantes
-            -- end
-            if not currentPlayers[playerName] and playerName == "Entidad desconocida" and not playerName ==
-                UnitName("player") then
-                SendSystemMessage(playerName .. " se fue del grupo. Roles liberados: " ..
-                                      table.concat(getPlayerRoles(playerData.rol)))
-                -- Eliminar el jugador de raidInfo
-                raidInfo[playerName] = nil
-            end
-        end
-
         -- Asegurarse de que el jugador actual tenga roles asignados
         local _, englishClass = UnitClass("player")
         local playerName = UnitName("player")
+        currentPlayers[playerName] = true
         if raidInfo[playerName] then
             raidInfo[playerName].rol = raidInfo[playerName].rol or {}
         else
@@ -77,8 +65,24 @@ function getPlayersInfo()
                 rol = {}
             }
         end
-        updateAllButtons()
+
+
+
+         -- Limpiar raidInfo de jugadores que ya no están en el grupo
+         for playerName, playerData in pairs(raidInfo) do
+            -- Imprimir mensaje informando sobre el jugador que se fue y los roles que dejó vacantes
+            -- end
+            if not currentPlayers[playerName] or playerName == "Entidad desconocida" then
+                SendSystemMessage("COMPROBACION DE GRUPO")
+                SendSystemMessage(playerName .. " se fue del grupo. Roles liberados: " ..
+                                      table.concat(getPlayerRoles(playerData.rol)))
+                -- Eliminar el jugador de raidInfo
+                raidInfo[playerName] = nil
+            end
+        end
+
     end
+    updateAllButtons()
 end
 
 -- Función para verificar si un jugador tiene piezas de equipamiento con temple
@@ -202,6 +206,14 @@ function updateAllButtons()
     updateButtonsForRoleType("SKILL")
 end
 
+function getAssignedPlayer(roleName)
+    for playerName, playerData in pairs(raidInfo) do
+        if playerData.rol and playerData.rol[roleName] then
+            return playerName
+        end
+    end
+end
+
 function updateButtonsForRoleType(roleType)
     local roles = playerRoles[roleType]
     roleType = string.lower(roleType)
@@ -210,6 +222,7 @@ function updateButtonsForRoleType(roleType)
         if button then
             local assignedPlayer = getAssignedPlayer(roleName)
             if assignedPlayer then
+                -- SendSystemMessage(assignedPlayer)
                 local playerData = raidInfo[assignedPlayer]
                 if playerData then
                     local playerClass = string.upper(string.sub(playerData.class, 1, 1)) ..
@@ -266,7 +279,7 @@ function SendDelayedMessages(messages, wispHowTo)
         if self.delay <= 0 then
             if index <= #messages then
                 if wispHowTo then
-                    SendSystemMessage(messages[index])     
+                    SendSystemMessage(messages[index])
                 else
                     SendSplitMessage(messages[index])
                 end
@@ -399,7 +412,7 @@ function RequestBuffs()
 
     local _, channel = getPlayerInitialState()
     SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
-    
+
     SendChatMessage("Susurro asignaciones de roles y buffs", "RAID_WARNING")
 
     -- Enviar susurros a cada jugador
@@ -434,7 +447,7 @@ function CheckDistance(unit)
 end
 
 StaticPopupDialogs["TIMER_INPUT_POPUP"] = {
-    text = "Tiempo y label para el timer:",
+    text = "Tiempo en segundos y etiqueta del timer:",
     button1 = "Aceptar",
     button2 = "Cancelar",
     hasEditBox = true,
@@ -462,7 +475,7 @@ StaticPopupDialogs["TIMER_INPUT_POPUP"] = {
         end
         SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
         parent:Hide()
-    end,
+    end
 }
 
 function nameTimer()
@@ -470,12 +483,14 @@ function nameTimer()
     local targetName = hasTarget and UnitName("target") or nil
 
     -- mostrar popup para ingresar tiempo
-    StaticPopup_Show("TIMER_INPUT_POPUP", nil, nil, { targetName = targetName })
+    StaticPopup_Show("TIMER_INPUT_POPUP", nil, nil, {
+        targetName = targetName
+    })
 end
 
 local reason
 StaticPopupDialogs["BLACKLIST_POPUP"] = {
-    text = "Motivo:",
+    text = "Motivo para agregar a Blacklist:",
     button1 = "Aceptar",
     button2 = "Cancelar",
     hasEditBox = true,
@@ -488,16 +503,15 @@ StaticPopupDialogs["BLACKLIST_POPUP"] = {
     end,
     OnAccept = function(self, data)
         local banReason = self.editBox:GetText()
-                SlashCmdList["BlackList"](data.targetName .. " " .. banReason)
+        SlashCmdList["BlackList"](data.targetName .. " " .. banReason)
 
     end,
     EditBoxOnEnterPressed = function(self)
         local parent = self:GetParent()
         local banReason = self:GetText()
-                SlashCmdList["BlackList"](data.targetName .. " " .. banReason)
-
+        SlashCmdList["BlackList"](data.targetName .. " " .. banReason)
         parent:Hide()
-    end,
+    end
 }
 
 function AlertFarPlayers(AFKTimer)
@@ -534,7 +548,9 @@ function AlertFarPlayers(AFKTimer)
         SendSystemMessage(playerNames)
     end
     if AFKTimer and hasTarget then
-        StaticPopup_Show("BLACKLIST_POPUP", nil, nil, { targetName = targetName })
+        StaticPopup_Show("BLACKLIST_POPUP", nil, nil, {
+            targetName = targetName
+        })
     end
 
 end
@@ -568,7 +584,6 @@ function reorderRaidMembers()
         end
     end
 end
-
 
 local isMasterLooter = false
 local isHeroicMode = false -- Variable para almacenar si es modo heroico o no
@@ -634,7 +649,8 @@ StaticPopupDialogs["PLAYER_NUMBER_POPUP"] = {
 }
 
 function CreateQuickNameAboutTabContent(parent)
-    local contentScrollFrame = CreateFrame("ScrollFrame", "AboutTab_ContentScrollFrame", parent, "UIPanelScrollFrameTemplate")
+    local contentScrollFrame = CreateFrame("ScrollFrame", "AboutTab_ContentScrollFrame", parent,
+        "UIPanelScrollFrameTemplate")
     contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
     contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
 
@@ -642,28 +658,34 @@ function CreateQuickNameAboutTabContent(parent)
     content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
     contentScrollFrame:SetScrollChild(content)
 
-    local instructions = {
-        { "GameFontHighlightSmall", "1. RAID MODE:", 20 },
-        { "GameFontNormal", "Convierte el grupo en banda y configura la dificultad.", 20, 390 },
-        { "GameFontHighlightSmall", "2. SET TIMER:", 20 },
-        { "GameFontNormal", "Coloca un marcador de tiempo personalizado para los miembros de la raid. Si tienes un objetivo seleccionado añade el nombre al marcador de tiempo. Ejemplo: ´120 REARMO´", 20, 390 },
-        { "GameFontHighlightSmall", "3. NAME / FAR:", 20 },
-        { "GameFontNormal", "Lista a todos los jugadores que estén lejos de ti. Si tienes un objetivo seleccionado alertará su nombre. Si das clic derecho con objetivo seleccionado pedirá motivo para agregar a blacklist", 20, 390 },
-        { "GameFontHighlightSmall", "4. LOOT MODE:", 20 },
-        { "GameFontNormal", "Intercambia el modo de botín entre Maestro despojador y Botín de grupo.", 20, 390 },
-        { "GameFontHighlightSmall", "5. ROL WISP:", 20 },
-        { "GameFontNormal", "Susurra los roles asignados a los jugadores correspondientes.", 20, 390 },
-        { "GameFontHighlightSmall", "6. PULL CHECK:", 20 },
-        { "GameFontNormal", "Coloca indicadores de tiempo y según el caso, da inicio o cancelación de pull de 10s.", 20, 390 },
-        { "GameFontHighlightSmall", "7. BOTÓN DE NOMBRE DE ROL:", 20 },
-        { "GameFontNormal", "Indica el estado del rol si está asignado o no.", 20, 390 },
-        { "GameFontHighlightSmall", "8. BOTÓN X DE ROL:", 20 },
-        { "GameFontNormal", "Limpia la asignación de rol. Si ya está vacío inicia un marcador de tiempo con el nombre del rol.", 20, 390 },
-        { "GameFontHighlightSmall", "Actualizaciones:", 20 },
-        { "GameFontNormal", "Mantente actualizado con las últimas versiones y soporte del addon. Visita nuestra página oficial para más información y reportes de errores.", 20, 390 },
-        { "GameFontHighlightSmall", "Donaciones:", 20 },
-        { "GameFontNormal", "Apoya el desarrollo continuo del addon mediante donaciones. ¡Gracias por tu apoyo!", 20, 390 }
-    }
+    local instructions = {{"GameFontHighlightSmall", "1. RAID MODE:", 20},
+                          {"GameFontNormal", "Convierte el grupo en banda y configura la dificultad.", 20, 390},
+                          {"GameFontHighlightSmall", "2. SET TIMER:", 20}, {"GameFontNormal",
+                                                                            "Coloca un marcador de tiempo personalizado para los miembros de la raid. Si tienes un objetivo seleccionado añade el nombre al marcador de tiempo. Ejemplo: ´120 REARMO´",
+                                                                            20, 390},
+                          {"GameFontHighlightSmall", "3. NAME / FAR:", 20}, {"GameFontNormal",
+                                                                             "Lista a todos los jugadores que estén lejos de ti. Si tienes un objetivo seleccionado alertará su nombre. Si das clic derecho con objetivo seleccionado pedirá motivo para agregar a blacklist",
+                                                                             20, 390},
+                          {"GameFontHighlightSmall", "4. LOOT MODE:", 20},
+                          {"GameFontNormal",
+                           "Intercambia el modo de botín entre Maestro despojador y Botín de grupo.", 20, 390},
+                          {"GameFontHighlightSmall", "5. ROL WISP:", 20},
+                          {"GameFontNormal", "Susurra los roles asignados a los jugadores correspondientes.", 20, 390},
+                          {"GameFontHighlightSmall", "6. PULL CHECK:", 20},
+                          {"GameFontNormal",
+                           "Coloca indicadores de tiempo y según el caso, da inicio o cancelación de pull de 10s.",
+                           20, 390}, {"GameFontHighlightSmall", "7. BOTÓN DE NOMBRE DE ROL:", 20},
+                          {"GameFontNormal", "Indica el estado del rol si está asignado o no.", 20, 390},
+                          {"GameFontHighlightSmall", "8. BOTÓN X DE ROL:", 20}, {"GameFontNormal",
+                                                                                  "Limpia la asignación de rol. Si ya está vacío inicia un marcador de tiempo con el nombre del rol.",
+                                                                                  20, 390},
+                          {"GameFontHighlightSmall", "Actualizaciones:", 20}, {"GameFontNormal",
+                                                                               "Mantente actualizado con las últimas versiones y soporte del addon. Visita nuestra página oficial para más información y reportes de errores.",
+                                                                               20, 390},
+                          {"GameFontHighlightSmall", "Donaciones:", 20},
+                          {"GameFontNormal",
+                           "Apoya el desarrollo continuo del addon mediante donaciones. ¡Gracias por tu apoyo!", 20,
+                           390}}
 
     local currentYOffset = -5 -- Posición vertical inicial
 
@@ -712,7 +734,8 @@ function CreateQuickNameAboutTabContent(parent)
 end
 
 function CreateQuickNameOptionsTabContent(parent)
-    local contentScrollFrame = CreateFrame("ScrollFrame", "OptionsTab_ContentScrollFrame", parent, "UIPanelScrollFrameTemplate")
+    local contentScrollFrame = CreateFrame("ScrollFrame", "OptionsTab_ContentScrollFrame", parent,
+        "UIPanelScrollFrameTemplate")
     contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
     contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
 
@@ -720,9 +743,7 @@ function CreateQuickNameOptionsTabContent(parent)
     content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
     contentScrollFrame:SetScrollChild(content)
 
-    local instructions = {
-        { "GameFontHighlightSmall", "DISCORD", 20 },
-    }
+    local instructions = {{"GameFontHighlightSmall", "DISCORD", 20}}
 
     local currentYOffset = -5 -- Posición vertical inicial
 

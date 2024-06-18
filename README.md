@@ -6,40 +6,33 @@
 QuickName es una herramienta diseñada para facilitar la comunicación y la interacción en el juego World of Warcraft. Te permite copiar el nombre de cualquier jugador en el chat rapidamente con un clic durante encuentros en mazmorras y bandas.
 
 ## Características principales
-### 1. Copiar el nombre de cualquier jugador en el chat rapidamente con un clic:
+### 1. Convertir el grupo en raid y configurar la dificultad rapidamente
+Convierte el grupo en banda y configura la dificultad
 
-QuickName agrega atajos de teclado para nombrar rápidamente a los jugadores que se encuentran cerca tuyo, en tu grupo o banda. Al hacer clic izquierdo en el jugador, o en el botón del jugador en tu grupo o banda, puedes realizar una serie de acciones con tan solo presionar una tecla modificadora:
-- ### Control (CTRL) + Clic Izquierdo:
-    Realiza un susurro al jugador seleccionado.
-- ### Shift + Clic Izquierdo:
-    Agrega el nombre del jugador al chat activo.
-- ### Alt + Clic Izquierdo:
-    - Si eres líder de banda y estás dentro de una instancia, agrega el nombre del jugador al chat de alerta de banda.
-    - Si eres miembro de la banda y estás en una instancia, agrega el nombre del jugador al chat de banda.
-        - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
-    - Si eres miembro de un grupo y estás dentro de una instancia, agrega el nombre del jugador al chat de grupo.
-        - Al estar fuera de la instancia agrega el nombre del jugador al chat gritar.
+### 2. Crea temporizadores para compartir con la banda:
+Coloca un marcador de tiempo personalizado para los miembros de la raid. Si tienes un objetivo seleccionado añade el nombre al marcador de tiempo. Ejemplo: ´120 ATACAR NOMBREOBJETIVO´
 
-### 2. Agregar nombres al chat rápidamente:
-Con QuickName, puedes agregar el nombre del jugador seleccionado al chat activo o a un chat específico con solo un clic. Esta función es especialmente útil para comunicarte con otros jugadores rápidamente sin tener que escribir el nombre completo.
+### 3. Lista jugadores lejanos a ti, alerta o blaclist:
+Lista a todos los jugadores que estén lejos de ti. Si tienes un objetivo seleccionado alertará su nombre. Si das clic derecho con objetivo seleccionado pedirá motivo para agregar a blacklist.
 
-### 3. Cuadro de ayuda y configuración:
-Al instalar QuickName, se te presentará un cuadro de ayuda y configuración la primera vez que ingreses al juego con el addon habilitado. Este cuadro de diálogo te proporcionará información detallada sobre las funciones del addon y cómo utilizarlas. También te dará la opción de habilitar o deshabilitar el addon y de ocultar el cuadro de ayuda en el futuro.
+### 4. Modo de loteo:
+Intercambia el modo de botín entre Maestro despojador y Botín de grupo.
 
-### 4. Opciones de personalización:
-QuickName te permite personalizar cómo interactúa con la interfaz de usuario y cómo se comporta en diferentes situaciones. Puedes habilitar o deshabilitar el addon según tus preferencias, y también puedes optar por ocultar el cuadro de ayuda después de haberlo revisado.
+### 5. Indica roles asignados sin spamear el chat de toda la banda
+Susurra los roles asignados a los jugadores correspondientes.
 
-## Instrucciones de instalación
-- Asegúrate de tener World of Warcraft instalado y actualizado.
-- Descarga el archivo del addon QuickName desde GitHub.
-- Extrae el archivo descargado en la carpeta de addons de World of Warcraft (normalmente ubicada en C:\Program Files\World of Warcraft\_retail_\Interface\AddOns en Windows o en la carpeta Interface\AddOns en macOS).
-- Asegurate que el nombre de la carpeta de addon sea "QuickName" (Remover "-main" del nombre de la carpeta del zip)
-- Inicia el juego y asegúrate de habilitar el addon desde el menú de selección de personaje.
-
-## Soporte y contribuciones
+### 6. Soporte y contribuciones
 Si tienes preguntas, sugerencias o encuentras algún problema con el addon, puedes visitar el repositorio de GitHub del proyecto. También puedes contribuir al desarrollo del addon mediante el apoyo via paypal.me/iamdev88.
 
-## Notas finales
+### 7. Gestiona check y pull de banda de manera clara:
+Coloca indicadores de tiempo y según el caso, da inicio o cancelación de pull de 10s.
+
+### 8. Gestiona check y pull de banda de manera clara:
+Coloca indicadores de tiempo y según el caso, da inicio o cancelación de pull de 10s.
+
+### 9. Los botones de rol:
+Indican el estado del rol si está asignado o no. Y el boton x limpia la asignación de rol. Si ya está vacío inicia un marcador de tiempo con el nombre del rol. Con clic derecho sera alertado por el canal de hermandad
+
 Simplifica tus interacciones en el juego con QuickName. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
 
 > QuickName es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.

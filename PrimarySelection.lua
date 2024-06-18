@@ -92,9 +92,9 @@ function ResetRoleAssignment(roleName, button)
                 button:SetText(playerClass .. " " .. targetName .. "\n" .. roleName) -- Concatenar el nombre del jugador al texto del label
             end
             SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
-            reorderRaidMembers()
+            -- reorderRaidMembers()
         else
-            local broadcastCommand = "broadcast timer 00:300 NEED " .. roleName
+            local broadcastCommand = "broadcast timer 00:05 NEED " .. roleName
             SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
         end
     end
@@ -127,15 +127,4 @@ function table.contains(table, element)
         end
     end
     return false
-end
-
-function getAssignedPlayer(roleName)
-        for playerName, playerData in pairs(raidInfo) do
-            -- print(playerName)
-            -- print(roleName)
-            -- print(playerData.rol[roleName])
-            if playerData.rol and playerData.rol[roleName] then
-                return playerName
-            end
-        end
 end
