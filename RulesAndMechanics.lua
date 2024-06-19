@@ -1,15 +1,15 @@
 function rulesAndMechanicsInit()
     -- Dropdown para rulesAndMechanics
-    local raidDropdown = CreateFrame("Frame", "RaidDropdown", QuickNameRoleTab, "UIDropDownMenuTemplate")
-    raidDropdown:SetPoint("TOPLEFT", QuickNameRoleTab, -4, -55)
+    local raidDropdown = CreateFrame("Frame", "RaidDropdown", RaidDominionRoleTab, "UIDropDownMenuTemplate")
+    raidDropdown:SetPoint("TOPLEFT", RaidDominionRoleTab, -4, -55)
     UIDropDownMenu_SetWidth(raidDropdown, 117)
-    UIDropDownMenu_SetText(raidDropdown, "RULES")
+    UIDropDownMenu_SetText(raidDropdown, "REGLAS")
 
     -- Dropdown para bosses
-    local bossDropdown = CreateFrame("Frame", "BossDropdown", QuickNameRoleTab, "UIDropDownMenuTemplate")
-    bossDropdown:SetPoint("TOPRIGHT", QuickNameRoleTab, -73, -55)
+    local bossDropdown = CreateFrame("Frame", "BossDropdown", RaidDominionRoleTab, "UIDropDownMenuTemplate")
+    bossDropdown:SetPoint("TOPRIGHT", RaidDominionRoleTab, -73, -55)
     UIDropDownMenu_SetWidth(bossDropdown, 117)
-    UIDropDownMenu_SetText(bossDropdown, "MECHANICS")
+    UIDropDownMenu_SetText(bossDropdown, "MECANICAS")
 
     local rulesAndMechanics = rulesAndMechanics -- Asignamos el diccionario de rulesAndMechanics a una variable local
     local selectedRaid, selectedBoss -- Variables para almacenar las selecciones actuales
@@ -17,7 +17,7 @@ function rulesAndMechanicsInit()
     -- Función para inicializar el dropdown de bosses
     function InitializeBossesDropdown()
         UIDropDownMenu_ClearAll(bossDropdown)
-        UIDropDownMenu_SetText(bossDropdown, "MECHANICS")
+        UIDropDownMenu_SetText(bossDropdown, "MECANICAS")
         if selectedRaid and rulesAndMechanics[selectedRaid]["MECHANICS"] then
             local bosses = rulesAndMechanics[selectedRaid]["MECHANICS"]
             local info = UIDropDownMenu_CreateInfo()
@@ -50,7 +50,7 @@ function rulesAndMechanicsInit()
     UIDropDownMenu_Initialize(bossDropdown, InitializeBossesDropdown)
 
     -- Botón de alerta para las reglas de la raid seleccionada
-    local alertRaidRulesButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
+    local alertRaidRulesButton = CreateFrame("Button", nil, RaidDominionRoleTab, "RaidAssistButtonTemplate")
     alertRaidRulesButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     alertRaidRulesButton:SetPoint("LEFT", RaidDropdown, "RIGHT", 15, 2)
     alertRaidRulesButton:SetText("!")
@@ -89,7 +89,7 @@ function rulesAndMechanicsInit()
     end)
 
     -- Botón de alerta para los detalles del boss seleccionado
-    local alertBossDetailsButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
+    local alertBossDetailsButton = CreateFrame("Button", nil, RaidDominionRoleTab, "RaidAssistButtonTemplate")
     alertBossDetailsButton:SetPoint("LEFT", bossDropdown, "RIGHT", 14, 2)
     alertBossDetailsButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     alertBossDetailsButton:SetText("!")
@@ -107,27 +107,27 @@ function rulesAndMechanicsInit()
     end)
 
     -- Botón de reseteo para rulesAndMechanics
-    local resetRaidButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
+    local resetRaidButton = CreateFrame("Button", nil, RaidDominionRoleTab, "RaidAssistButtonTemplate")
     resetRaidButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     resetRaidButton:SetText("X")
     resetRaidButton:SetPoint("RIGHT", raidDropdown, 13, 2)
     resetRaidButton:SetSize(26, 26)
     resetRaidButton:SetScript("OnClick", function()
-        UIDropDownMenu_SetText(raidDropdown, "RULES")
-        UIDropDownMenu_SetText(bossDropdown, "MECHANICS")
+        UIDropDownMenu_SetText(raidDropdown, "REGLAS")
+        UIDropDownMenu_SetText(bossDropdown, "MECANICAS")
         selectedRaid = nil
         selectedBoss = nil
         InitializeBossesDropdown()
     end)
 
     -- Botón de reseteo para bosses
-    local resetBossButton = CreateFrame("Button", nil, QuickNameRoleTab, "RaidAssistButtonTemplate")
+    local resetBossButton = CreateFrame("Button", nil, RaidDominionRoleTab, "RaidAssistButtonTemplate")
     resetBossButton:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
     resetBossButton:SetText("X")
     resetBossButton:SetPoint("RIGHT", bossDropdown, 13, 2)
     resetBossButton:SetSize(26, 26)
     resetBossButton:SetScript("OnClick", function()
-        UIDropDownMenu_SetText(bossDropdown, "MECHANICS")
+        UIDropDownMenu_SetText(bossDropdown, "MECANICAS")
         selectedBoss = nil
     end)
 

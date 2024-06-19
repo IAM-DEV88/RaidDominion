@@ -1,5 +1,5 @@
 function secondarySelection()
-    local secondaryRoleFrame = CreateFrame("Frame", nil, QuickNamePanel)
+    local secondaryRoleFrame = CreateFrame("Frame", nil, RaidDominionPanel)
     secondaryRoleFrame:SetSize(430, 175)
 
     local contentScrollFrame = CreateFrame("ScrollFrame", "secondaryRole_ContentScrollFrame", secondaryRoleFrame,
@@ -17,7 +17,7 @@ function secondarySelection()
     local columnWidth = 190
     local numColumns = 2
 
-    local roles = playerRoles["SECONDARY"]
+    local roles = playerRoles["SECUNDARIO"]
     local numRoles = #roles
     local numRows = math.ceil(numRoles / numColumns)
 

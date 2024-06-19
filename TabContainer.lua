@@ -1,6 +1,6 @@
-function QuickNameTabContainerInit()
+function RaidDominionTabContainerInit()
         if not roleSelectionFrame then
-            roleSelectionFrame = CreateFrame("Frame", nil, QuickNameRoleTab)
+            roleSelectionFrame = CreateFrame("Frame", nil, RaidDominionRoleTab)
             roleSelectionFrame:SetPoint("TOP", -11, -24)
             roleSelectionFrame:SetSize(430, 230)
 

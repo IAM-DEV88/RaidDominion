@@ -1,3 +1,6 @@
+local enabledPanel = enabledPanel or {}
+
+
 function getPlayerInitialState()
     -- local defaultChannel = "SAY"
     local defaultChannel = "GUILD"
@@ -14,38 +17,38 @@ function getPlayerInitialState()
     return numberOfPlayers, defaultChannel
 end
 
+local addonCache = {}
 local currentPlayers = {}
-local currentPlayers = {}
-function getPlayersInfo()
-    local numberOfPlayers, channel = getPlayerInitialState()
-    -- Lista de jugadores actualmente en el grupo
 
+function getPlayersInfo()
+    -- Restablecer currentPlayers al inicio de la función
+    currentPlayers = {}
+
+    local numberOfPlayers, _ = getPlayerInitialState()
+    -- Obtener numJugadores y canal
     if numberOfPlayers == 0 then
-        -- Reinicializar las estructuras de datos si no hay jugadores en el grupo
+        -- Reinicializar estructuras de datos al no estar en grupo
         raidInfo = {}
         local _, englishClass = UnitClass("player")
-        raidInfo[UnitName("player")] = {
+        local playerName = UnitName("player")
+        addonCache[playerName] = {
             class = englishClass,
             rol = {}
         }
-        currentPlayers[UnitName("player")] = true
+        currentPlayers[playerName] = true
     else
-        -- Actualizar raidInfo con la información del grupo
-
-        -- Actualizar raidInfo con los jugadores actuales
+        addonCache = raidInfo
+        -- Marcar jugadores actuales como presentes
         for i = 1, numberOfPlayers do
             local unit = GetNumRaidMembers() ~= 0 and "raid" .. i or "party" .. i
             local playerName = UnitName(unit)
-
             if playerName then
-                -- SendSystemMessage(playerName)
                 currentPlayers[playerName] = true
-
-                if raidInfo[playerName] then
-                    raidInfo[playerName].rol = raidInfo[playerName].rol or {}
+                if addonCache[playerName] then
+                    addonCache[playerName].rol = addonCache[playerName].rol or {}
                 else
                     local playerClass = select(2, UnitClass(unit))
-                    raidInfo[playerName] = {
+                    addonCache[playerName] = {
                         class = playerClass,
                         rol = {}
                     }
@@ -53,36 +56,140 @@ function getPlayersInfo()
             end
         end
 
-        -- Asegurarse de que el jugador actual tenga roles asignados
+        -- Asegurarse de añadir la información del player
         local _, englishClass = UnitClass("player")
         local playerName = UnitName("player")
         currentPlayers[playerName] = true
-        if raidInfo[playerName] then
-            raidInfo[playerName].rol = raidInfo[playerName].rol or {}
+        if addonCache[playerName] then
+            addonCache[playerName].rol = addonCache[playerName].rol or {}
         else
-            raidInfo[playerName] = {
+            addonCache[playerName] = {
                 class = englishClass,
                 rol = {}
             }
         end
 
-
-
-         -- Limpiar raidInfo de jugadores que ya no están en el grupo
-         for playerName, playerData in pairs(raidInfo) do
-            -- Imprimir mensaje informando sobre el jugador que se fue y los roles que dejó vacantes
-            -- end
+        -- Limpiar raidInfo y addonCache de jugadores que ya no están en el grupo
+        for playerName, playerData in pairs(addonCache) do
+            -- Revisa la recientemente asignada addonCache y la coteja con currentPlayers
             if not currentPlayers[playerName] or playerName == "Entidad desconocida" then
-                SendSystemMessage("COMPROBACION DE GRUPO")
                 SendSystemMessage(playerName .. " se fue del grupo. Roles liberados: " ..
-                                      table.concat(getPlayerRoles(playerData.rol)))
-                -- Eliminar el jugador de raidInfo
+                                      table.concat(getPlayerRoles(playerData.rol), ", "))
+                -- Eliminar el elemento
                 raidInfo[playerName] = nil
+                addonCache[playerName] = nil
             end
         end
 
+        -- Imprimir el contenido de addonCache para depuración
+        -- for playerName, playerInfo in pairs(addonCache) do
+        --     SendSystemMessage("Player: " .. playerName)
+        --     for key, value in pairs(playerInfo) do
+        --         if type(value) == "table" then
+        --             SendSystemMessage("  " .. key .. ":")
+        --             for role, assigned in pairs(value) do
+        --                 SendSystemMessage("    " .. role .. " = " .. tostring(assigned))
+        --             end
+        --         else
+        --             SendSystemMessage("  " .. key .. " = " .. tostring(value))
+        --         end
+        --     end
+        -- end
+
+        updateAllButtons()
     end
-    updateAllButtons()
+    return addonCache
+end
+
+function ResetRoleAssignment(roleName, button)
+    local _, channel = getPlayerInitialState()
+    local addonCache = getPlayersInfo()
+    local selectedPlayer = button:GetAttribute("player")
+    if selectedPlayer then
+        if addonCache[selectedPlayer] and addonCache[selectedPlayer].rol then
+            addonCache[selectedPlayer].rol[roleName] = nil
+            local playerClass = addonCache[selectedPlayer].class
+            playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
+            SendSystemMessage("Se retiro al " .. playerClass .. " " .. selectedPlayer .. " del rol de [" .. roleName ..
+                                  "]")
+            button:SetText(roleName) -- Restaurar el texto original del button
+            button:SetAttribute("player", nil)
+        end
+    else
+        local hasTarget = UnitExists("target")
+        local targetName = UnitName("target")
+
+        local addonCache = getPlayersInfo()
+
+        local targetInRaid = addonCache[targetName] and true or false
+
+        if hasTarget and targetInRaid then
+            addonCache[targetName].rol = addonCache[targetName].rol or {}
+            local playerClass = addonCache[targetName].class
+            playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
+            if not addonCache[targetName].rol[roleName] then
+                addonCache[targetName].rol[roleName] = true
+                button:SetAttribute("player", targetName)
+                button:SetText(playerClass .. " " .. targetName .. "\n" .. roleName) -- Concatenar el nombre del jugador al texto del label
+            end
+            SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
+            -- reorderRaidMembers()
+        else
+            local broadcastCommand = "broadcast timer 00:05 NEED " .. roleName
+            SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
+        end
+    end
+end
+
+function SendRoleAlert(roleName, button)
+    local numberOfPlayers, channel = getPlayerInitialState()
+    local addonCache = getPlayersInfo()
+    local playerName = button:GetAttribute("player")
+
+    local message = ""
+    if playerName then
+        local unit = "raid" -- Asumir que el jugador está en raid
+        if not UnitInRaid("player") then
+            unit = "party" -- Si no está en raid, asumir que está en party
+        end
+
+        -- Buscar el índice de la unidad
+        local unitIndex
+        for i = 1, numberOfPlayers do
+            local currentUnit = unit .. i
+            if UnitName(currentUnit) == playerName then
+                unitIndex = i
+                break
+            end
+        end
+
+        -- Si se encuentra la unidad, comprobar si está muerto o vivo
+        local playerClass = addonCache[playerName].class
+        playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
+        if unitIndex then
+            local unitFull = unit .. unitIndex
+            if UnitIsDeadOrGhost(unitFull) then
+                message = "REVIVIR A [" .. playerName .. "] ASAP!"
+            else
+                message = playerClass .. " " .. playerName .. "[" .. roleName .. "]"
+            end
+        else
+            message = "NEED " .. " [" .. roleName .. "]"
+        end
+    else
+        message = "NEED " .. " [" .. roleName .. "]"
+    end
+
+    SendChatMessage(message, "RAID")
+end
+
+function table.contains(table, element)
+    for _, value in pairs(table) do
+        if value == element then
+            return true
+        end
+    end
+    return false
 end
 
 -- Función para verificar si un jugador tiene piezas de equipamiento con temple
@@ -200,14 +307,14 @@ function getPlayerRoles(playerRoles)
 end
 
 function updateAllButtons()
-    updateButtonsForRoleType("PRIMARY")
-    updateButtonsForRoleType("SECONDARY")
+    updateButtonsForRoleType("PRIMARIO")
+    updateButtonsForRoleType("SECUNDARIO")
     updateButtonsForRoleType("BUFF")
     updateButtonsForRoleType("SKILL")
 end
 
 function getAssignedPlayer(roleName)
-    for playerName, playerData in pairs(raidInfo) do
+    for playerName, playerData in pairs(addonCache) do
         if playerData.rol and playerData.rol[roleName] then
             return playerName
         end
@@ -223,7 +330,7 @@ function updateButtonsForRoleType(roleType)
             local assignedPlayer = getAssignedPlayer(roleName)
             if assignedPlayer then
                 -- SendSystemMessage(assignedPlayer)
-                local playerData = raidInfo[assignedPlayer]
+                local playerData = addonCache[assignedPlayer]
                 if playerData then
                     local playerClass = string.upper(string.sub(playerData.class, 1, 1)) ..
                                             string.lower(string.sub(playerData.class, 2))
@@ -342,7 +449,7 @@ function WpLoot()
     local _, channel = getPlayerInitialState()
 
     local signatureMessage = (channel == "RAID_WARNING") and
-                                 {"{rt8} Interesados en probar el addon // https://github.com/IAM-DEV88/QuickName/archive/refs/heads/main.zip {rt8}",
+                                 {"{rt8} Interesados en probar el addon // https://github.com/IAM-DEV88/RaidDominion/archive/refs/heads/main.zip {rt8}",
                                   "{rt1} Atentos quienes se quedan a lotear"} or {"Nos vemos"}
 
     local thanksMessage = {"Gracias a todos!"}
@@ -544,7 +651,7 @@ function AlertFarPlayers(AFKTimer)
             end
         end
 
-        SendSystemMessage("Jugadores AFK/OFF o lejos del grupo: " .. AFKPlayerNum)
+        SendSystemMessage("Jugadores AFK/OFF o demasiado lejos: " .. AFKPlayerNum)
         SendSystemMessage(playerNames)
     end
     if AFKTimer and hasTarget then
@@ -648,7 +755,7 @@ StaticPopupDialogs["PLAYER_NUMBER_POPUP"] = {
     preferredIndex = 3
 }
 
-function CreateQuickNameAboutTabContent(parent)
+function CreateRaidDominionAboutTabContent(parent)
     local contentScrollFrame = CreateFrame("ScrollFrame", "AboutTab_ContentScrollFrame", parent,
         "UIPanelScrollFrameTemplate")
     contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
@@ -658,18 +765,18 @@ function CreateQuickNameAboutTabContent(parent)
     content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
     contentScrollFrame:SetScrollChild(content)
 
-    local instructions = {{"GameFontHighlightSmall", "1. RAID MODE:", 20},
+    local instructions = {{"GameFontHighlightSmall", "1. RAID MODO:", 20},
                           {"GameFontNormal", "Convierte el grupo en banda y configura la dificultad.", 20, 390},
-                          {"GameFontHighlightSmall", "2. SET TIMER:", 20}, {"GameFontNormal",
-                                                                            "Coloca un marcador de tiempo personalizado para los miembros de la raid. Si tienes un objetivo seleccionado añade el nombre al marcador de tiempo. Ejemplo: ´120 REARMO´",
-                                                                            20, 390},
-                          {"GameFontHighlightSmall", "3. NAME / FAR:", 20}, {"GameFontNormal",
-                                                                             "Lista a todos los jugadores que estén lejos de ti. Si tienes un objetivo seleccionado alertará su nombre. Si das clic derecho con objetivo seleccionado pedirá motivo para agregar a blacklist",
-                                                                             20, 390},
-                          {"GameFontHighlightSmall", "4. LOOT MODE:", 20},
+                          {"GameFontHighlightSmall", "2. TEMPORIZADOR:", 20}, {"GameFontNormal",
+                                                                               "Coloca un marcador de tiempo personalizado para los miembros de la raid. Si tienes un objetivo seleccionado añade el nombre al marcador de tiempo. Ejemplo: ´120 REARMO´",
+                                                                               20, 390},
+                          {"GameFontHighlightSmall", "3. LEJANOS:", 20}, {"GameFontNormal",
+                                                                          "Lista a todos los jugadores que estén lejos de ti. Si tienes un objetivo seleccionado alertará su nombre. Si das clic derecho con objetivo seleccionado pedirá motivo para agregar a blacklist",
+                                                                          20, 390},
+                          {"GameFontHighlightSmall", "4. BOTIN:", 20},
                           {"GameFontNormal",
                            "Intercambia el modo de botín entre Maestro despojador y Botín de grupo.", 20, 390},
-                          {"GameFontHighlightSmall", "5. ROL WISP:", 20},
+                          {"GameFontHighlightSmall", "5. WISP ROL:", 20},
                           {"GameFontNormal", "Susurra los roles asignados a los jugadores correspondientes.", 20, 390},
                           {"GameFontHighlightSmall", "6. PULL CHECK:", 20},
                           {"GameFontNormal",
@@ -714,7 +821,7 @@ function CreateQuickNameAboutTabContent(parent)
     githubLink:SetPoint("TOPLEFT", githubTitle, "BOTTOMLEFT", 0, -5)
     githubLink:SetSize(250, 20)
     githubLink:SetAutoFocus(false)
-    githubLink:SetText("https://github.com/IAM-DEV88/QuickName")
+    githubLink:SetText("https://github.com/IAM-DEV88/RaidDominion")
     githubLink:SetFontObject("ChatFontNormal")
     currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
 
@@ -733,7 +840,30 @@ function CreateQuickNameAboutTabContent(parent)
     currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
 end
 
-function CreateQuickNameOptionsTabContent(parent)
+function ShareDC()
+    local discordInput = _G["DiscordLinkInput"]
+    local discordLink = discordInput:GetText()
+
+    if discordLink == "" then
+        -- Activar la pestaña de opciones y enfocar el input de Discord
+        local panel = _G["RaidDominionPanel"]
+        if not panel then return end
+
+        PanelTemplates_SetTab(panel, 2)
+        _G["RaidDominionRoleTab"]:Hide()
+        _G["RaidDominionAboutTab"]:Hide()
+        _G["RaidDominionOptionsTab"]:Show()
+        
+        discordInput:SetFocus()
+    else
+    SendSystemMessage(discordLink)
+    -- Alertar a la banda con el enlace de Discord
+        local message = "Enlace de Discord: " .. discordLink
+        SendChatMessage(message, "RAID_WARNING")
+    end
+end
+
+function CreateRaidDominionOptionsTabContent(parent)
     local contentScrollFrame = CreateFrame("ScrollFrame", "OptionsTab_ContentScrollFrame", parent,
         "UIPanelScrollFrameTemplate")
     contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
@@ -743,7 +873,8 @@ function CreateQuickNameOptionsTabContent(parent)
     content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
     contentScrollFrame:SetScrollChild(content)
 
-    local instructions = {{"GameFontHighlightSmall", "DISCORD", 20}}
+    local instructions = {{"GameFontHighlightSmall", "DISCORD", 20}, {"GameFontNormal", "ENLACE:", 20},
+                          {"GameFontHighlightSmall", "Mostrar panel al cargar", 20}}
 
     local currentYOffset = -5 -- Posición vertical inicial
 
@@ -761,5 +892,22 @@ function CreateQuickNameOptionsTabContent(parent)
         local numExtraLines = math.ceil(#instruction[2] / 70)
         currentYOffset = currentYOffset - fontHeight * (numExtraLines + 1) - 5 -- Actualiza la posición vertical para la siguiente línea
     end
+
+    discordInput = CreateFrame("EditBox", "DiscordLinkInput", content, "InputBoxTemplate")
+    discordInput:SetPoint("TOPLEFT", 80, -26) -- Ajusta la posición según sea necesario
+    discordInput:SetSize(250, 20)
+    discordInput:SetAutoFocus(false)
+    discordInput:SetFontObject("ChatFontNormal")
+    discordInput:SetText("")
+
+    enabledPanelCheckbox = CreateFrame("CheckButton", nil, DiscordLinkInput, "UICheckButtonTemplate")
+    enabledPanelCheckbox:SetPoint("TOPLEFT", 60, -30)
+
+    enabledPanelCheckbox:SetSize(20, 20)
+    enabledPanelCheckbox:SetChecked(enabledPanel)
+    enabledPanelCheckbox:SetScript("OnClick", function(self)
+        enabledPanel = (self:GetChecked() == 1) and true or false
+    end)
+ return enabledPanel
 end
 

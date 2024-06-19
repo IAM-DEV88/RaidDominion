@@ -1,5 +1,5 @@
 function skillSelection()
-    local skillRoleFrame = CreateFrame("Frame", nil, QuickNamePanel)
+    local skillRoleFrame = CreateFrame("Frame", nil, RaidDominionPanel)
     skillRoleFrame:SetSize(430, 175)
 
     local contentScrollFrame = CreateFrame("ScrollFrame", "skillRole_ContentScrollFrame", skillRoleFrame,

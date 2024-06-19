@@ -1,5 +1,5 @@
 function buffSelection()
-    local buffRoleFrame = CreateFrame("Frame", nil, QuickNamePanel)
+    local buffRoleFrame = CreateFrame("Frame", nil, RaidDominionPanel)
     buffRoleFrame:SetSize(430, 175)
 
     local contentScrollFrame = CreateFrame("ScrollFrame", "buffRole_ContentScrollFrame", buffRoleFrame,

@@ -1,5 +1,5 @@
 function extraSelection()
-    local extraRoleFrame = CreateFrame("Frame", nil, QuickNamePanel)
+    local extraRoleFrame = CreateFrame("Frame", nil, RaidDominionPanel)
     extraRoleFrame:SetSize(430, 175)
 
     local contentScrollFrame = CreateFrame("ScrollFrame", "extraRole_ContentScrollFrame", extraRoleFrame,

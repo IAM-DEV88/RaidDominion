@@ -1,6 +1,6 @@
 function PlayerRolesTabContainerInit()
     -- Crear las pestañas
-    local PlayerRolesTabContainer = CreateFrame("Frame", nil, QuickNameRoleTab)
+    local PlayerRolesTabContainer = CreateFrame("Frame", nil, RaidDominionRoleTab)
     PlayerRolesTabContainer:SetPoint("TOP", 0, 0)
     PlayerRolesTabContainer:SetSize(430, 25)
 
@@ -135,7 +135,7 @@ function PlayerRolesTabContainerInit()
     end
 
     function SwitchTab(tabName)
-        if tabName == "PRIMARY" then
+        if tabName == "PRIMARIO" then
             -- Función para cambiar a la pestaña de roles principales
             primarySelectionContainer()
         elseif tabName == "BUFF" then
@@ -150,10 +150,10 @@ function PlayerRolesTabContainerInit()
             -- Función para cambiar a la pestaña de roles de habilidades
             extraSelectionContainer()
             -- Agrega el código aquí para cambiar a la pestaña de EXTRA
-        elseif tabName == "SECONDARY" then
+        elseif tabName == "SECUNDARIO" then
             secondarySelectionContainer()
             -- Función para cambiar a la pestaña de roles secundarios
-            -- Agrega el código aquí para cambiar a la pestaña de SECONDARY
+            -- Agrega el código aquí para cambiar a la pestaña de 
         end
     end
     -- Crear las pestañas y configurarlas
@@ -199,7 +199,7 @@ function PlayerRolesTabContainerInit()
 
     -- Inicializar la primera pestaña como seleccionada
     if #tabs > 0 then
-        SelectTab(tabs[1]:GetText())
+        SelectTab(tabs[5]:GetText())
     end
 
     -- skillSelectionContainer()

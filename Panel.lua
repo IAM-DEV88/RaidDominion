@@ -1,37 +1,37 @@
--- Function to initialize the QuickName panel
-function QuickNamePanelInit()
-    -- SendSystemMessage("QuickNamePanelInit")
+-- Function to initialize the RaidDominion panel
+function RaidDominionPanelInit()
+    -- SendSystemMessage("RaidDominionPanelInit")
 
-    local panel = _G["QuickNamePanel"]
+    local panel = _G["RaidDominionPanel"]
     if not panel then return end
     
     PanelTemplates_SetNumTabs(panel, 3)
     PanelTemplates_SetTab(panel, 1)
-    _G["QuickNameRoleTab"]:Show()
-    _G["QuickNameOptionsTab"]:Hide()
-    _G["QuickNameAboutTab"]:Hide()
+    _G["RaidDominionRoleTab"]:Show()
+    _G["RaidDominionOptionsTab"]:Hide()
+    _G["RaidDominionAboutTab"]:Hide()
 
-    _G["QuickNamePanelTab1"]:SetScript("OnClick", function()
+    _G["RaidDominionPanelTab1"]:SetScript("OnClick", function()
         PanelTemplates_SetTab(panel, 1)
-        _G["QuickNameRoleTab"]:Show()
-        _G["QuickNameAboutTab"]:Hide()
-        _G["QuickNameOptionsTab"]:Hide()
+        _G["RaidDominionRoleTab"]:Show()
+        _G["RaidDominionAboutTab"]:Hide()
+        _G["RaidDominionOptionsTab"]:Hide()
     end)
 
-    _G["QuickNamePanelTab2"]:SetScript("OnClick", function()
+    _G["RaidDominionPanelTab2"]:SetScript("OnClick", function()
         PanelTemplates_SetTab(panel, 2)
-        _G["QuickNameRoleTab"]:Hide()
-        _G["QuickNameAboutTab"]:Hide()
-        _G["QuickNameOptionsTab"]:Show()
+        _G["RaidDominionRoleTab"]:Hide()
+        _G["RaidDominionAboutTab"]:Hide()
+        _G["RaidDominionOptionsTab"]:Show()
     end)
 
-    _G["QuickNamePanelTab3"]:SetScript("OnClick", function()
+    _G["RaidDominionPanelTab3"]:SetScript("OnClick", function()
         PanelTemplates_SetTab(panel, 3)
-        _G["QuickNameRoleTab"]:Hide()
-        _G["QuickNameOptionsTab"]:Hide()
-        _G["QuickNameAboutTab"]:Show()
+        _G["RaidDominionRoleTab"]:Hide()
+        _G["RaidDominionOptionsTab"]:Hide()
+        _G["RaidDominionAboutTab"]:Show()
     end)
 
-    QuickNameTabContainerInit()
+    RaidDominionTabContainerInit()
     rulesAndMechanicsInit()
 end

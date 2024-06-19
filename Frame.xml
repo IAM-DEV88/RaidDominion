@@ -1,7 +1,7 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 
-    <Script file="QuickName.lua"/>
-    <Frame name="QuickNamePanel" inherits="UIPanelDialogTemplate" toplevel="true" frameStrata="MEDIUM" movable="true" enableMouse="true" hidden="false" parent="UIParent">
+    <Script file="RaidDominion.lua"/>
+    <Frame name="RaidDominionPanel" inherits="UIPanelDialogTemplate" toplevel="true" frameStrata="MEDIUM" movable="true" enableMouse="true" hidden="false" parent="UIParent">
         <Size>
             <AbsDimension x="430" y="227"/>
         </Size>
@@ -38,9 +38,24 @@
             </Layer>
         </Layers>
         <Frames>
-            <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="RELOAD">
+        <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="DC">
                 <Size>
-                    <AbsDimension x="50" y="14" />
+                    <AbsDimension x="30" y="14" />
+                </Size>
+                <Anchors>
+                    <Anchor point="TOPRIGHT" relativePoint="TOPRIGHT">
+                        <Offset>
+                            <AbsDimension x="-86" y="-8" />
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnClick>ShareDC()</OnClick>
+                </Scripts>
+            </Button>
+            <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="RECARGAR">
+                <Size>
+                    <AbsDimension x="60" y="14" />
                 </Size>
                 <Anchors>
                     <Anchor point="TOPRIGHT" relativePoint="TOPRIGHT">
@@ -53,13 +68,13 @@
                     <OnClick>ReloadUI()</OnClick>
                 </Scripts>
             </Button>
-            <Frame name="QuickNameRoleTab">
+            <Frame name="RaidDominionRoleTab">
                 <Anchors>
                     <Anchor point="TOPLEFT"/>
                     <Anchor point="BOTTOMRIGHT"/>
                 </Anchors>
                 <Frames>
-                    <Button name="$parentRaidModeBtn" inherits="RaidAssistButtonTemplate" text="RAID MODE">
+                    <Button name="$parentRaidModeBtn" inherits="RaidAssistButtonTemplate" text="RAID MODO">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>
@@ -82,7 +97,7 @@
                             </OnClick>
                         </Scripts>
                     </Button>
-                    <Button name="$parentPvpCheckBtn" inherits="RaidAssistButtonTemplate" text="SET TIMER">
+                    <Button name="$parentPvpCheckBtn" inherits="RaidAssistButtonTemplate" text="TEMPORIZADOR">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>
@@ -99,7 +114,7 @@
                             </OnClick>
                         </Scripts>
                     </Button>
-                    <Button name="$parentTurnRaidCheckBtn" inherits="RaidAssistButtonTemplate" text="NAME / FAR">
+                    <Button name="$parentTurnRaidCheckBtn" inherits="RaidAssistButtonTemplate" text="LEJANOS">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>
@@ -120,7 +135,7 @@
                             </OnClick>
                         </Scripts>
                     </Button>
-                    <Button name="$parentLootModeBtn" inherits="RaidAssistButtonTemplate" text="LOOT MODE">
+                    <Button name="$parentLootModeBtn" inherits="RaidAssistButtonTemplate" text="BOTIN">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>
@@ -142,7 +157,7 @@
                             </OnClick>
                         </Scripts>
                     </Button>
-                    <Button name="$parentBuffRequestBtn" inherits="RaidAssistButtonTemplate" text="ROL WISP">
+                    <Button name="$parentBuffRequestBtn" inherits="RaidAssistButtonTemplate" text="WISP ROL">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>
@@ -179,25 +194,25 @@
                     </Button>
                 </Frames>
             </Frame>
-            <Frame name="QuickNameOptionsTab">
+            <Frame name="RaidDominionOptionsTab">
                 <Anchors>
                     <Anchor point="TOPLEFT" x="-12" y="28"/>
                     <Anchor point="BOTTOMRIGHT"/>
                 </Anchors>
                 <Scripts>
                     <OnLoad>
-                CreateQuickNameOptionsTabContent(self)
+                CreateRaidDominionOptionsTabContent(self)
                     </OnLoad>
                 </Scripts>
             </Frame>
-            <Frame name="QuickNameAboutTab">
+            <Frame name="RaidDominionAboutTab">
                 <Anchors>
                     <Anchor point="TOPLEFT" x="-12" y="28"/>
                     <Anchor point="BOTTOMRIGHT"/>
                 </Anchors>
                 <Scripts>
                     <OnLoad>
-                CreateQuickNameAboutTabContent(self)
+                CreateRaidDominionAboutTabContent(self)
                     </OnLoad>
                 </Scripts>
             </Frame>
@@ -222,7 +237,7 @@
             </Button>
             <Button name="$parentTab3" inherits="CharacterFrameTabButtonTemplate" id="3" text="INFO">
                 <Anchors>
-                    <Anchor point="BOTTOMRIGHT" relativeTo="QuickNamePanel" relativePoint="BOTTOMRIGHT">
+                    <Anchor point="BOTTOMRIGHT" relativeTo="RaidDominionPanel" relativePoint="BOTTOMRIGHT">
                         <Offset>
                             <AbsDimension x="0" y="-25"/>
                         </Offset>

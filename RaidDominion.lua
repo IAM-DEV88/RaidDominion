@@ -1,4 +1,4 @@
-local addonName = "QuickName"
+local addonName = "RaidDominion"
 
 -- Function to handle events
 local function OnEvent(self, event, arg1)
@@ -6,26 +6,25 @@ local function OnEvent(self, event, arg1)
         -- print("ADDON_LOADED")
         getPlayersInfo()
         
-        
     elseif event == "PLAYER_LOGIN" then
         getPlayersInfo()
-        QuickNamePanelInit()
+        RaidDominionPanelInit()
 
         -- print("PLAYER_LOGIN")
         if not enabledPanel then
-            print("Puedes usar /qname para ver mostrar el panel de RaidAssist")
+            print("Puedes usar /rdom para mostrar el panel de RaidDominion")
         end
         if enabledPanel then
-            QuickNamePanel:Show()
+            RaidDominionPanel:Show()
         else
-            QuickNamePanel:Hide()
+            RaidDominionPanel:Hide()
         end
-        SLASH_QNAME1 = "/qname"
-        SlashCmdList["QNAME"] = function()
-            if QuickNamePanel:IsShown() then
-                QuickNamePanel:Hide()
+        SLASH_RDOM1 = "/rdom"
+        SlashCmdList["RDOM"] = function()
+            if RaidDominionPanel:IsShown() then
+                RaidDominionPanel:Hide()
             else
-                QuickNamePanel:Show()
+                RaidDominionPanel:Show()
             end
         end
     elseif event == "PARTY_MEMBERS_CHANGED" then
@@ -38,7 +37,7 @@ local function OnEvent(self, event, arg1)
         -- print("PLAYER_LOGOUT")
         enabledPanel = (enabledPanelCheckbox:GetChecked() == 1) and true or false
         raidInfo = {}
-        for k, v in (raidInfo) do
+        for k, v in (addonCache) do
             raidInfo[k] = v
         end
     end

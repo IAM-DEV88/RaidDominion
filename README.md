@@ -1,9 +1,9 @@
-# QuickName
+# RaidDominion
 > WoW 335a Addon
 
-![QuickNameUI](https://i.ibb.co/jb47JHh/Captura-de-pantalla-2024-06-17-092147.png)
+![RaidDominionUI](https://i.ibb.co/jb47JHh/Captura-de-pantalla-2024-06-17-092147.png)
 ## Descripción
-QuickName es una herramienta diseñada para facilitar la comunicación y la interacción en el juego World of Warcraft. Te permite copiar el nombre de cualquier jugador en el chat rapidamente con un clic durante encuentros en mazmorras y bandas.
+RaidDominion es una herramienta diseñada para facilitar la comunicación y la interacción en el juego World of Warcraft. Te permite copiar el nombre de cualquier jugador en el chat rapidamente con un clic durante encuentros en mazmorras y bandas.
 
 ## Características principales
 ### 1. Convertir el grupo en raid y configurar la dificultad rapidamente
@@ -33,6 +33,6 @@ Coloca indicadores de tiempo y según el caso, da inicio o cancelación de pull 
 ### 9. Los botones de rol:
 Indican el estado del rol si está asignado o no. Y el boton x limpia la asignación de rol. Si ya está vacío inicia un marcador de tiempo con el nombre del rol. Con clic derecho sera alertado por el canal de hermandad
 
-Simplifica tus interacciones en el juego con QuickName. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
+Simplifica tus interacciones en el juego con RaidDominion. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
 
-> QuickName es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.
+> RaidDominion es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.

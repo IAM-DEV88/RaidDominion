@@ -1,12 +1,12 @@
 -- Función para manejar los clics en el botón del minimapa
 local function MyMiniMapButton_OnMouseDown(self, button)
     if button == "LeftButton" then
-        if QuickNamePanel:IsShown() then
+        if RaidDominionPanel:IsShown() then
             -- Si el panel está mostrado, ocúltalo
-            QuickNamePanel:Hide()
+            RaidDominionPanel:Hide()
         else
             -- Si el panel está oculto, muéstralo
-            QuickNamePanel:Show()
+            RaidDominionPanel:Show()
         end
     elseif button == "RightButton" then
         -- Crear el menú emergente
@@ -65,7 +65,7 @@ myMiniMapButton:SetScript("OnMouseDown", MyMiniMapButton_OnMouseDown)
 -- Función para manejar el evento cuando el mouse entra al botón del minimapa
 local function MyMiniMapButton_OnEnter(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT") -- Establecer el tooltip en relación al botón
-    GameTooltip:SetText("|cfff58cbaQuickName|r |caad4af37v1.0.0|r")
+    GameTooltip:SetText("|cfff58cbaRaidDominion|r |caad4af37v1.0.0|r")
     GameTooltip:AddLine("Clic Izq: Mostrar/ocultar panel")
     GameTooltip:AddLine("Clic Der: Menu")
     GameTooltip:Show() -- Mostrar el tooltip
