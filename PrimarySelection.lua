@@ -17,7 +17,7 @@ function primarySelection()
     local columnWidth = 190
     local numColumns = 2
 
-    local roles = playerRoles["PRIMARIO"]
+    local roles = playerRoles["PRIMARY"]
     local numRoles = #roles
     local numRows = math.ceil(numRoles / numColumns)
 
@@ -38,9 +38,8 @@ function primarySelection()
             button:SetText(assignedPlayer .. "\n" .. roleName) -- Actualiza el texto del botón con el nombre del jugador y el rol
             button:SetAttribute("player", assignedPlayer) -- Establece la propiedad 'player' del botón con el nombre del jugador
         end
-
-        button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-        button:SetScript("OnClick", function(self, mouseButton)
+        
+        button:SetScript("OnClick", function(self)
                 SendRoleAlert(roleName, self)
         end)
 

@@ -37,6 +37,7 @@ local function OnEvent(self, event, arg1)
         -- print("PLAYER_LOGOUT")
         enabledPanel = (enabledPanelCheckbox:GetChecked() == 1) and true or false
         raidInfo = {}
+
         for k, v in (addonCache) do
             raidInfo[k] = v
         end

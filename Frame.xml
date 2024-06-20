@@ -38,14 +38,29 @@
             </Layer>
         </Layers>
         <Frames>
-        <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="DC">
+        <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="CHECK">
+                <Size>
+                    <AbsDimension x="50" y="14" />
+                </Size>
+                <Anchors>
+                    <Anchor point="TOPRIGHT" relativePoint="TOPRIGHT">
+                        <Offset>
+                            <AbsDimension x="-114" y="-8" />
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+                <Scripts>
+                    <OnClick>DoReadyCheck()</OnClick>
+                </Scripts>
+            </Button>
+            <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="DC">
                 <Size>
                     <AbsDimension x="30" y="14" />
                 </Size>
                 <Anchors>
                     <Anchor point="TOPRIGHT" relativePoint="TOPRIGHT">
                         <Offset>
-                            <AbsDimension x="-86" y="-8" />
+                            <AbsDimension x="-85" y="-8" />
                         </Offset>
                     </Anchor>
                 </Anchors>
@@ -174,7 +189,7 @@
                             </OnClick>
                         </Scripts>
                     </Button>
-                    <Button name="$parentPullCheckBtn" inherits="RaidAssistButtonTemplate" text="PULL CHECK">
+                    <Button name="$parentPullCheckBtn" inherits="RaidAssistButtonTemplate" text="PULL">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>

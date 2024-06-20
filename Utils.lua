@@ -1,5 +1,6 @@
 local enabledPanel = enabledPanel or {}
-
+local addonCache = {}
+local currentPlayers = {}
 
 function getPlayerInitialState()
     -- local defaultChannel = "SAY"
@@ -17,9 +18,6 @@ function getPlayerInitialState()
     return numberOfPlayers, defaultChannel
 end
 
-local addonCache = {}
-local currentPlayers = {}
-
 function getPlayersInfo()
     -- Restablecer currentPlayers al inicio de la función
     currentPlayers = {}
@@ -29,6 +27,7 @@ function getPlayersInfo()
     if numberOfPlayers == 0 then
         -- Reinicializar estructuras de datos al no estar en grupo
         raidInfo = {}
+        addonCache = {}
         local _, englishClass = UnitClass("player")
         local playerName = UnitName("player")
         addonCache[playerName] = {
@@ -98,29 +97,53 @@ function getPlayersInfo()
 
         updateAllButtons()
     end
-    return addonCache
+    -- return addonCache
+end
+
+function updateAllButtons()
+    updateButtonsForRoleType("PRIMARY")
+    updateButtonsForRoleType("SECONDARY")
+    updateButtonsForRoleType("BUFF")
+    updateButtonsForRoleType("SKILL")
+end
+
+function updateButtonsForRoleType(roleType)
+    local roles = playerRoles[roleType]
+    roleType = string.lower(roleType)
+    for i, roleName in ipairs(roles) do
+        local button = _G[roleType .. "Rol" .. i]
+        if button then
+            local assignedPlayer = getAssignedPlayer(roleName)
+            if assignedPlayer then
+                -- SendSystemMessage(assignedPlayer)
+                local playerData = addonCache[assignedPlayer]
+                if playerData then
+                    local playerClass = string.upper(string.sub(playerData.class, 1, 1)) ..
+                                            string.lower(string.sub(playerData.class, 2))
+                    button:SetText(playerClass .. " " .. assignedPlayer .. "\n" .. roleName)
+                    button:SetAttribute("player", assignedPlayer)
+                end
+            else
+                button:SetText(roleName)
+                button:SetAttribute("player", nil)
+            end
+        end
+    end
 end
 
 function ResetRoleAssignment(roleName, button)
-    local _, channel = getPlayerInitialState()
-    local addonCache = getPlayersInfo()
     local selectedPlayer = button:GetAttribute("player")
     if selectedPlayer then
         if addonCache[selectedPlayer] and addonCache[selectedPlayer].rol then
             addonCache[selectedPlayer].rol[roleName] = nil
-            local playerClass = addonCache[selectedPlayer].class
-            playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
-            SendSystemMessage("Se retiro al " .. playerClass .. " " .. selectedPlayer .. " del rol de [" .. roleName ..
-                                  "]")
-            button:SetText(roleName) -- Restaurar el texto original del button
-            button:SetAttribute("player", nil)
         end
+        button:SetText(roleName) -- Restaurar el texto original del button
+        button:SetAttribute("player", nil)
+        SendSystemMessage("Se retiro a " .. selectedPlayer .. " del rol de [" .. roleName ..
+        "]")
     else
         local hasTarget = UnitExists("target")
         local targetName = UnitName("target")
-
-        local addonCache = getPlayersInfo()
-
         local targetInRaid = addonCache[targetName] and true or false
 
         if hasTarget and targetInRaid then
@@ -133,7 +156,6 @@ function ResetRoleAssignment(roleName, button)
                 button:SetText(playerClass .. " " .. targetName .. "\n" .. roleName) -- Concatenar el nombre del jugador al texto del label
             end
             SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
-            -- reorderRaidMembers()
         else
             local broadcastCommand = "broadcast timer 00:05 NEED " .. roleName
             SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
@@ -142,7 +164,7 @@ function ResetRoleAssignment(roleName, button)
 end
 
 function SendRoleAlert(roleName, button)
-    local numberOfPlayers, channel = getPlayerInitialState()
+    local numberOfPlayers, _ = getPlayerInitialState()
     local addonCache = getPlayersInfo()
     local playerName = button:GetAttribute("player")
 
@@ -183,120 +205,6 @@ function SendRoleAlert(roleName, button)
     SendChatMessage(message, "RAID")
 end
 
-function table.contains(table, element)
-    for _, value in pairs(table) do
-        if value == element then
-            return true
-        end
-    end
-    return false
-end
-
--- Función para verificar si un jugador tiene piezas de equipamiento con temple
-function checkTempleGear(playerName)
-    local hasTempleGear = false
-    local isChecked = false
-
-    local slots = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot",
-                   "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot",
-                   "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
-
-    -- Nombres de los items que indican la presencia de temple
-    local templeItemNames = {"incansable", "colérico", "furioso"}
-
-    if raidInfo[playerName] then
-        -- Lista para almacenar los nombres de los items no permitidos
-        local templeItemsFound = {}
-
-        -- Iterar sobre los slots de equipamiento
-        for _, slot in pairs(slots) do
-            local itemLink = GetInventoryItemLink(playerName, GetInventorySlotInfo(slot))
-            if itemLink then
-                local itemName, _ = GetItemInfo(itemLink)
-                -- Comprobar si el nombre del item contiene palabras clave
-                for _, keyword in ipairs(templeItemNames) do
-                    if string.find(itemName, keyword) then
-                        table.insert(templeItemsFound, itemName)
-                        hasTempleGear = true
-                        break -- Salir del bucle interno, continuar con el siguiente slot
-                    end
-                end
-                isChecked = true
-            elseif not itemLink and not isChecked then
-                SendSystemMessage("El jugador " .. playerName .. " debe estar cerca para ser inspeccionado")
-                SendChatMessage(playerName .. " por favor acercate para inpección.", "WHISPER", nil, playerName)
-                break
-            end
-        end
-
-        -- Si se encontraron items no permitidos, susurrar cada uno de ellos al jugador
-        if hasTempleGear and isChecked then
-            local counter = 0
-            for _, itemName in ipairs(templeItemsFound) do
-                counter = counter + 1
-                SendChatMessage(itemName, "WHISPER", nil, playerName)
-            end
-            SendChatMessage("Tienes (" .. counter .. ") parte" .. (counter <= 1 and "" or "s") .. " PVP", "WHISPER",
-                nil, playerName)
-
-            if GetNumRaidMembers ~= 0 then
-                local numberOfPlayers, _ = getPlayerInitialState()
-                local subgroup7Count = 0
-                local subgroupForPvp = 7 -- Por defecto asignar al grupo 7
-
-                -- Contar el número de jugadores en el grupo 7
-                for i = 1, numberOfPlayers do
-                    local _, _, subgroup = GetRaidRosterInfo(i)
-                    if subgroup == 7 then
-                        subgroup7Count = subgroup7Count + 1
-                    end
-                end
-
-                -- Si el grupo 7 está lleno (5 jugadores), asignar al grupo 8
-                if subgroup7Count >= 5 then
-                    subgroupForPvp = 8
-                end
-
-                -- Asignar el jugador al grupo correspondiente
-                for i = 1, numberOfPlayers do
-                    local unit = "raid" .. i
-                    local unt = UnitName("raid" .. i)
-                    if UnitName(unit) == playerName then
-                        SetRaidSubgroup(i, subgroupForPvp)
-                    end
-                end
-            end
-
-            -- Mostrar un popup
-            local confirm = StaticPopup_Show("CONFIRM_TEMPLE_GEAR", playerName)
-            if confirm then
-                confirm.data = playerName -- Pasar el nombre del jugador al popup
-            end
-        elseif isChecked and not hasTempleGear then
-            SendChatMessage("Sin piezas PVP", "WHISPER", nil, playerName)
-            SendChatMessage("Muchas gracias " .. playerName, "WHISPER", nil, playerName)
-        end
-    else
-        SendSystemMessage("El jugador " .. playerName .. " no esta en la raid para ser inspeccionado")
-    end
-end
-
--- Crear el popup de confirmación
-StaticPopupDialogs["CONFIRM_TEMPLE_GEAR"] = {
-    text = "El jugador %s tiene piezas de equipamiento con temple. ¿Deseas expulsarlo de la raid?",
-    button1 = "Sí",
-    button2 = "No",
-    OnAccept = function(self, playerName)
-        -- Expulsar al jugador de la raid
-        SendChatMessage("Te agradezco, en una próxima oportunidad te espero full PVE.", "WHISPER", nil, playerName)
-        UninviteUnit(playerName)
-    end,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3
-}
-
 -- Función para obtener una lista de roles asignados de un jugador
 function getPlayerRoles(playerRoles)
     local roles = {}
@@ -306,41 +214,10 @@ function getPlayerRoles(playerRoles)
     return roles
 end
 
-function updateAllButtons()
-    updateButtonsForRoleType("PRIMARIO")
-    updateButtonsForRoleType("SECUNDARIO")
-    updateButtonsForRoleType("BUFF")
-    updateButtonsForRoleType("SKILL")
-end
-
 function getAssignedPlayer(roleName)
     for playerName, playerData in pairs(addonCache) do
         if playerData.rol and playerData.rol[roleName] then
             return playerName
-        end
-    end
-end
-
-function updateButtonsForRoleType(roleType)
-    local roles = playerRoles[roleType]
-    roleType = string.lower(roleType)
-    for i, roleName in ipairs(roles) do
-        local button = _G[roleType .. "Rol" .. i]
-        if button then
-            local assignedPlayer = getAssignedPlayer(roleName)
-            if assignedPlayer then
-                -- SendSystemMessage(assignedPlayer)
-                local playerData = addonCache[assignedPlayer]
-                if playerData then
-                    local playerClass = string.upper(string.sub(playerData.class, 1, 1)) ..
-                                            string.lower(string.sub(playerData.class, 2))
-                    button:SetText(playerClass .. " " .. assignedPlayer .. "\n" .. roleName)
-                    button:SetAttribute("player", assignedPlayer)
-                end
-            else
-                button:SetText(roleName)
-                button:SetAttribute("player", nil)
-            end
         end
     end
 end
@@ -467,8 +344,15 @@ function RequestBuffs()
         ["BUFF"] = {}
     }
 
+    local alert = false
+    local usedIcons = {} -- Seguimiento de íconos ya utilizados
+    local roleIcons = {} -- Asignación de íconos para cada rol
+
+    local availableIcons = {2, 3, 4, 5, 6, 7, 8} -- Lista de íconos disponibles (7 íconos únicos)
+    local iconIndex = 1 -- Índice para recorrer los íconos disponibles
+
     -- Recoger a los miembros de la raid y sus roles de raidInfo
-    for playerName, playerData in pairs(raidInfo) do
+    for playerName, playerData in pairs(addonCache) do
         local playerClass = playerData.class
         local roles = playerData.rol or {"DPS"} -- Obtener los roles del jugador
         if playerClass then
@@ -482,13 +366,11 @@ function RequestBuffs()
 
             -- Concatenar los roles asignados a un solo jugador
             if #playerRoles > 0 then
+                alert = true
                 local rolesString
                 if #playerRoles == 1 then
                     rolesString = playerRoles[1]
-                elseif #playerRoles >= 2 and playerClass == "Paladin" then
-                    rolesString = table.concat(playerRoles, ", ", 1, #playerRoles - 1) .. " o " ..
-                                      playerRoles[#playerRoles]
-                else -- si no es paladin solo debe concatenar con comas y "y" para el ultimo
+                else -- si no es paladin solo debe concatenar con comas y "y" para el último
                     rolesString = table.concat(playerRoles, ", ", 1, #playerRoles - 1) .. " y " ..
                                       playerRoles[#playerRoles]
                 end
@@ -496,13 +378,23 @@ function RequestBuffs()
                 -- Convertir la tabla de roles a una cadena para usar find
                 local rolesStr = table.concat(playerRoles, ",")
 
-                -- Añadir "SEGUN SE REQUIERA" si hay más de un rol
-                if #playerRoles > 1 and playerClass == "Paladin" then
-                    rolesString = rolesString .. " SEGUN CLASE"
+                -- Añadir "SEGÚN SE REQUIERA" si hay más de un rol
+                if playerClass == "Paladin" then
+                    rolesString = rolesString .. " SEGÚN REQUIERA CADA CLASE"
                 end
 
-                -- Seleccionar aleatoriamente el ícono
-                local icon = math.random(2, 8)
+                -- Asignar íconos únicos a roles
+                local icon = nil
+                for _, role in ipairs(playerRoles) do
+                    if not roleIcons[role] then
+                        -- Asignar un ícono único al rol si no tiene uno
+                        if iconIndex <= #availableIcons then
+                            roleIcons[role] = availableIcons[iconIndex]
+                            iconIndex = iconIndex + 1
+                        end
+                    end
+                    icon = roleIcons[role]
+                end
 
                 -- Asignar el ícono como marcador de objetivo para el jugador
                 if rolesStr:find("MAIN TANK") or rolesStr:find("OFF TANK") or rolesStr:find("HEALER") then
@@ -517,21 +409,17 @@ function RequestBuffs()
         end
     end
 
-    local _, channel = getPlayerInitialState()
     SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
-
-    SendChatMessage("Susurro asignaciones de roles y buffs", "RAID_WARNING")
+    if alert then
+        SendChatMessage("Susurro asignaciones de roles y buffs", "RAID_WARNING")
+    end
 
     -- Enviar susurros a cada jugador
     for _, playerInfo in ipairs(raidMembers["BUFF"]) do
         local playerName = playerInfo[1]
         local message = playerInfo[2]
-        SendChatMessage(message .. " -- Mensaje de RaidDominion", "WHISPER", nil, playerName)
+        SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
     end
-
-    -- Mostrar el diálogo de confirmación para el Ready Check
-    -- StaticPopup_Show("CONFIRM_READY_CHECK")
-
 end
 
 function GetDistanceBetweenUnits(unit1, unit2)
@@ -623,17 +511,18 @@ StaticPopupDialogs["BLACKLIST_POPUP"] = {
 
 function AlertFarPlayers(AFKTimer)
     local hasTarget = UnitExists("target")
-    local _, channel = getPlayerInitialState()
     local targetName = UnitName("target")
-    local targetInRaid = raidInfo[targetName] and true or false
+    local targetInRaid = addonCache[targetName] and true or false
+    local broadcastCommand = "broadcast timer 00:20"
     -- Si hay jugador seleccionado envia una alerta con su nombre
     if hasTarget and not AFKTimer then
-        SendChatMessage(targetName, channel)
+        SendChatMessage(targetName, "RAID_WARNING")
     elseif not AFKTimer then
         local playerNames = "" -- Inicializar la cadena para nombres
         local numberOfPlayers = GetNumRaidMembers() ~= 0 and GetNumRaidMembers() or GetNumPartyMembers()
         local groupType = GetNumRaidMembers() ~= 0 and "raid" or "party"
         local AFKPlayerNum = 0
+
         for i = 1, numberOfPlayers do
             local unit = groupType .. i
             if not CheckDistance(unit) then
@@ -650,11 +539,15 @@ function AlertFarPlayers(AFKTimer)
                 end
             end
         end
+        broadcastCommand = broadcastCommand .. " REVISO AFK/OFFs"
+        SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
 
         SendSystemMessage("Jugadores AFK/OFF o demasiado lejos: " .. AFKPlayerNum)
         SendSystemMessage(playerNames)
     end
     if AFKTimer and hasTarget then
+        broadcastCommand = broadcastCommand .. " KICK " .. targetName
+        SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
         StaticPopup_Show("BLACKLIST_POPUP", nil, nil, {
             targetName = targetName
         })
@@ -843,24 +736,28 @@ end
 function ShareDC()
     local discordInput = _G["DiscordLinkInput"]
     local discordLink = discordInput:GetText()
+    local broadcastCommand = "broadcast timer 00:30"
 
     if discordLink == "" then
         -- Activar la pestaña de opciones y enfocar el input de Discord
         local panel = _G["RaidDominionPanel"]
-        if not panel then return end
+        if not panel then
+            return
+        end
 
         PanelTemplates_SetTab(panel, 2)
         _G["RaidDominionRoleTab"]:Hide()
         _G["RaidDominionAboutTab"]:Hide()
         _G["RaidDominionOptionsTab"]:Show()
-        
+        broadcastCommand = broadcastCommand .. " PREPARANDO DC"
         discordInput:SetFocus()
     else
-    SendSystemMessage(discordLink)
-    -- Alertar a la banda con el enlace de Discord
+        -- Alertar a la banda con el enlace de Discord
+        broadcastCommand = broadcastCommand .. " CONECTEN DC"
         local message = "Enlace de Discord: " .. discordLink
         SendChatMessage(message, "RAID_WARNING")
     end
+    SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
 end
 
 function CreateRaidDominionOptionsTabContent(parent)
@@ -908,6 +805,119 @@ function CreateRaidDominionOptionsTabContent(parent)
     enabledPanelCheckbox:SetScript("OnClick", function(self)
         enabledPanel = (self:GetChecked() == 1) and true or false
     end)
- return enabledPanel
+    return enabledPanel
 end
 
+function table.contains(table, element)
+    for _, value in pairs(table) do
+        if value == element then
+            return true
+        end
+    end
+    return false
+end
+
+-- Función para verificar si un jugador tiene piezas de equipamiento con temple
+function checkTempleGear(playerName)
+    local hasTempleGear = false
+    local isChecked = false
+
+    local slots = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot",
+                   "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot",
+                   "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
+
+    -- Nombres de los items que indican la presencia de temple
+    local templeItemNames = {"incansable", "colérico", "furioso"}
+
+    if raidInfo[playerName] then
+        -- Lista para almacenar los nombres de los items no permitidos
+        local templeItemsFound = {}
+
+        -- Iterar sobre los slots de equipamiento
+        for _, slot in pairs(slots) do
+            local itemLink = GetInventoryItemLink(playerName, GetInventorySlotInfo(slot))
+            if itemLink then
+                local itemName, _ = GetItemInfo(itemLink)
+                -- Comprobar si el nombre del item contiene palabras clave
+                for _, keyword in ipairs(templeItemNames) do
+                    if string.find(itemName, keyword) then
+                        table.insert(templeItemsFound, itemName)
+                        hasTempleGear = true
+                        break -- Salir del bucle interno, continuar con el siguiente slot
+                    end
+                end
+                isChecked = true
+            elseif not itemLink and not isChecked then
+                SendSystemMessage("El jugador " .. playerName .. " debe estar cerca para ser inspeccionado")
+                SendChatMessage(playerName .. " por favor acercate para inpección.", "WHISPER", nil, playerName)
+                break
+            end
+        end
+
+        -- Si se encontraron items no permitidos, susurrar cada uno de ellos al jugador
+        if hasTempleGear and isChecked then
+            local counter = 0
+            for _, itemName in ipairs(templeItemsFound) do
+                counter = counter + 1
+                SendChatMessage(itemName, "WHISPER", nil, playerName)
+            end
+            SendChatMessage("Tienes (" .. counter .. ") parte" .. (counter <= 1 and "" or "s") .. " PVP", "WHISPER",
+                nil, playerName)
+
+            if GetNumRaidMembers ~= 0 then
+                local numberOfPlayers, _ = getPlayerInitialState()
+                local subgroup7Count = 0
+                local subgroupForPvp = 7 -- Por defecto asignar al grupo 7
+
+                -- Contar el número de jugadores en el grupo 7
+                for i = 1, numberOfPlayers do
+                    local _, _, subgroup = GetRaidRosterInfo(i)
+                    if subgroup == 7 then
+                        subgroup7Count = subgroup7Count + 1
+                    end
+                end
+
+                -- Si el grupo 7 está lleno (5 jugadores), asignar al grupo 8
+                if subgroup7Count >= 5 then
+                    subgroupForPvp = 8
+                end
+
+                -- Asignar el jugador al grupo correspondiente
+                for i = 1, numberOfPlayers do
+                    local unit = "raid" .. i
+                    local unt = UnitName("raid" .. i)
+                    if UnitName(unit) == playerName then
+                        SetRaidSubgroup(i, subgroupForPvp)
+                    end
+                end
+            end
+
+            -- Mostrar un popup
+            local confirm = StaticPopup_Show("CONFIRM_TEMPLE_GEAR", playerName)
+            if confirm then
+                confirm.data = playerName -- Pasar el nombre del jugador al popup
+            end
+        elseif isChecked and not hasTempleGear then
+            SendChatMessage("Sin piezas PVP", "WHISPER", nil, playerName)
+            SendChatMessage("Muchas gracias " .. playerName, "WHISPER", nil, playerName)
+        end
+    else
+        SendSystemMessage("El jugador " .. playerName .. " no esta en la raid para ser inspeccionado")
+    end
+end
+
+-- Crear el popup de confirmación
+StaticPopupDialogs["CONFIRM_TEMPLE_GEAR"] = {
+    text = "El jugador %s tiene piezas de equipamiento con temple. ¿Deseas expulsarlo de la raid?",
+    button1 = "Sí",
+    button2 = "No",
+    OnAccept = function(self, playerName)
+        -- Expulsar al jugador de la raid
+        SendChatMessage("Te agradezco, en una próxima oportunidad te espero full PVE.", "WHISPER", nil, playerName)
+        UninviteUnit(playerName)
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3
+}

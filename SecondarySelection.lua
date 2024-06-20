@@ -17,7 +17,7 @@ function secondarySelection()
     local columnWidth = 190
     local numColumns = 2
 
-    local roles = playerRoles["SECUNDARIO"]
+    local roles = playerRoles["SECONDARY"]
     local numRoles = #roles
     local numRows = math.ceil(numRoles / numColumns)
 
@@ -26,21 +26,21 @@ function secondarySelection()
         local column = (i - 1) % numColumns
 
         local button = CreateFrame("Button", "secondaryRol" .. i, content, "RaidAssistButtonTemplate")
-        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth+3), yOffset - row * (rowHeight + 1))
+        button:SetPoint("TOPLEFT", xOffset + column * (columnWidth + 3), yOffset - row * (rowHeight + 1))
         button:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
         button:SetSize(163, rowHeight)
         button:SetText(roleName)
 
-        -- Comprueba si el rol está asignado a un jugador en raidInfo
-        local assignedPlayer = getAssignedPlayer(roleName) -- Debes implementar esta función
+        -- Comprueba si el rol está asignado a un jugador en addonCache
+        local assignedPlayer = getAssignedPlayer(roleName)
 
         if assignedPlayer then
             button:SetText(assignedPlayer .. "\n" .. roleName) -- Actualiza el texto del botón con el nombre del jugador y el rol
             button:SetAttribute("player", assignedPlayer) -- Establece la propiedad 'player' del botón con el nombre del jugador
         end
-
-        button:SetScript("OnClick", function(self, mouseButton)
-            SendRoleAlert(roleName, self)
+        
+        button:SetScript("OnClick", function(self)
+                SendRoleAlert(roleName, self)
         end)
 
         local resetButton = CreateFrame("Button", nil, content, "RaidAssistButtonTemplate")

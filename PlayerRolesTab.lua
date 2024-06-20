@@ -135,7 +135,7 @@ function PlayerRolesTabContainerInit()
     end
 
     function SwitchTab(tabName)
-        if tabName == "PRIMARIO" then
+        if tabName == "PRIMARY" then
             -- Función para cambiar a la pestaña de roles principales
             primarySelectionContainer()
         elseif tabName == "BUFF" then
@@ -150,7 +150,7 @@ function PlayerRolesTabContainerInit()
             -- Función para cambiar a la pestaña de roles de habilidades
             extraSelectionContainer()
             -- Agrega el código aquí para cambiar a la pestaña de EXTRA
-        elseif tabName == "SECUNDARIO" then
+        elseif tabName == "SECONDARY" then
             secondarySelectionContainer()
             -- Función para cambiar a la pestaña de roles secundarios
             -- Agrega el código aquí para cambiar a la pestaña de 
@@ -199,7 +199,7 @@ function PlayerRolesTabContainerInit()
 
     -- Inicializar la primera pestaña como seleccionada
     if #tabs > 0 then
-        SelectTab(tabs[5]:GetText())
+        SelectTab(tabs[1]:GetText())
     end
 
     -- skillSelectionContainer()
