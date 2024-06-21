@@ -12,7 +12,7 @@ local function OnEvent(self, event, arg1)
 
         -- print("PLAYER_LOGIN")
         if not enabledPanel then
-            print("Puedes usar /rdom para mostrar el panel de RaidDominion")
+            print("Puedes usar /rdom para mostrar el panel de RaidDominion Tools")
         end
         if enabledPanel then
             RaidDominionPanel:Show()
@@ -36,7 +36,6 @@ local function OnEvent(self, event, arg1)
     elseif event == "PLAYER_LOGOUT" then
         -- print("PLAYER_LOGOUT")
         enabledPanel = (enabledPanelCheckbox:GetChecked() == 1) and true or false
-        raidInfo = {}
 
         for k, v in (addonCache) do
             raidInfo[k] = v

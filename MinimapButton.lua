@@ -16,30 +16,25 @@ local function MyMiniMapButton_OnMouseDown(self, button)
         local function OnMenuOptionClicked(self)
             local option = self:GetID() -- Obtener el ID de la opción seleccionada
             if option == 1 then
-                setRaidButton:GetScript("OnClick")(setRaidButton)
+                RaidDominionRoleTabRaidModeBtn:GetScript("OnClick")(RaidDominionRoleTabRaidModeBtn)
             elseif option == 2 then
-                alertPlayersBtn:GetScript("OnClick")(alertPlayersBtn)
+                RaidDominionRoleTabAlertFarPlayerBtn:GetScript("OnClick")(RaidDominionRoleTabAlertFarPlayerBtn)
             elseif option == 3 then
-                reqBuffsBtn:GetScript("OnClick")(reqBuffsBtn)
+                RaidDominionRoleTabBuffRequestBtn:GetScript("OnClick")(RaidDominionRoleTabBuffRequestBtn)
             elseif option == 4 then
-                wpLootBtn:GetScript("OnClick")(wpLootBtn)
-            elseif option == 5 then
                 ReloadUI()
             end
         end
 
         -- Crear las opciones del menú
         local menuList = {{
-            text = "Crear raid o hacer check",
+            text = "Crear raid",
             func = OnMenuOptionClicked
         }, {
             text = "Revisar AFK/OFFs",
             func = OnMenuOptionClicked
         }, {
             text = "Indicar BUFFs asignados",
-            func = OnMenuOptionClicked
-        }, {
-            text = "Agradecer y lotear",
             func = OnMenuOptionClicked
         }, {
             text = "Recargar UI",

@@ -1,5 +1,5 @@
-local enabledPanel = enabledPanel or {}
 local addonCache = {}
+local enabledPanel = enabledPanel or {}
 local currentPlayers = {}
 
 function getPlayerInitialState()
@@ -71,9 +71,13 @@ function getPlayersInfo()
         -- Limpiar raidInfo y addonCache de jugadores que ya no están en el grupo
         for playerName, playerData in pairs(addonCache) do
             -- Revisa la recientemente asignada addonCache y la coteja con currentPlayers
-            if not currentPlayers[playerName] or playerName == "Entidad desconocida" then
-                SendSystemMessage(playerName .. " se fue del grupo. Roles liberados: " ..
-                                      table.concat(getPlayerRoles(playerData.rol), ", "))
+            if not currentPlayers[playerName] then
+                if playerName == "Entidad desconocida" then
+                    --
+                else
+                    SendSystemMessage(playerName .. " se fue del grupo. Roles liberados: " ..
+                                          table.concat(getPlayerRoles(playerData.rol), ", "))
+                end
                 -- Eliminar el elemento
                 raidInfo[playerName] = nil
                 addonCache[playerName] = nil
@@ -97,7 +101,7 @@ function getPlayersInfo()
 
         updateAllButtons()
     end
-    -- return addonCache
+    return addonCache
 end
 
 function updateAllButtons()
@@ -139,8 +143,7 @@ function ResetRoleAssignment(roleName, button)
         end
         button:SetText(roleName) -- Restaurar el texto original del button
         button:SetAttribute("player", nil)
-        SendSystemMessage("Se retiro a " .. selectedPlayer .. " del rol de [" .. roleName ..
-        "]")
+        SendSystemMessage("Se retiro a " .. selectedPlayer .. " del rol de [" .. roleName .. "]")
     else
         local hasTarget = UnitExists("target")
         local targetName = UnitName("target")
@@ -186,14 +189,12 @@ function SendRoleAlert(roleName, button)
         end
 
         -- Si se encuentra la unidad, comprobar si está muerto o vivo
-        local playerClass = addonCache[playerName].class
-        playerClass = string.upper(string.sub(playerClass, 1, 1)) .. string.lower(string.sub(playerClass, 2))
         if unitIndex then
             local unitFull = unit .. unitIndex
             if UnitIsDeadOrGhost(unitFull) then
                 message = "REVIVIR A [" .. playerName .. "] ASAP!"
             else
-                message = playerClass .. " " .. playerName .. "[" .. roleName .. "]"
+                message = playerName .. " [" .. roleName .. "]"
             end
         else
             message = "NEED " .. " [" .. roleName .. "]"
@@ -344,13 +345,13 @@ function RequestBuffs()
         ["BUFF"] = {}
     }
 
-    local alert = false
     local usedIcons = {} -- Seguimiento de íconos ya utilizados
     local roleIcons = {} -- Asignación de íconos para cada rol
 
     local availableIcons = {2, 3, 4, 5, 6, 7, 8} -- Lista de íconos disponibles (7 íconos únicos)
     local iconIndex = 1 -- Índice para recorrer los íconos disponibles
-
+    local addonCache = getPlayersInfo()
+    local alertBuffRequest = false
     -- Recoger a los miembros de la raid y sus roles de raidInfo
     for playerName, playerData in pairs(addonCache) do
         local playerClass = playerData.class
@@ -366,7 +367,7 @@ function RequestBuffs()
 
             -- Concatenar los roles asignados a un solo jugador
             if #playerRoles > 0 then
-                alert = true
+                alertBuffRequest = true
                 local rolesString
                 if #playerRoles == 1 then
                     rolesString = playerRoles[1]
@@ -379,7 +380,7 @@ function RequestBuffs()
                 local rolesStr = table.concat(playerRoles, ",")
 
                 -- Añadir "SEGÚN SE REQUIERA" si hay más de un rol
-                if playerClass == "Paladin" then
+                if playerClass == "Paladin" or rolesStr:find("PODERIO Y REYES") or rolesStr:find("SABIDURIA Y REYES") then
                     rolesString = rolesString .. " SEGÚN REQUIERA CADA CLASE"
                 end
 
@@ -402,16 +403,10 @@ function RequestBuffs()
                 end
 
                 -- Añadir al mensaje del jugador con ícono y roles
-                table.insert(raidMembers["BUFF"], {playerName,
-                                                   "{rt" .. icon .. "}" .. " " .. playerClass .. " " .. playerName ..
-                    " [" .. rolesString .. "]"})
+                table.insert(raidMembers["BUFF"],
+                    {playerName, "{rt" .. icon .. "}" .. " " .. playerName .. " [" .. rolesString .. "]"})
             end
         end
-    end
-
-    SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
-    if alert then
-        SendChatMessage("Susurro asignaciones de roles y buffs", "RAID_WARNING")
     end
 
     -- Enviar susurros a cada jugador
@@ -420,6 +415,10 @@ function RequestBuffs()
         local message = playerInfo[2]
         SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
     end
+    if alertBuffRequest then
+        SendChatMessage("Susurro asignacion de roles", "RAID_WARNING")
+    end
+    SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
 end
 
 function GetDistanceBetweenUnits(unit1, unit2)
@@ -758,54 +757,6 @@ function ShareDC()
         SendChatMessage(message, "RAID_WARNING")
     end
     SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
-end
-
-function CreateRaidDominionOptionsTabContent(parent)
-    local contentScrollFrame = CreateFrame("ScrollFrame", "OptionsTab_ContentScrollFrame", parent,
-        "UIPanelScrollFrameTemplate")
-    contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
-    contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
-
-    local content = CreateFrame("Frame", nil, contentScrollFrame)
-    content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
-    contentScrollFrame:SetScrollChild(content)
-
-    local instructions = {{"GameFontHighlightSmall", "DISCORD", 20}, {"GameFontNormal", "ENLACE:", 20},
-                          {"GameFontHighlightSmall", "Mostrar panel al cargar", 20}}
-
-    local currentYOffset = -5 -- Posición vertical inicial
-
-    for _, instruction in ipairs(instructions) do
-        local fontString = content:CreateFontString(nil, "ARTWORK", instruction[1])
-        fontString:SetText(instruction[2])
-        fontString:SetPoint("TOPLEFT", content, "TOPLEFT", instruction[3], currentYOffset)
-
-        if instruction[4] then
-            fontString:SetJustifyH("LEFT")
-            fontString:SetWidth(instruction[4])
-        end
-
-        local _, fontHeight = fontString:GetFont()
-        local numExtraLines = math.ceil(#instruction[2] / 70)
-        currentYOffset = currentYOffset - fontHeight * (numExtraLines + 1) - 5 -- Actualiza la posición vertical para la siguiente línea
-    end
-
-    discordInput = CreateFrame("EditBox", "DiscordLinkInput", content, "InputBoxTemplate")
-    discordInput:SetPoint("TOPLEFT", 80, -26) -- Ajusta la posición según sea necesario
-    discordInput:SetSize(250, 20)
-    discordInput:SetAutoFocus(false)
-    discordInput:SetFontObject("ChatFontNormal")
-    discordInput:SetText("")
-
-    enabledPanelCheckbox = CreateFrame("CheckButton", nil, DiscordLinkInput, "UICheckButtonTemplate")
-    enabledPanelCheckbox:SetPoint("TOPLEFT", 60, -30)
-
-    enabledPanelCheckbox:SetSize(20, 20)
-    enabledPanelCheckbox:SetChecked(enabledPanel)
-    enabledPanelCheckbox:SetScript("OnClick", function(self)
-        enabledPanel = (self:GetChecked() == 1) and true or false
-    end)
-    return enabledPanel
 end
 
 function table.contains(table, element)

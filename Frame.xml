@@ -23,7 +23,6 @@
                 <AbsValue val="32"/>
             </EdgeSize>
         </Backdrop>
-        <!-- /dbm broadcast timer 1:00 Busando en posada... -->
         <Layers>
             <Layer level="ARTWORK">
                 <FontString inherits="GameFontHighlightSmall" name="$parentTitle" text="RaidDominion Tools">
@@ -38,7 +37,7 @@
             </Layer>
         </Layers>
         <Frames>
-        <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="CHECK">
+            <Button name="$parentReloadBtn" inherits="RaidAssistButtonTemplate" text="CHECK">
                 <Size>
                     <AbsDimension x="50" y="14" />
                 </Size>
@@ -129,7 +128,7 @@
                             </OnClick>
                         </Scripts>
                     </Button>
-                    <Button name="$parentTurnRaidCheckBtn" inherits="RaidAssistButtonTemplate" text="LEJANOS">
+                    <Button name="$parentAlertFarPlayerBtn" inherits="RaidAssistButtonTemplate" text="LEJANOS">
                         <Size>
                             <AbsDimension x="65" y="20" />
                         </Size>

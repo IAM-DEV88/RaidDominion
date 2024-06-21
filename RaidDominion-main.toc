@@ -3,6 +3,7 @@
 ## Version: 1.0.0
 ## Author: Ioan Andres Muñoz Martinez - https://lambent-sundae-83e53b.netlify.app/
 ## SavedVariables: enabledPanel, raidInfo
+## DefaultState: enabled
 
 Utils.lua
 RaidDominion.lua
@@ -16,8 +17,8 @@ SecondarySelection.lua
 BuffSelection.lua
 SkillSelection.lua
 ExtraSelection.lua
+About.lua
+MinimapButton.lua
 Templates.xml
 Frame.xml
-MinimapButton.lua
-About.lua
 Wow.lua
