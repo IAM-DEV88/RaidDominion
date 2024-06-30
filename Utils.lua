@@ -352,13 +352,35 @@ function RequestBuffs()
     local raidMembers = {
         ["BUFF"] = {}
     }
+    local numberOfPlayers, _ = getPlayerInitialState()
 
-    local usedIcons = {} -- Seguimiento de íconos ya utilizados
     local roleIcons = {} -- Asignación de íconos para cada rol
 
     local availableIcons = {2, 3, 4, 5, 6, 7, 8} -- Lista de íconos disponibles (7 íconos únicos)
     local iconIndex = 1 -- Índice para recorrer los íconos disponibles
     local addonCache = getPlayersInfo()
+
+    -- Función auxiliar para encontrar la unidad de raid
+    local function GetRaidUnitByName(name)
+        for i = 1, numberOfPlayers do
+            local unit = "raid" .. i
+            if UnitName(unit) == name then
+                return unit
+            end
+        end
+        return nil
+    end
+
+    -- Función para verificar si un jugador debe recibir un ícono
+    local function ShouldAssignIcon(rolesStr)
+        local iconRoles = {"MAIN TANK", "HEALER 1", "OFF TANK", "HEALER 2", "HEALER 3", "HEALER 4", "HEALER 5"}
+        for _, role in ipairs(iconRoles) do
+            if rolesStr:find(role) then
+                return true
+            end
+        end
+        return false
+    end
 
     -- Recoger a los miembros de la raid y sus roles de raidInfo
     for playerName, playerData in pairs(addonCache) do
@@ -388,61 +410,47 @@ function RequestBuffs()
 
                 -- Añadir "SEGÚN SE REQUIERA" si hay más de un rol
                 if rolesStr:find("PODERIO Y REYES") or rolesStr:find("SABIDURIA Y REYES") then
-                    rolesString = rolesString .. " SEGÚN REQUIERA CADA CLASE"
+                    rolesString = "SEGÚN REQUIERA CADA CLASE " .. rolesString
                 end
 
-                -- Asignar íconos únicos a roles
+                -- Asignar íconos únicos a roles específicos
                 local icon = nil
-                for _, role in ipairs(playerRoles) do
-                    if not roleIcons[role] and iconIndex <= #availableIcons then
-                        roleIcons[role] = availableIcons[iconIndex]
-                        iconIndex = iconIndex + 1
-                    end
-                    if roleIcons[role] and not icon then
-                        icon = roleIcons[role]
-                    end
-                end
-
-                -- Si no se asignó un ícono, usar el siguiente disponible
-                if not icon and iconIndex <= #availableIcons then
+                if ShouldAssignIcon(rolesStr) and iconIndex <= #availableIcons then
                     icon = availableIcons[iconIndex]
                     iconIndex = iconIndex + 1
                 end
 
-                -- Asignar el ícono como marcador de objetivo para el jugador
-                if rolesStr:find("MAIN TANK") or rolesStr:find("OFF TANK") or rolesStr:find("HEALER") then
-                    if playerName then
-                        SetRaidTarget(playerName, icon)
+                -- Asignar el ícono como marcador de objetivo para el jugador si corresponde
+                if icon then
+                    local raidUnit = GetRaidUnitByName(playerName)
+                    if raidUnit and UnitExists(raidUnit) and not UnitIsDeadOrGhost(raidUnit) then
+                        SetRaidTarget(raidUnit, icon)
+                    else
+                        -- Si el jugador está offline o muerto, no asignamos el ícono
+                        icon = nil
                     end
                 end
 
                 -- Añadir al mensaje del jugador con ícono y roles
+                local message
                 if icon then
-                    table.insert(raidMembers["BUFF"],
-                        {playerName, "{rt" .. icon .. "}" .. " " .. playerName .. " [" .. rolesString .. "]"})
+                    message = "{rt" .. icon .. "}" .. " " .. playerName .. " [" .. rolesString .. "]"
                 else
-                    table.insert(raidMembers["BUFF"],
-                        {playerName, playerName .. " [" .. rolesString .. "]"})
+                    message = playerName .. " [" .. rolesString .. "]"
                 end
+                table.insert(raidMembers["BUFF"], {playerName, message})
             end
         end
     end
 
-    -- Enviar susurros a cada jugador
+    -- Enviar los mensajes como susurros
     for _, playerInfo in ipairs(raidMembers["BUFF"]) do
-        if playerInfo[1] then
-            local playerName = playerInfo[1]
-            local message = playerInfo[2]
-            if playerName then
-                SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
-            end
-        else
-            SendSystemMessage("Error: playerInfo[1] is nil")
-        end
+        local playerName = playerInfo[1]
+        local message = playerInfo[2]
+        SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
     end
-    if IsRaidLeader() then
-        SendChatMessage("Susurro asignacion de roles", "RAID_WARNING")
-    end
+
+    -- Iniciar el temporizador de DBM
     SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
 end
 
