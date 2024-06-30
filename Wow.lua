@@ -17,13 +17,13 @@ rulesAndMechanics = {
             ["SHARED"] = {"El jugador que se quede AFK/OFF por mucho tiempo sin avisar, no siga mecanincas o tenga DPS debajo del Tanque se queda sin loteo y puede ser expulsado de la raid."}
         }
     },
-    ["PRE-ICC 25 ARMADO"] = {
+    ["PRE-ARMADO ICC 25"] = {
         ["RULES"] = {
             ["SHARED"] = {"DBM Y DC son OBLIGATORIOS // DC al llenar raid // Reglas frente Tuetano",
                           "Inspección del Grupo 6 en Zona de Vuelo, Dalaran"}
         }
     },
-    ["PRE-ICC 10 ARMADO"] = {
+    ["PRE-ARMADO ICC 10"] = {
         ["RULES"] = {
             ["SHARED"] = {"DBM Y DC son OBLIGATORIOS // DC al llenar raid",
                           "Inspección del Grupo 3 en Zona de Vuelo, Dalaran"}
@@ -31,7 +31,7 @@ rulesAndMechanics = {
     },
     ["BUEN JUEGO Y BUENA VIBRA"] = {
         ["RULES"] = {
-            ["SHARED"] = {"Gracias a todos por asistir. Concentremonos en realizar BUENAS MECANICAS, mantener SIEMPRE BUFFEADO al grupo y estar atentos para AVANZAR RAPIDO y seguros. Portales listos siempre que sean necesarios. Que esta sea una excelente raid."}
+            ["SHARED"] = {"Concentremonos en realizar BUENAS MECANICAS, mantener SIEMPRE BUFFEADO al grupo y estar atentos para AVANZAR RAPIDO y seguros. Portales listos siempre que sean necesarios. Que esta sea una excelente raid."}
         }
     },
     ["BLACKLISTED"] = {
@@ -121,9 +121,16 @@ rulesAndMechanics = {
                               "Ir destruyendo Tumbas de Hielo lentamente sincronizados hasta el ultimo disparo de sindra",
                               "Segunda fase marcados por Tumba de Hielo intercalan posicion a un metro frente a escaleras, primero Izquierda luego centro",
                               "Resto del grupo se limpia tras tumba y destruye rapidamente antes de continuar con sindra"},
-            ["LICK KING"] = {"MAIN TANK LK // OFF HORRORES",
-                             "HEALERS: Toda la banda debe estar sobre el 90% de salud para evitar Infestar",
-                             "LK castea Invierno sin remordimientos. Para evitar el daño masivo, todos deben permanecer en el anillo exterior de la plataforma."}
+            ["LICK KING"] = {"MAIN TANK LK // OFF HORRORES cerca al MAIN ambos de espaldas al grupo",
+                             "HEALERS: Banda al 90% de salud siempre para evitar cada Infestar",
+                             "Atacar HORRORES solo luego del taunt del OFF hasta el 15%. Luego focus LK.",
+                             "Durante cada INVIERNO salimos al anillo exterior, OFF tauntea cada ESPIRITU. Destruimos ESPIRITUS y regresamos a capa de LK",
+                             "Alejarse 5s antes de cada PROFANAR lejos del centro. Marcado por PROFANAR se aleja sin saltar. Todos regresan detras de capa LK.",
+                             "Destruir VALKIRS en cada spawn. Marcado lleva PROFANAR direccion lejos de VALKYRS y LK",
+                             "Paladines se turnan ESCUDO DIVINO y limpian cada oleada de FANTASMAS",
+
+
+                            }
 
         }
     }

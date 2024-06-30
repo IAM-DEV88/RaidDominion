@@ -1,5 +1,12 @@
+-- local addonName = "RaidDominion"
+
+local addonName, addon = ...
+local _G = _G
+_G["RaidDominion"] = addon
+
 local addonCache = {}
-local enabledPanel = enabledPanel or {}
+enabledPanel = enabledPanel or {}
+
 local currentPlayers = {}
 
 function getPlayerInitialState()
@@ -158,6 +165,7 @@ function ResetRoleAssignment(roleName, button)
                 button:SetAttribute("player", targetName)
                 button:SetText(playerClass .. " " .. targetName .. "\n" .. roleName) -- Concatenar el nombre del jugador al texto del label
             end
+            reorderRaidMember(targetName)
             SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
         else
             local broadcastCommand = "broadcast timer 00:05 NEED " .. roleName
@@ -264,7 +272,7 @@ function SendDelayedMessages(messages, wispHowTo)
         if self.delay <= 0 then
             if index <= #messages then
                 if wispHowTo then
-                    SendSystemMessage(messages[index])
+                    SendChatMessage(messages[index], "RAID_WARNING")
                 else
                     SendSplitMessage(messages[index])
                 end
@@ -351,7 +359,7 @@ function RequestBuffs()
     local availableIcons = {2, 3, 4, 5, 6, 7, 8} -- Lista de íconos disponibles (7 íconos únicos)
     local iconIndex = 1 -- Índice para recorrer los íconos disponibles
     local addonCache = getPlayersInfo()
-    local alertBuffRequest = false
+
     -- Recoger a los miembros de la raid y sus roles de raidInfo
     for playerName, playerData in pairs(addonCache) do
         local playerClass = playerData.class
@@ -367,7 +375,6 @@ function RequestBuffs()
 
             -- Concatenar los roles asignados a un solo jugador
             if #playerRoles > 0 then
-                alertBuffRequest = true
                 local rolesString
                 if #playerRoles == 1 then
                     rolesString = playerRoles[1]
@@ -380,46 +387,65 @@ function RequestBuffs()
                 local rolesStr = table.concat(playerRoles, ",")
 
                 -- Añadir "SEGÚN SE REQUIERA" si hay más de un rol
-                if playerClass == "Paladin" or rolesStr:find("PODERIO Y REYES") or rolesStr:find("SABIDURIA Y REYES") then
+                if rolesStr:find("PODERIO Y REYES") or rolesStr:find("SABIDURIA Y REYES") then
                     rolesString = rolesString .. " SEGÚN REQUIERA CADA CLASE"
                 end
 
                 -- Asignar íconos únicos a roles
                 local icon = nil
                 for _, role in ipairs(playerRoles) do
-                    if not roleIcons[role] then
-                        -- Asignar un ícono único al rol si no tiene uno
-                        if iconIndex <= #availableIcons then
-                            roleIcons[role] = availableIcons[iconIndex]
-                            iconIndex = iconIndex + 1
-                        end
+                    if not roleIcons[role] and iconIndex <= #availableIcons then
+                        roleIcons[role] = availableIcons[iconIndex]
+                        iconIndex = iconIndex + 1
                     end
-                    icon = roleIcons[role]
+                    if roleIcons[role] and not icon then
+                        icon = roleIcons[role]
+                    end
+                end
+
+                -- Si no se asignó un ícono, usar el siguiente disponible
+                if not icon and iconIndex <= #availableIcons then
+                    icon = availableIcons[iconIndex]
+                    iconIndex = iconIndex + 1
                 end
 
                 -- Asignar el ícono como marcador de objetivo para el jugador
                 if rolesStr:find("MAIN TANK") or rolesStr:find("OFF TANK") or rolesStr:find("HEALER") then
-                    SetRaidTarget(playerName, icon)
+                    if playerName then
+                        SetRaidTarget(playerName, icon)
+                    end
                 end
 
                 -- Añadir al mensaje del jugador con ícono y roles
-                table.insert(raidMembers["BUFF"],
-                    {playerName, "{rt" .. icon .. "}" .. " " .. playerName .. " [" .. rolesString .. "]"})
+                if icon then
+                    table.insert(raidMembers["BUFF"],
+                        {playerName, "{rt" .. icon .. "}" .. " " .. playerName .. " [" .. rolesString .. "]"})
+                else
+                    table.insert(raidMembers["BUFF"],
+                        {playerName, playerName .. " [" .. rolesString .. "]"})
+                end
             end
         end
     end
 
     -- Enviar susurros a cada jugador
     for _, playerInfo in ipairs(raidMembers["BUFF"]) do
-        local playerName = playerInfo[1]
-        local message = playerInfo[2]
-        SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
+        if playerInfo[1] then
+            local playerName = playerInfo[1]
+            local message = playerInfo[2]
+            if playerName then
+                SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
+            end
+        else
+            SendSystemMessage("Error: playerInfo[1] is nil")
+        end
     end
-    if alertBuffRequest then
+    if IsRaidLeader() then
         SendChatMessage("Susurro asignacion de roles", "RAID_WARNING")
     end
     SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
 end
+
 
 function GetDistanceBetweenUnits(unit1, unit2)
     local x1, y1 = GetPlayerMapPosition(unit1)
@@ -554,19 +580,19 @@ function AlertFarPlayers(AFKTimer)
 
 end
 
-function reorderRaidMembers()
-    if GetNumRaidMembers() > 0 and IsRaidLeader() then
+function reorderRaidMember(targetName)
+    if GetNumRaidMembers() > 10 and IsRaidLeader() then
         local numberOfPlayers, _ = getPlayerInitialState()
-        local subgroupForHeal = numberOfPlayers > 10 and 5 or 2
-        local subgroupForOff = numberOfPlayers > 10 and 3 or 1
-        local subgroupForTank = numberOfPlayers > 10 and 4 or 2
+        local subgroupForTank = 3
+        local subgroupForOff = 4
+        local subgroupForHeal = 5
 
         for i = 1, numberOfPlayers do
             local unit = "raid" .. i
             local playerName = UnitName(unit)
-            local role = raidInfo[playerName] and raidInfo[playerName].rol
+            local role = addonCache[playerName] and addonCache[playerName].rol
 
-            if role then
+            if role and playerName == targetName then
                 for roleName, _ in pairs(role) do
                     if roleName:match("^HEALER %d$") then
                         SetRaidSubgroup(i, subgroupForHeal)

@@ -99,7 +99,7 @@ function rulesAndMechanicsInit()
             -- Crear una copia del array de reglas para no modificar el original
             local howToBoss = {unpack(rulesAndMechanics[selectedRaid]["MECHANICS"][selectedBoss])}
             -- Insertar un nuevo elemento al inicio del array
-            table.insert(howToBoss, 1, "MECANICAS DE " .. selectedBoss)
+            table.insert(howToBoss, 1, "===> " .. selectedBoss .. " <===")
 
             -- Enviar las reglas, ahora incluyendo el nuevo elemento al inicio
             SendDelayedMessages(howToBoss,true)

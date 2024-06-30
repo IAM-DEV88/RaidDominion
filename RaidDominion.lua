@@ -1,15 +1,12 @@
-local addonName = "RaidDominion"
-
 -- Function to handle events
 local function OnEvent(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == addonName then
         -- print("ADDON_LOADED")
-        getPlayersInfo()
+        -- getPlayersInfo()
         
     elseif event == "PLAYER_LOGIN" then
         getPlayersInfo()
         RaidDominionPanelInit()
-
         -- print("PLAYER_LOGIN")
         if not enabledPanel then
             print("Puedes usar /rdom para mostrar el panel de RaidDominion Tools")
@@ -51,3 +48,4 @@ frame:RegisterEvent("PLAYER_LOGOUT")
 frame:RegisterEvent("PARTY_MEMBERS_CHANGED") -- Group changes
 frame:RegisterEvent("RAID_ROSTER_UPDATE") -- Raid roster changes
 frame:SetScript("OnEvent", OnEvent)
+

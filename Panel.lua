@@ -31,7 +31,6 @@ function RaidDominionPanelInit()
         _G["RaidDominionOptionsTab"]:Hide()
         _G["RaidDominionAboutTab"]:Show()
     end)
-
     RaidDominionTabContainerInit()
     rulesAndMechanicsInit()
 end

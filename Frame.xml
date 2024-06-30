@@ -154,7 +154,7 @@
                             <AbsDimension x="65" y="20" />
                         </Size>
                         <Anchors>
-                            <Anchor point="LEFT" relativeTo="$parentTurnRaidCheckBtn" relativePoint="RIGHT">
+                            <Anchor point="LEFT" relativeTo="$parentAlertFarPlayerBtn" relativePoint="RIGHT">
                                 <Offset>
                                     <AbsDimension x="3" y="0" />
                                 </Offset>
