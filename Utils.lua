@@ -350,7 +350,11 @@ end
 
 function RequestBuffs()
     local raidMembers = {
-        ["BUFF"] = {}
+        ["BUFF"] = {},
+        ["ALERT"] = {
+            tanks = {},
+            healers = {}
+        }
     }
     local numberOfPlayers, _ = getPlayerInitialState()
 
@@ -409,7 +413,7 @@ function RequestBuffs()
                 local rolesStr = table.concat(playerRoles, ",")
 
                 -- Añadir "SEGÚN SE REQUIERA" si hay más de un rol
-                if rolesStr:find("PODERIO Y REYES") or rolesStr:find("SABIDURIA Y REYES") then
+                if rolesStr:find("PODERIO") or rolesStr:find("SABIDURIA") then
                     rolesString = "SEGÚN REQUIERA CADA CLASE " .. rolesString
                 end
 
@@ -435,6 +439,14 @@ function RequestBuffs()
                 local message
                 if icon then
                     message = "{rt" .. icon .. "}" .. " " .. playerName .. " [" .. rolesString .. "]"
+                    -- Añadir a la alerta si es tank o healer
+                    if rolesStr:find("MAIN TANK") then
+                        raidMembers["ALERT"].tanks[1] = "{rt" .. icon .. "} MAIN TANK"
+                    elseif rolesStr:find("OFF TANK") then
+                        raidMembers["ALERT"].tanks[2] = "{rt" .. icon .. "} OFF TANK"
+                    elseif rolesStr:find("HEALER") then
+                        table.insert(raidMembers["ALERT"].healers, "{rt" .. icon .. "}")
+                    end
                 else
                     message = playerName .. " [" .. rolesString .. "]"
                 end
@@ -448,6 +460,16 @@ function RequestBuffs()
         local playerName = playerInfo[1]
         local message = playerInfo[2]
         SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
+    end
+
+    -- Enviar alerta con íconos y roles de tanks y healers
+    local alertMessages = {
+        table.concat(raidMembers["ALERT"].tanks, " // "),
+        "HEALERS",
+        table.concat(raidMembers["ALERT"].healers, " ")
+    }
+    for _, message in ipairs(alertMessages) do
+        SendChatMessage(message, "RAID_WARNING")
     end
 
     -- Iniciar el temporizador de DBM

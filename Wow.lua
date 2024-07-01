@@ -1,20 +1,21 @@
 playerRoles = {
     ["PRIMARY"] = {"MAIN TANK", "HEALER 1", "OFF TANK", "HEALER 2", "HEALER 3", "HEALER 4", "HEALER 5"},
-    ["BUFF"] = {"REZOS DE ESPIRITU, PROTECCION Y ENTEREZA", "DON DE LO SALVAJE", "SALVAGUARDA", "PODERIO Y REYES", "SABIDURIA Y REYES",
+    ["BUFF"] = {"REZOS DE ESPIRITU, PROTECCION Y ENTEREZA", "DON DE LO SALVAJE", "SALVAGUARDA", "PODERIO", "REYES",
                 "SABIDURIA", "VIGILANCIA", "GRITO DE ORDEN", "GRITO DE BATALLA", "GRITO DESMORALIZADOR", "ENFOQUE",
                 "TOTEM DE CORRIENTE DE SANACION"},
-    ["SKILL"] = {"HEROISMO", "DESACTIVAR TRAMPA", "SECRETOS DEL OFICIO", "REDIRECCION", "TRAMPA DE ESCARCHA", "COLERA SAGRADA",
-                 "POLIMORFIA", "CICLON", "RAICES ENREDADORAS", "AHUYENTAR EL MAL", "TIFON", "CADENAS DE HIELO",
-                 "ENCADENAR NO MUERTO"},
-    ["SECONDARY"] = {"RESUCITAR CAIDOS", "RITUAL DE INVOCACION", "RITUAL DE REFRIGERIO", "PIEDRA DE ALMA", "TOTEM DE NEXO TERRESTRE"},
-    ["EXTRA"] = {"FRAGMENTADOR", "ABOMINACION", "TANQUE DUAL AUXILIAR", "HEALER DUAL AUXILIAR", "MAESTRIA EN AURAS",
-    "IMPOSICION DE MANOS", "MANO DE SACRIFICIO", "MANO DE LIBERTAD"}
+    ["SKILL"] = {"HEROISMO", "DESACTIVAR TRAMPA", "SECRETOS DEL OFICIO", "REDIRECCION", "TRAMPA DE ESCARCHA",
+                 "COLERA SAGRADA", "POLIMORFIA", "CICLON", "RAICES ENREDADORAS", "AHUYENTAR EL MAL", "TIFON",
+                 "CADENAS DE HIELO", "ENCADENAR NO MUERTO"},
+    ["SECONDARY"] = {"FRAGMENTADOR", "ABOMINACION", "TANQUE DUAL AUXILIAR", "HEALER DUAL AUXILIAR", "MAESTRIA EN AURAS",
+                     "IMPOSICION DE MANOS", "MANO DE SACRIFICIO", "MANO DE LIBERTAD"},
+    ["EXTRA"] = {"RESUCITAR CAIDOS", "RITUAL DE INVOCACION", "RITUAL DE REFRIGERIO", "PIEDRA DE ALMA",
+                 "TOTEM DE NEXO TERRESTRE"}
 }
 
 rulesAndMechanics = {
     ["ADVERTENCIA: AFK/OFFs"] = {
         ["RULES"] = {
-            ["SHARED"] = {"El jugador que se quede AFK/OFF por mucho tiempo sin avisar, no siga mecanincas o tenga DPS debajo del Tanque se queda sin loteo y puede ser expulsado de la raid."}
+            ["SHARED"] = {"El jugador que se quede AFK/OFF por mucho tiempo sin avisar, no este en DC, no siga mecanincas o tenga DPS debajo del Tanque se queda sin loteo y puede ser expulsado de la raid."}
         }
     },
     ["PRE-ARMADO ICC 25"] = {
@@ -57,16 +58,16 @@ rulesAndMechanics = {
         ["RULES"] = {
             ["SHARED"] = {"PRIORIDAD DE LOTEO: Por función MAIN > DUAL > ENCHANT > CODICIA."},
             ["10"] = {},
-            ["25"] = {"MARCAS: Debe linkear 1 t10 engemado/encantado.",
-                      "TESTAMENTO: top5 daño en Panza cerrado + 5% en bestias, al igual que Tarro.",
-                      "OBJETO: top5 cerrado daño en Panza + 3% en bestias.",
-                      "FILACTERIA: top3 cerrado daño en Profe + 10% en mocos.",
-                      "ABACO: top3 cerrado  en Reina.",
-                      "COLMILLO: prioridad tanques activos en su rol, luego el resto.",
-                      "RESERVADOS: Fragmentos, Items no ligados y Saros.",
-                      "ARMAS LK: top10 daño en LK + 5% en Valkyrs y top3 conteo de sanacion en LK.",
-                      "Un abalorio, arma y marca por raid. Un ítem por main, 2 ítems dual. Marcas se rolean por dual. Arma y sostener cuentan como ítem. Solo excentas armas de Lk.",
-                      "Si en algun top no necesitan el ítem o no cumplen la regla para lotear, pasará al siguiente en top."}
+            ["25"] = {"MARCAS: Debe linkear 1 t10 engemado/encantado.", "ABACO: top3 cerrado  en Reina.",
+            "TESTAMENTO: top5 daño en Panza cerrado + 5% en bestias. Rollean warrior fury, dk profano/escarcha, pícaro combate y druida feral",
+            "TARRO: top5 daño en Panza cerrado + 5% en bestias, rollea paladín retry, pícaro asesinato.",
+            "OBJETO: top5 cerrado daño en Panza + 3% en bestias.",
+            "FILACTERIA: top3 cerrado daño en Profe + 10% en mocos.",
+            "COLMILLO: prioridad tanques activos en su rol, luego el resto.",
+            "RESERVADOS: Fragmentos, Items no ligados y Saros.",
+            "ARMAS LK: top10 daño en LK + 5% en Valkyrs y top3 conteo de sanacion en LK.",
+            "Un abalorio, Un arma, Dos marcas por raid. Un ítem por main(excepto tankes), sin limite por dual. Marcas tambien por dual. Arma y sostener cuentan como ítem. Solo excentas armas de Lk. Armas 2.6 pueden ser loteadas por tanques",
+            "Si en algun top no necesitan el ítem o no cumplen la regla para lotear, pasará al siguiente en top."}
         },
         ["MECHANICS"] = {
             ["TUETANO"] = {"Tanques a la derecha, grupo detras y debajo del boss, hunters alejados en costado opuesto a tanques. DPS destruyen puas de inmediato. Caster y ranged destruyen puas lejanas al grupo",
@@ -82,7 +83,8 @@ rulesAndMechanics = {
                           "Por favor esperar en la terraza de libra, nadie abra el cofre de loot o perdera todo loteo"},
             ["LIBRA"] = {"TANQUES voltean boss y estan atentos a intercambiar marca de inmediato. Cuerpo a cuerpo detras. DPS rango y caster distanciados a /range 12 para evitar propagar marcas",
                          "RALENTIZAR Y ANIQUILAR BESTIAS EN CADA OLEADA: Trampa de Escarcha, Tótem de Nexo Terrestre, Veneno entorpecedor, Cadenas de Hielo, Raíces, Tifon, etc",
-                         "Marcados evitan atacar bestias y se aplican defensivos para seguir en Libra", "Heroismo al 35%",
+                         "Marcados evitan atacar bestias y se aplican defensivos para seguir en Libra",
+                         "Heroismo al 35%",
                          "IMPORTANTE: Tomar distancia = No marcas // Aniquilar bestias sin que los toquen = Libra no se cura"},
             ["PANZACHANCRO"] = {"TANQUES intercambian cada 9 marcas y ubican al boss de espaldas al grupo en el centro de la sala",
                                 "DPS Caster y ranged => G1 y G3 IZQ // G2 y G4 DER toman distancia /range 12 para no vomitarse",
@@ -128,10 +130,7 @@ rulesAndMechanics = {
                              "Durante cada INVIERNO salimos al anillo exterior, OFF tauntea cada ESPIRITU. Destruimos ESPIRITUS y regresamos a capa de LK",
                              "Alejarse 5s antes de cada PROFANAR lejos del centro. Marcado por PROFANAR se aleja sin saltar. Todos regresan detras de capa LK.",
                              "Destruir VALKIRS en cada spawn. Marcado lleva PROFANAR direccion lejos de VALKYRS y LK",
-                             "Paladines se turnan ESCUDO DIVINO y limpian cada oleada de FANTASMAS",
-
-
-                            }
+                             "Paladines se turnan ESCUDO DIVINO y limpian cada oleada de FANTASMAS"}
 
         }
     }
