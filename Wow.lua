@@ -61,6 +61,7 @@ rulesAndMechanics = {
                       "TESTAMENTO: top5 daño en Panza cerrado + 5% en bestias, al igual que Tarro.",
                       "OBJETO: top5 cerrado daño en Panza + 3% en bestias.",
                       "FILACTERIA: top3 cerrado daño en Profe + 10% en mocos.",
+                      "ABACO: top3 cerrado  en Reina.",
                       "COLMILLO: prioridad tanques activos en su rol, luego el resto.",
                       "RESERVADOS: Fragmentos, Items no ligados y Saros.",
                       "ARMAS LK: top10 daño en LK + 5% en Valkyrs y top3 conteo de sanacion en LK.",
