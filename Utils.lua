@@ -359,7 +359,6 @@ function RequestBuffs()
     local numberOfPlayers, _ = getPlayerInitialState()
 
     local roleIcons = {} -- Asignación de íconos para cada rol
-
     local availableIcons = {2, 3, 4, 5, 6, 7, 8} -- Lista de íconos disponibles (7 íconos únicos)
     local iconIndex = 1 -- Índice para recorrer los íconos disponibles
     local addonCache = getPlayersInfo()
@@ -459,7 +458,7 @@ function RequestBuffs()
     for _, playerInfo in ipairs(raidMembers["BUFF"]) do
         local playerName = playerInfo[1]
         local message = playerInfo[2]
-        SendChatMessage(message .. " -- Mensaje de RaidDominion Tools", "WHISPER", nil, playerName)
+        SendChatMessage(message .. " -- RaidDominion Tools", "WHISPER", nil, playerName)
     end
 
     -- Enviar alerta con íconos y roles de tanks y healers
@@ -597,8 +596,8 @@ function AlertFarPlayers(AFKTimer)
         broadcastCommand = broadcastCommand .. " REVISO AFK/OFFs"
         SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
 
-        SendSystemMessage("Jugadores AFK/OFF o demasiado lejos: " .. AFKPlayerNum)
-        SendSystemMessage(playerNames)
+        -- SendChatMessage("Jugadores AFK/OFF o demasiado lejos: " .. AFKPlayerNum, "RAID_WARNING")
+        -- SendChatMessage(playerNames, "RAID_WARNING")
     end
     if AFKTimer and hasTarget then
         broadcastCommand = broadcastCommand .. " KICK " .. targetName

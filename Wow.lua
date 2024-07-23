@@ -13,125 +13,105 @@ playerRoles = {
 }
 
 rulesAndMechanics = {
-    ["ADVERTENCIA: AFK/OFFs"] = {
+    ["REVISO Y REEMPLAZO"] = {
         ["RULES"] = {
-            ["SHARED"] = {"El jugador que se quede AFK/OFF por mucho tiempo sin avisar, no este en DC, no siga mecanincas o tenga DPS debajo del Tanque se queda sin loteo y puede ser expulsado de la raid."}
+            ["SHARED"] = {"AFK/OFFs sin avisar // DPS debajo del Tanque // No respetar pulls o mecanincas = No botin"}
         }
     },
-    ["PRE-ARMADO ICC 25"] = {
+    ["DC OBLIGATORIO"] = {
         ["RULES"] = {
-            ["SHARED"] = {"DBM Y DC son OBLIGATORIOS // DC al llenar raid // Reglas frente Tuetano",
-                          "Inspección del Grupo 6 en Zona de Vuelo, Dalaran"}
+            ["SHARED"] = {"No DC = No Botin"}
         }
     },
-    ["PRE-ARMADO ICC 10"] = {
+    ["CUMPLIMIENTO DE REGLAS"] = {
         ["RULES"] = {
-            ["SHARED"] = {"DBM Y DC son OBLIGATORIOS // DC al llenar raid",
-                          "Inspección del Grupo 3 en Zona de Vuelo, Dalaran"}
+            ["SHARED"] = {"Se recomienda devolver items en caso de error en loteo // Toda falta baneable sera apoyada con pantallazos, grabaciones, etc."}
         }
     },
     ["BUEN JUEGO Y BUENA VIBRA"] = {
         ["RULES"] = {
-            ["SHARED"] = {"Concentremonos en realizar BUENAS MECANICAS, mantener SIEMPRE BUFFEADO al grupo y estar atentos para AVANZAR RAPIDO y seguros. Portales listos siempre que sean necesarios. Que esta sea una excelente raid."}
+            ["SHARED"] = {"Concentrados en BUENAS MECANICAS // raid SIEMPRE BUFFEADA y atenta para AVANZAR RAPIDO // Portales listos siempre que sean necesarios // Que esta sea una excelente raid."}
         }
     },
-    ["BLACKLISTED"] = {
+    ["CULTO DEL OSARIO"] = {
         ["RULES"] = {
-            ["SHARED"] = {"Ha incumplido con lo minimo requerido para el buen desarrollo de la banda."}
+            ["SHARED"] = {"Todos invitados a unirse a la hermandad."}
         }
     },
     ["RE-ARME RAPIDO"] = {
         ["RULES"] = {
-            ["SHARED"] = {"Por favor continuar. Ya se esta buscando por posada. Conocidos interesados que WISP."}
+            ["SHARED"] = {"Por favor continuar // Ya se esta buscando por posada // Conocidos interesados que WISP"}
         }
     },
     ["LA CAMARA DE ARCHAVON"] = {
         ["RULES"] = {
-            ["SHARED"] = {"PRIORIDAD BOTIN PVE: Por función MAIN.", "PRIORIDAD BOTIN PVP: Por clase."}
+            ["SHARED"] = {"BOTIN => PVE: Por función MAIN // PVP: Por clase"}
         },
         ["MECHANICS"] = {
-            ["TOVARON EL VIGIA DE HIELO"] = {"Tanques intercambian cada 4 marcas",
-                                             "DPS destruiyen orbes totalmente y continuan con boss"}
+            ["TOVARON EL VIGIA DE HIELO"] = {"Tanques intercambian cada 4 marcas // DPS destruyen orbes totalmente y continuan con boss"}
         }
     },
     ["CIUDADELA DE LA CORONA DE HIELO"] = {
         ["RULES"] = {
-            ["SHARED"] = {"PRIORIDAD DE LOTEO: Por función MAIN > DUAL > ENCHANT > CODICIA."},
+            ["SHARED"] = {"PRIORIDAD DE LOTEO: Por función MAIN > DUAL."},
             ["10"] = {},
-            ["25"] = {"MARCAS: Debe linkear 1 t10 engemado/encantado.", "ABACO: top3 cerrado  en Reina.",
-            "TESTAMENTO: top5 daño en Panza cerrado + 5% en bestias. Rollean warrior fury, dk profano/escarcha, pícaro combate y druida feral",
-            "TARRO: top5 daño en Panza cerrado + 5% en bestias, rollea paladín retry, pícaro asesinato.",
-            "OBJETO: top5 cerrado daño en Panza + 3% en bestias.",
-            "FILACTERIA: top3 cerrado daño en Profe + 10% en mocos.",
-            "COLMILLO: prioridad tanques activos en su rol, luego el resto.",
-            "RESERVADOS: Fragmentos, Items no ligados y Saros.",
-            "ARMAS LK: top10 daño en LK + 5% en Valkyrs y top3 conteo de sanacion en LK.",
-            "Un abalorio, Un arma, Dos marcas por raid. Un ítem por main(excepto tankes), sin limite por dual. Marcas tambien por dual. Arma y sostener cuentan como ítem. Solo excentas armas de Lk. Armas 2.6 pueden ser loteadas por tanques",
-            "Si en algun top no necesitan el ítem o no cumplen la regla para lotear, pasará al siguiente en top."}
+            ["25"] = {"MARCAS: Debe linkear 1 t10 engemado/encantado. // ABACO: top3 cerrado  en Reina.",
+                      "TESTAMENTO: top5 daño en Panza cerrado + 5% en bestias. Rollean warrior fury, dk profano/escarcha, pícaro combate y druida feral, hunter punteria",
+                      "TARRO: top5 daño en Panza cerrado + 5% en bestias, rollea paladín retry, pícaro asesinato. // OBJETO: top5 cerrado daño en Panza + 3% en bestias. // FILACTERIA: top3 cerrado daño en Profe + 10% en mocos.",
+                      "COLMILLO: prioridad tanques activos en su rol, luego el resto. // RESERVADOS: Fragmentos, Items no ligados y Saros. // ARMAS LK: top10 daño en LK + 5% en Valkyrs y top3 conteo de sanacion en LK.",
+                      "Un abalorio, Un arma, Dos marcas por raid. Un ítem por main(excepto tankes), sin limite por dual. Marcas tambien por dual. Arma y sostener cuentan como ítem. Solo excentas armas de Lk. Armas 2.6 pueden ser loteadas por tanques",
+                      "Si en algun top no necesitan el ítem o no cumplen la regla para lotear, pasará al siguiente en top."}
         },
         ["MECHANICS"] = {
-            ["TUETANO"] = {"Tanques a la derecha, grupo detras y debajo del boss, hunters alejados en costado opuesto a tanques. DPS destruyen puas de inmediato. Caster y ranged destruyen puas lejanas al grupo",
-                           "Evitar trazos de fuego sobre el suelo y castear defensivos durante tormentas. En ultima tormenta tanques toman boss cerca a las escaleras"},
-            ["LADY DEATHWISPER"] = {"OFF TANK, Grupos 1 y 3 IZQUIERDA // MAIN TANK, Grupos 2 y 4 DERECHA, picaros con lady todo el tiempo",
-                                    "Destruir adds de ambos lados y continuar con lady // Retirarse de areas de daño de inmediato",
-                                    "Usar habilidades de control sin daño sobre aliado controlado // Evitar tocar fantasmas y llevarlos lejos grupo",
-                                    "Heroismo al terminar los 10min de ansias // Ceder agro sobre los tanques todo el tiempo"},
-            ["BARCOS"] = {"MAIN TANK salta SOLO por su lado del barco, DPS saltan por el lado contrario y evitan ser rajados",
-                          "Cañones se mantienen entre 87~100% del poder de ataque antes de ataque especial",
-                          "DPS saltan a destruir mago y regresan por el mismo lado que saltaron a limpiar nuestro barco",
-                          "Los cañones deben terminar el trabajo",
-                          "Por favor esperar en la terraza de libra, nadie abra el cofre de loot o perdera todo loteo"},
-            ["LIBRA"] = {"TANQUES voltean boss y estan atentos a intercambiar marca de inmediato. Cuerpo a cuerpo detras. DPS rango y caster distanciados a /range 12 para evitar propagar marcas",
-                         "RALENTIZAR Y ANIQUILAR BESTIAS EN CADA OLEADA: Trampa de Escarcha, Tótem de Nexo Terrestre, Veneno entorpecedor, Cadenas de Hielo, Raíces, Tifon, etc",
-                         "Marcados evitan atacar bestias y se aplican defensivos para seguir en Libra",
-                         "Heroismo al 35%",
-                         "IMPORTANTE: Tomar distancia = No marcas // Aniquilar bestias sin que los toquen = Libra no se cura"},
-            ["PANZACHANCRO"] = {"TANQUES intercambian cada 9 marcas y ubican al boss de espaldas al grupo en el centro de la sala",
-                                "DPS Caster y ranged => G1 y G3 IZQ // G2 y G4 DER toman distancia /range 12 para no vomitarse",
-                                "Juntarse con su espora, sea con los Cuerpo a Cuerpo o los ranged",
-                                "DOBLE ESPORA EN CUERPO A CUERPO: Uno de los jugadores con espora se reune con los caster para compartirles espora",
-                                "ATENCION: Quien no acumule 3 esporas absorbera daño masivo en explosion de gas"},
-            ["CARAPUTREA"] = {"MAIN TANK ubica al boss en el centro de la sala",
-                              "DPS siempre detras del boss y fuera de zonas de inundacion de mocos",
-                              "MOCO PEQUEÑO: ubicarse al costado mas cercano al transito del moco grande // SIN DAÑO DE AREA CUANDO MOCO GRANDE ESTE CERCA",
-                              "OFF TANK toma mocos grandes estando siempre fuera de la inundacion de mocos y apuntando los vomitos lejos del grupo",
-                              "Deben alejarse del boss al momento de la explosion de anublo"},
-            ["PROFESOR PUTRICIDIO"] = {"Fase 1: 100% a 80% // LADO DERECHO DE LA SALA",
-                                       "No dispel sobre ABOMINACION // Si Imbuir y Rejuvenecer // ABO consume charcos y ralentiza mocos antes de que comiencen a moverse",
-                                       "Ranged y caster atacan mocos apenas aparecen // Cuerpo a cuerpo atacan mocos apenas marque un aliado",
-                                       "MOCO NARANJA: marcado huye. Healers overheal y dots sobre marcado. // MOCO VERDE: Empuja 3yrds y causa daño de area al impactar marcado o morir. // TODOS esquivan MOCO MALEABLE",
-                                       "Fase 2: 80% a 35% // Tanques llevan boss sobre la pared y se separan minimo 10 metros de los frascos",
-                                       "Fase 3: 35% a 0% // Maximo DPS // HEROISMO",
-                                       "TANQUES cambian boss a DOS dosis de PESTE MUTADA: una vez los tanks tengan 2 dosis, tendrán que rotar de nuevo tomando 1 dosis mas, en cada rotacion hasta 4 dosis. Si cualquiera de los tank adquiere 5 dosis el daño en raid será masivo."},
-            ["REINA DE SANGRE LANA'THEL"] = {"MAIN TANK ubica al boss sobre las escaleras // OFF Tank se mentiene cerca al main para hacer espejo",
-                                             "DPS cuerpo a cuerpo atacan al maximo rango posible // Marcado por sombras corre junto a la pared lejos del centro",
-                                             "Marcados por pacto unen lazo rapidamente evitando que los healer tengan que moverse // Marcados por mordida rotar rapidamente entre los DPS mas equipados que no hayan sido mordidos",
-                                             "EN 2DO TERROR: a 3segs de levantar vuelo TODOS aplican defensivos. Antifear sobre sacerdotes. Paladines comparten daño si esta disponible"},
-            ["VALITHRIA DREAMWALKER"] = {"Minimizar a toda costa el daño que reciba la banda para dar a los healers la mayor cantidad de tiempo de sanar a Valithria // Healers usar Portales de Pesadilla para amplificar sanacion y mana con las Nubes oníricas",
-                                         "PRIORIDAD: // 1 Esqueleto Ardiente // 2 Supresor // 3 Archimago resucitado // 4 Zombie Virulento // 5 Ablominación glotona // Tanques atentos para agrear todo y llevarlo lejos de Valithria",
-                                         "Alejarse de Zombies Virulentos al estallar // Atentos a limpiar y eliminar enfermedades al instante y en todo momento"},
-            ["CONCEJO DE PRINCIPES DE SANGRE"] = {"Main Tank toma gemelos sobre escaleras",
-                                                  "OFF Tank toma a Keleseth a la izquierda y agrea Nucleos Oscuros (Minimo 3). Ayudarlo con secretos o redi",
-                                                  "DPS Cuerpo a Cuerpo se retiran al fondo en cada vortice",
-                                                  "Hunters y Locks con sus mascostas mantienen cineticas arriba",
-                                                  "Casters y ranged tomar distancia durante vortices y mantenerse en grupo para mitigar daño",
-                                                  "Atentos a cada cambio de principe"},
-            ["SINDRAGOSA"] = {"Main tank ubica de costado al boss para el resto de la banda",
-                              "DPS dejan de golpear al tener 6 o mas marcas hasta limpiarse",
-                              "Todo el grupo debe correr de regreso y agruparse sobre escaleras. Utilizar mitigadores de daño y escudos durante el regreso",
-                              "Marcados por Tumba de Hielo se distribuyen segun sus nombres: 1 y 2 Izquierda // 3 centro // 4 y 5 Derecha // a un metro en frente del primer escalon",
-                              "Resto del grupo se cubre de los impactos de sindra evitando recibir onda de choque con Tumba de Hielo",
-                              "Ir destruyendo Tumbas de Hielo lentamente sincronizados hasta el ultimo disparo de sindra",
-                              "Segunda fase marcados por Tumba de Hielo intercalan posicion a un metro frente a escaleras, primero Izquierda luego centro",
-                              "Resto del grupo se limpia tras tumba y destruye rapidamente antes de continuar con sindra"},
-            ["LICK KING"] = {"MAIN TANK LK // OFF HORRORES cerca al MAIN ambos de espaldas al grupo",
-                             "HEALERS: Banda al 90% de salud siempre para evitar cada Infestar",
-                             "Atacar HORRORES solo luego del taunt del OFF hasta el 15%. Luego focus LK.",
-                             "Durante cada INVIERNO salimos al anillo exterior, OFF tauntea cada ESPIRITU. Destruimos ESPIRITUS y regresamos a capa de LK",
-                             "Alejarse 5s antes de cada PROFANAR lejos del centro. Marcado por PROFANAR se aleja sin saltar. Todos regresan detras de capa LK.",
-                             "Destruir VALKIRS en cada spawn. Marcado lleva PROFANAR direccion lejos de VALKYRS y LK",
-                             "Paladines se turnan ESCUDO DIVINO y limpian cada oleada de FANTASMAS"}
-
+            ["TUETANO"] = {
+                "Tanques derecha // Grupo detrás y debajo del boss // Hunters izquierda // HEROISMO de entrada // DESTRUIR púas de inmediato // RANGED destruyen púas lejanas al grupo // Evitar trazos de fuego",
+                "Maestría y defensivos durante tormentas // Tanques retoman boss cerca de escaleras"
+            },
+            ["LADY DEATHWISPER"] = {
+                "TODOS fondo a la derecha // Tanques juntan agro adds // DPS áreas sobre adds // Evitar áreas de daño // CADENAS y CICLÓN sobre aliado controlado // Evitar tocar fantasmas y llevarlos lejos del grupo"
+            },
+            ["BARCOS"] = {
+                "MAIN TANK SOLO por su lado // DPS lado contrario // Evitar ser rajados // Cañones entre 87~100% del poder de ataque antes de ataque especial // DESTRUIR mago y regresar por el mismo lado // Cañones terminan el trabajo",
+                "Esperar en terraza de libra, nadie abra el cofre de loot o perderá todo loteo"
+            },
+            ["LIBRA"] = {
+                "TANQUES bajo escaleras atentos a marcas // Cuerpo a cuerpo sobre escaleras // Ranged a /range 12 evitan marcas // Trampa de Escarcha al caleo // Marcados no atacan bestias // HEROISMO al caleo",
+                "IMPORTANTE: Tomar distancia = No marcas // Aniquilar bestias sin que los toquen = Libra no se cura"
+            },
+            ["PANZACHANCRO"] = {
+                "MAIN TANK absorbe 9 marcas y cambia // Ranged a /range 12 para no vomitarse // Juntar desde SEGUNDA espora // DOBLE ESPORA EN CUERPO A CUERPO O DOBLE EN RANGED: Una espora se reune con el grupo que no tenga",
+                "ATENCIÓN: Acumular 3 esporas o daño masivo en explosión de gas"
+            },
+            ["CARAPUTREA"] = {
+                "MAIN TANK siempre frente al BOSS // Banda siempre detrás del boss // Unir 2xMOCOS PEQUEÑO al costado // SIN DAÑO DE ÁREA CON MOCO GRANDE CERCA // OFF mocos grandes // Deben alejarse del boss al momento de la explosión de anublo"
+            },
+            ["PROFESOR PUTRICIDIO"] = {
+                "Fase 1: 100% a 80% // LADO DERECHO DE LA SALA // No dispel sobre ABOMINACIÓN // Si Imbuir y Rejuvenecer // ABO limpia charcos y vomita mocos // Parar DPS antes de cada moco // Marcado por moco naranja corre al caleo",
+                "Fase 2: 80% a 35% // BOTELLAS sobre la pared y separan mínimo 10 metros // Esquivan maleables",
+                "Fase 3: 35% a 0% // Máximo DPS // HEROISMO // TANQUES cambian boss a DOS dosis de PESTE MUTADA: una vez los tanks tengan 2 dosis, tendrán que rotar de nuevo tomando 1 dosis más en cada rotación hasta 4 dosis. Si cualquiera de los tanks adquiere 5 dosis, el daño en raid será masivo."
+            },
+            ["REINA DE SANGRE LANA'THEL"] = {
+                "MAIN TANK sobre escaleras // OFF Tank cerca para espejo // Cuerpo a cuerpo a máximo rango posible // Sombras a la pared lejos del centro // Unir PACTO rápidamente // Rotar MORDIDA rápido entre los mayores DPS",
+                "TERROR: antifear sacerdote y comparte paladín // TODOS mitigan con escudos"
+            },
+            ["VALITHRIA DREAMWALKER"] = {
+                "Minimizar daño en banda // Full Heal sobre Valithria // Tomar Portales de Pesadilla para amplificar con Nubes oníricas",
+                "PRIORIDAD: // 1 Esqueleto Ardiente // 2 Supresor // 3 Archimago resucitado // 4 Zombie Virulento // 5 Abominación glotona // Tanques atentos para agrear todo y llevarlo lejos de Valithria",
+                "SOLO Cazador pega y mata Zombies Virulentos lejos de la raid // Limpiar enfermedades en todo momento"
+            },
+            ["CONCEJO DE PRINCIPES DE SANGRE"] = {
+                "Main Tank gemelos // OFF Tank Keleseth y agrea Núcleos Oscuros (Mínimo 3) // DPS Cuerpo a Cuerpo se retiran al fondo en cada vórtice // Hunters y Locks mantienen cinéticas arriba",
+                "Ranged toman distancia durante vórtices y se mantienen en grupo para mitigar daño // Atentos a cada cambio de príncipe"
+            },
+            ["SINDRAGOSA"] = {
+                "Main tank BOSS // OFF y DPS cuidan marcas: Máximo 6 // Re-agruparse sobre escaleras con defensivos // Tumbas de Hielo según nombres: 1 y 2 Izquierda // 3 centro // 4 y 5 Derecha // A un metro en frente del primer escalón",
+                "Columnear sin pegar hasta 4to impacto // SEGUNDA FASE: marcados primero Izquierda luego centro // HEROISMO al caleo // Cambio de tanque"
+            },
+            ["LICK KING"] = {
+                "MAIN TANK LK // OFF HORRORES // Banda al 90% de salud antes de cada Infestar // Atacar HORROR al caleo hasta 15% // Faseo en borde exterior // Full Redirecciones ESPÍRITUS // Hunter PULSOS // Capa de LK",
+                "Atentos a cada PROFANAR lejos del centro SIN SALTAR // Destruir VAL'KIR en cada spawn // Retri ESCUDO DIVINO al caleo para FANTASMAS // Shadow DISPERSIÓN al caleo para FANTASMAS"
+            }
         }
+        
     }
 }
