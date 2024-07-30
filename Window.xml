@@ -1,0 +1,89 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+
+    <Frame name="RaidDominionWindow" inherits="UIPanelDialogTemplate" toplevel="true" frameStrata="MEDIUM" movable="true" enableMouse="true" hidden="false" parent="UIParent">
+        <Size>
+            <AbsDimension x="300" y="200"/>
+        </Size>
+        <Anchors>
+            <Anchor point="CENTER">
+                <Offset>
+                    <AbsDimension x="0" y="0"/>
+                </Offset>
+            </Anchor>
+        </Anchors>
+        <Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
+            <BackgroundInsets>
+                <AbsInset left="11" right="12" top="12" bottom="11"/>
+            </BackgroundInsets>
+            <TileSize>
+                <AbsValue val="32"/>
+            </TileSize>
+            <EdgeSize>
+                <AbsValue val="32"/>
+            </EdgeSize>
+        </Backdrop>
+        <Layers>
+            <Layer level="ARTWORK">
+                <FontString inherits="GameFontHighlightSmall" name="$parentTitle" text="RaidDominion Tools">
+                    <Anchors>
+                        <Anchor point="LEFT" relativeTo="$parentTitleBG" relativePoint="LEFT">
+                            <Offset>
+                                <AbsDimension x="5" y="1" />
+                            </Offset>
+                        </Anchor>
+                    </Anchors>
+                </FontString>
+            </Layer>
+        </Layers>
+        <Frames>
+            <Frame name="RaidDominionOptionsTab">
+                <Anchors>
+                    <Anchor point="TOPLEFT" x="-12" y="28"/>
+                    <Anchor point="BOTTOMRIGHT"/>
+                </Anchors>
+                <Scripts>
+                    <OnLoad>
+                CreateRaidDominionOptionsTabContent(self)
+                    </OnLoad>
+                </Scripts>
+            </Frame>
+            <Frame name="RaidDominionAboutTab">
+                <Anchors>
+                    <Anchor point="TOPLEFT" x="-12" y="28"/>
+                    <Anchor point="BOTTOMRIGHT"/>
+                </Anchors>
+                <Scripts>
+                    <OnLoad>
+                CreateRaidDominionAboutTabContent(self)
+                    </OnLoad>
+                </Scripts>
+            </Frame>
+
+            <Button name="$parentTab1" inherits="CharacterFrameTabButtonTemplate" id="1" text="OPCIONES">
+                <Anchors>
+                    <Anchor point="CENTER" relativePoint="BOTTOM">
+                        <Offset>
+                            <AbsDimension x="0" y="-10"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+            </Button>
+            <Button name="$parentTab2" inherits="CharacterFrameTabButtonTemplate" id="2" text="AYUDA">
+                <Anchors>
+                    <Anchor point="RIGHT" relativeTo="$parentTab1" relativePoint="RIGHT">
+                        <Offset>
+                            <AbsDimension x="60" y="0"/>
+                        </Offset>
+                    </Anchor>
+                </Anchors>
+            </Button>
+        </Frames>
+        <Scripts>
+            <OnLoad>
+                self:RegisterForDrag("LeftButton");
+            </OnLoad>
+            <OnDragStart>self:StartMoving();</OnDragStart>
+            <OnDragStop>self:StopMovingOrSizing();</OnDragStop>
+        </Scripts>
+    </Frame>
+</Ui>
