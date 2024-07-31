@@ -22,6 +22,14 @@ function getPlayerInitialState()
     return numberOfPlayers, defaultChannel
 end
 
+function getPlayerRoles(playerRoles)
+    local roles = {}
+    for roleName, _ in pairs(playerRoles) do
+        table.insert(roles, roleName)
+    end
+    return roles
+end
+
 function getPlayersInfo()
     -- Restablecer currentPlayers al inicio de la función
     currentPlayers = {}
