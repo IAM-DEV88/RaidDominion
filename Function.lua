@@ -87,7 +87,7 @@ function getPlayersInfo()
                 if playerName == "Entidad desconocida" then
                     --
                 else
-                    SendSystemMessage(playerName .. " se fue del grupo. Roles liberados: " ..
+                    SendSystemMessage(playerData.class .. ". Roles liberados: " ..
                                           table.concat(getPlayerRoles(playerData.rol), ", "))
                 end
                 -- Eliminar el elemento
@@ -362,7 +362,7 @@ function AssignIconsAndAlert()
         local availableIcons = {2, 3, 4, 5, 6, 7, 8}
         local iconIndex = 1
         local addonCache = getPlayersInfo()
-    
+
         local function GetRaidUnitByName(name)
             for i = 1, numberOfPlayers do
                 local unit = "raid" .. i
@@ -372,7 +372,7 @@ function AssignIconsAndAlert()
             end
             return nil
         end
-    
+
         local function ShouldAssignIcon(rolesStr)
             local iconRoles = {"MAIN TANK", "HEALER 1", "OFF TANK", "HEALER 2", "HEALER 3", "HEALER 4", "HEALER 5"}
             for _, role in ipairs(iconRoles) do
@@ -382,7 +382,7 @@ function AssignIconsAndAlert()
             end
             return false
         end
-    
+
         for playerName, playerData in pairs(addonCache) do
             local roles = playerData.rol or {"DPS"}
             local playerRoles = {}
@@ -391,19 +391,19 @@ function AssignIconsAndAlert()
                     table.insert(playerRoles, role)
                 end
             end
-    
+
             if #playerRoles > 0 then
                 local rolesString = #playerRoles == 1 and playerRoles[1] or
                                         table.concat(playerRoles, ", ", 1, #playerRoles - 1) .. " y " ..
                                         playerRoles[#playerRoles]
                 local rolesStr = table.concat(playerRoles, ",")
-    
+
                 local icon = nil
                 if ShouldAssignIcon(rolesStr) and iconIndex <= #availableIcons then
                     icon = availableIcons[iconIndex]
                     iconIndex = iconIndex + 1
                 end
-    
+
                 if icon then
                     local raidUnit = GetRaidUnitByName(playerName)
                     if raidUnit and UnitExists(raidUnit) and not UnitIsDeadOrGhost(raidUnit) then
@@ -412,7 +412,7 @@ function AssignIconsAndAlert()
                         icon = nil
                     end
                 end
-    
+
                 if icon then
                     if rolesStr:find("MAIN TANK") then
                         raidMembers["ALERT"].tanks[1] = "{rt" .. icon .. "} MAIN TANK"
@@ -424,23 +424,20 @@ function AssignIconsAndAlert()
                 end
             end
         end
-    
+
         -- Verificar si hay al menos un tanque o un healer
         if #raidMembers["ALERT"].tanks > 0 or #raidMembers["ALERT"].healers > 0 then
             local alertMessages = {}
-            
+
             if #raidMembers["ALERT"].tanks > 0 then
                 table.insert(alertMessages, table.concat(raidMembers["ALERT"].tanks, " // "))
             end
-            
+
             if #raidMembers["ALERT"].healers > 0 then
                 table.insert(alertMessages, "HEALERS")
                 table.insert(alertMessages, table.concat(raidMembers["ALERT"].healers, " "))
             end
-    
             SendDelayedMessages(alertMessages)
-    
-            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
         else
             SendSystemMessage("No hay tanques ni healers asignados.")
         end
@@ -480,7 +477,8 @@ function WhisperAssignments()
     for _, playerInfo in ipairs(raidMembers) do
         local playerName = playerInfo[1]
         local message = playerInfo[2]
-        SendChatMessage(message .. " -- RaidDominion Tools", "WHISPER", nil, playerName)
+            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
+            SendChatMessage(message .. " -- RaidDominion Tools", "WHISPER", nil, playerName)
     end
 end
 

@@ -8,8 +8,8 @@
 
 Templates.xml
 Core.lua
+Window.xml
 Resources.lua
 Function.lua
-Window.xml
 RaidDominion.lua
 MinimapButton.lua

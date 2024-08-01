@@ -1,13 +1,7 @@
-
 function CreateRaidDominionOptionsTabContent(parent)
-    local contentScrollFrame = CreateFrame("ScrollFrame", "OptionsTab_ContentScrollFrame", parent,
-        "UIPanelScrollFrameTemplate")
-    contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
-    contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
-
-    local content = CreateFrame("Frame", nil, contentScrollFrame)
-    content:SetSize(340, 600) -- Ajusta la altura según la cantidad de contenido
-    contentScrollFrame:SetScrollChild(content)
+    local content = CreateFrame("Frame", "OptionsTabContent", parent)
+    content:SetPoint("TOPLEFT", 10, -55)
+    content:SetSize(340, 300)
 
     local instructions = {{"GameFontHighlightSmall", "DISCORD", 20}, {"GameFontNormal", "ENLACE:", 20},
                           {"GameFontHighlightSmall", "Mostrar panel al cargar", 20}}
@@ -46,26 +40,13 @@ function CreateRaidDominionOptionsTabContent(parent)
     end)
 end
 
-
 function CreateRaidDominionAboutTabContent(parent)
-    local contentScrollFrame = CreateFrame("ScrollFrame", "AboutTab_ContentScrollFrame", parent,
-        "UIPanelScrollFrameTemplate")
-    contentScrollFrame:SetPoint("TOPLEFT", 10, -55)
-    contentScrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
-
-    local content = CreateFrame("Frame", nil, contentScrollFrame)
-    content:SetSize(300, 600) -- Ajusta la altura según la cantidad de contenido
-    contentScrollFrame:SetScrollChild(content)
+    local content = CreateFrame("Frame", "AboutTabContent", parent)
+    content:SetPoint("TOPLEFT", 10, -55)
+    content:SetSize(300, 300)
 
     local instructions = {{"GameFontHighlightSmall", "NAVEGAR POR EL MENU:", 20},
-                          {"GameFontNormal", "Click derecho/izquierdo.", 20, 270},
-                          {"GameFontHighlightSmall", "TUTORIAL EN YOUTUBE:", 20}, {"GameFontNormal",
-                                                                               "Conozca todas las herramientas de RaidDominion Tools.",
-                                                                               20, 270},
-                          {"GameFontHighlightSmall", "COMUNIDAD:", 20},
-                          {"GameFontNormal",
-                           "Apoye el desarrollo continuo del addon mediante donaciones. ¡Gracias!", 20,
-                           270}}
+                          {"GameFontNormal", "Click derecho/izquierdo.", 20, 270}}
 
     local currentYOffset = -5 -- Posición vertical inicial
 
@@ -84,9 +65,22 @@ function CreateRaidDominionAboutTabContent(parent)
         currentYOffset = currentYOffset - fontHeight * (numExtraLines + 1) - 5 -- Actualiza la posición vertical para la siguiente línea
     end
 
+    local youtubeTitle = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    youtubeTitle:SetText("Tutorial en Youtube:")
+    youtubeTitle:SetPoint("TOPLEFT", content, "TOPLEFT", 20, currentYOffset - 0)
+    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
+
+    local youtubeLink = CreateFrame("EditBox", "youtubeLink", content, "InputBoxTemplate")
+    youtubeLink:SetPoint("TOPLEFT", youtubeTitle, "BOTTOMLEFT", 0, -5)
+    youtubeLink:SetSize(250, 20)
+    youtubeLink:SetAutoFocus(false)
+    youtubeLink:SetText("https://www.youtube.com/@IAM-DEV88")
+    youtubeLink:SetFontObject("ChatFontNormal")
+    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
+
     -- Enlace de GitHub para actualizaciones
     local githubTitle = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    githubTitle:SetText("Actualizaciones:")
+    githubTitle:SetText("Descarga de Actualizaciones:")
     githubTitle:SetPoint("TOPLEFT", content, "TOPLEFT", 20, currentYOffset - 0)
     currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
 
@@ -111,28 +105,16 @@ function CreateRaidDominionAboutTabContent(parent)
     paypalLink:SetText("https://paypal.me/iamdev88")
     paypalLink:SetFontObject("ChatFontNormal")
     currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
-
-    local youtubeTitle = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    youtubeTitle:SetText("Youtube:")
-    youtubeTitle:SetPoint("TOPLEFT", content, "TOPLEFT", 20, currentYOffset - 0)
-    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
-
-    local youtubeLink = CreateFrame("EditBox", "youtubeLink", content, "InputBoxTemplate")
-    youtubeLink:SetPoint("TOPLEFT", youtubeTitle, "BOTTOMLEFT", 0, -5)
-    youtubeLink:SetSize(250, 20)
-    youtubeLink:SetAutoFocus(false)
-    youtubeLink:SetText("https://www.youtube.com/@IAM-DEV88")
-    youtubeLink:SetFontObject("ChatFontNormal")
-    currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
 end
-
 
 -- Function to initialize the RaidDominion panel
 function RaidDominionPanelInit()
     -- SendSystemMessage("RaidDominionPanelInit")
     local panel = _G["RaidDominionWindow"]
-    if not panel then return end
-    
+    if not panel then
+        return
+    end
+
     PanelTemplates_SetNumTabs(panel, 2)
     PanelTemplates_SetTab(panel, 1)
     _G["RaidDominionOptionsTab"]:Show()

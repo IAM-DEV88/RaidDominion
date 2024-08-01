@@ -3,19 +3,25 @@ RaidDominion.frame = CreateFrame("Frame", "RaidDominionFrame", UIParent)
 
 local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
     local menu = CreateFrame("Frame", nil, parent)
+    local labelWidth = 185
     local labelHeight = 22
     local buttonSize = 20
     local buttonMargin = 1
+    local columnSpacing = 20 -- Espaciado adicional entre columnas
 
-    -- Calculamos el tamaño del menú tomando en cuenta los elementos y una fila adicional para los botones
-    local totalItems = #items + 1 -- +1 para la fila de botones adicionales
-    menu:SetSize(180, totalItems * labelHeight)
+    -- Calcular el número de columnas y filas necesarias
+    local columns = math.min(3, math.ceil(#items / 10))
+    local rows = math.ceil(#items / columns)
+
+    -- Ajustar el tamaño del menú en función del número de columnas y filas
+    local menuWidth = columns * (185 + columnSpacing) - columnSpacing
+    local menuHeight = rows * labelHeight + buttonSize + buttonMargin * 4
+    menu:SetSize(menuWidth, menuHeight)
     menu:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, yOffset)
     menu:Hide()
 
-    -- Crear botones para el menu
+    -- Crear botones para el menú
     for i, item in ipairs(items) do
-        local labelWidth = 185
         local assignableButton = Assignable and roleType .. "Assignable" .. i or nil
         local button = CreateFrame("Button", assignableButton, menu, "RaidDominionButtonTemplate")
         local assignedPlayer = getAssignedPlayer(item.name)
@@ -31,7 +37,9 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
             labelWidth = 167
         end
         button:SetSize(labelWidth, labelHeight)
-        button:SetPoint("TOPLEFT", -4, -labelHeight * (i - 1))
+        local col = (i - 1) % columns
+        local row = math.floor((i - 1) / columns)
+        button:SetPoint("TOPLEFT", col * (labelWidth + columnSpacing), -row * labelHeight)
         button:SetText(item.name or item)
         button:SetNormalFontObject("GameFontNormal")
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
@@ -47,12 +55,12 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
 
     -- Crear botones adicionales en una sola fila
     local totalButtonWidth = (#barItems * buttonSize) + ((#barItems - 1) * (buttonMargin * 2))
-    local xOffset = (menu:GetWidth() - totalButtonWidth) / 2 - 8
+    local xOffset = (menuWidth - totalButtonWidth) / 2 - 8
 
     for i, key in ipairs(barItems) do
         local button = CreateFrame("Button", nil, menu, "RaidDominionButtonTemplate")
         button:SetSize(buttonSize, buttonSize)
-        button:SetPoint("TOPLEFT", xOffset, -labelHeight * #items -8)
+        button:SetPoint("TOPLEFT", xOffset, -labelHeight * rows - 8)
         button:SetNormalTexture(key.icon) -- Asignar el icono al botón
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         button:RegisterForClicks("AnyUp")
@@ -73,8 +81,11 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
         end)
         xOffset = xOffset + buttonSize + (buttonMargin * 4)
     end
-
-    return menu
+    if columns > 1 then
+        local decrement = columns > 2 and 10 or 0
+        menuWidth = menuWidth - decrement - (columns * 9)
+    end
+    return menu, menuWidth, menuHeight
 end
 
 function RaidDominion:HandleAssignableRole(role)
@@ -86,32 +97,30 @@ function RaidDominion:HandleAssignableRole(role)
     end
 end
 
-function RaidDominion:ShowMainMenu()
+function RaidDominion:ShowMenu(menu, menuWidth, menuHeight)
     if self.currentMenu then
         self.currentMenu:Hide()
     end
-    self.mainMenu:Show()
-    self.currentMenu = self.mainMenu
-    self.frame:SetHeight(self.mainMenu:GetHeight() + 23) -- Ajustar la altura del frame según el menú principal
+    menu:Show()
+    self.currentMenu = menu
+
+    -- Ajustar el tamaño del frame principal según las dimensiones del menú
+    self.frame:SetSize(menuWidth + 20, menuHeight + 20)
+end
+
+function RaidDominion:ShowMainMenu()
+    self:ShowMenu(self.mainMenu, self.mainMenuWidth, self.mainMenuHeight)
 end
 
 function RaidDominion:HandleMainOption(option)
     if option == "Roles principales" then
-        self.mainMenu:Hide()
-        self.primaryMenu:Show()
-        self.currentMenu = self.primaryMenu
+        self:ShowMenu(self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight)
     elseif option == "BUFFs" then
-        self.mainMenu:Hide()
-        self.secondaryMenu:Show()
-        self.currentMenu = self.secondaryMenu
+        self:ShowMenu(self.secondaryMenu, self.secondaryMenuWidth, self.secondaryMenuHeight)
     elseif option == "Habilidades principales" then
-        self.mainMenu:Hide()
-        self.primarySkillsMenu:Show()
-        self.currentMenu = self.primarySkillsMenu
+        self:ShowMenu(self.primarySkillsMenu, self.primarySkillsMenuWidth, self.primarySkillsMenuHeight)
     elseif option == "Banda" then
-        self.mainMenu:Hide()
-        self.raidMenu:Show()
-        self.currentMenu = self.raidMenu
+        self:ShowMenu(self.raidMenu, self.raidMenuWidth, self.raidMenuHeight)
     elseif option == "Reglas" then
         self.addonMenu:Hide()
         self:ShowRulesMenu()
@@ -119,13 +128,9 @@ function RaidDominion:HandleMainOption(option)
         self.addonMenu:Hide()
         self:ShowMechanicsMenu()
     elseif option == "Roles secundarios" then
-        self.mainMenu:Hide()
-        self.secondaryRolesMenu:Show()
-        self.currentMenu = self.secondaryRolesMenu
+        self:ShowMenu(self.secondaryRolesMenu, self.secondaryRolesMenuWidth, self.secondaryRolesMenuHeight)
     elseif option == "RaidDominion Tools" then
-        self.mainMenu:Hide()
-        self.addonMenu:Show()
-        self.currentMenu = self.addonMenu
+        self:ShowMenu(self.addonMenu, self.addonMenuWidth, self.addonMenuHeight)
     elseif option == "Nombrar objetivo" then
         nameTarget()
     elseif option == "Modo de raid" then
@@ -166,10 +171,6 @@ function RaidDominion:HandleMainOption(option)
         _G["RaidDominionAboutTab"]:Show()
         _G["RaidDominionOptionsTab"]:Hide()
     end
-
-    if self.currentMenu then
-        self.frame:SetHeight(self.currentMenu:GetHeight() + 24)
-    end
 end
 
 function RaidDominion:ShowRulesMenu()
@@ -178,7 +179,7 @@ function RaidDominion:ShowRulesMenu()
         table.insert(rulesList, rule)
     end
     if not self.rulesMenu then
-        self.rulesMenu = CreateMenu(self.frame, rulesList, -12, function(rule)
+        self.rulesMenu, self.rulesMenuWidth, self.rulesMenuHeight = CreateMenu(self.frame, rulesList, -12, function(rule)
             SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 REGLAS")
             local title = "===> " .. rule .. " <==="
             local messages = raidRules[rule]
@@ -186,9 +187,10 @@ function RaidDominion:ShowRulesMenu()
             SendDelayedMessages(messages)
         end)
     end
-    self.rulesMenu:Show()
-    self.currentMenu = self.rulesMenu
-    self.frame:SetHeight(self.rulesMenu:GetHeight() + 23)
+    if self.rulesMenuWidth > 210 then
+        self.rulesMenuWidth = self.rulesMenuWidth + 18
+    end 
+    self:ShowMenu(self.rulesMenu, self.rulesMenuWidth, self.rulesMenuHeight)
 end
 
 function RaidDominion:ShowMechanicsMenu()
@@ -197,20 +199,18 @@ function RaidDominion:ShowMechanicsMenu()
         table.insert(mechanicsList, mechanic)
     end
     if not self.mechanicsMenu then
-        self.mechanicsMenu = CreateMenu(self.frame, mechanicsList, -12, function(mechanic)
-            -- Enviar los detalles específicos del jefe seleccionado a SendDelayedMessages
-            if raidMechanics[mechanic] then
-                SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 MECANICAS")
-                local title = "===> " .. mechanic .. " <==="
-                local messages = raidMechanics[mechanic]
-                table.insert(messages, 1, title)
-                SendDelayedMessages(messages)
-            end
+        self.mechanicsMenu, self.mechanicsMenuWidth, self.mechanicsMenuHeight = CreateMenu(self.frame, mechanicsList, -12, function(mechanic)
+            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 MECÁNICAS")
+            local title = "===> " .. mechanic .. " <==="
+            local messages = raidMechanics[mechanic]
+            table.insert(messages, 1, title)
+            SendDelayedMessages(messages)
         end)
     end
-    self.mechanicsMenu:Show()
-    self.currentMenu = self.mechanicsMenu
-    self.frame:SetHeight(self.mechanicsMenu:GetHeight() + 23)
+    if self.mechanicsMenuWidth > 210 then
+        self.mechanicsMenuWidth =  self.mechanicsMenuWidth + 18
+    end 
+    self:ShowMenu(self.mechanicsMenu, self.mechanicsMenuWidth, self.mechanicsMenuHeight)
 end
 
 function RaidDominion:Init()
@@ -229,22 +229,22 @@ function RaidDominion:Init()
     self.frame:SetScript("OnDragStart", self.frame.StartMoving)
     self.frame:SetScript("OnDragStop", self.frame.StopMovingOrSizing)
 
-    self.mainMenu = CreateMenu(self.frame, mainOptions, -12, function(option)
+    self.mainMenu, self.mainMenuWidth, self.mainMenuHeight = CreateMenu(self.frame, mainOptions, -12, function(option)
         RaidDominion:HandleMainOption(option)
     end, false)
-    self.primaryMenu = CreateMenu(self.frame, primaryRoles, -12, function(role)
+    self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight = CreateMenu(self.frame, primaryRoles, -12, function(role)
         RaidDominion:HandleAssignableRole(role)
     end, true, "PrimaryRole")
-    self.primarySkillsMenu = CreateMenu(self.frame, primarySkills, -12, function(role)
+    self.primarySkillsMenu, self.primarySkillsMenuWidth, self.primarySkillsMenuHeight = CreateMenu(self.frame, primarySkills, -12, function(role)
         RaidDominion:HandleAssignableRole(role)
     end, true, "PrimarySkill")
-    self.secondaryMenu = CreateMenu(self.frame, primaryBuffs, -12, function(role)
+    self.secondaryMenu, self.secondaryMenuWidth, self.secondaryMenuHeight = CreateMenu(self.frame, primaryBuffs, -12, function(role)
         RaidDominion:HandleAssignableRole(role)
     end, true, "BUFFs")
-    self.secondaryRolesMenu = CreateMenu(self.frame, secondaryRoles, -12, function(role)
+    self.secondaryRolesMenu, self.secondaryRolesMenuWidth, self.secondaryRolesMenuHeight = CreateMenu(self.frame, secondaryRoles, -12, function(role)
         RaidDominion:HandleAssignableRole(role)
     end, true, "SecondaryRole")
-    self.addonMenu = CreateMenu(self.frame, addonOptions, -12, function(option)
+    self.addonMenu, self.addonMenuWidth, self.addonMenuHeight = CreateMenu(self.frame, addonOptions, -12, function(option)
         RaidDominion:HandleMainOption(option)
     end, false)
 

@@ -3,6 +3,7 @@ local _G = _G
 _G["RaidDominion"] = addon
 
 raidRules = {
+    ["LA CAMARA DE ARCHAVON"] = {"BOTIN => PVE: Por función MAIN // PVP: Por clase"},
     ["CULTO DEL OSARIO"] = {"Todos invitados a unirse a la hermandad."},
     ["RE-ARME RAPIDO"] = {"Por favor continuar // Ya se esta buscando por posada // Conocidos interesados que WISP"},
     ["REVISO Y REEMPLAZO"] = {"AFK/OFFs sin avisar // DPS debajo del Tanque // No respetar pulls o mecanincas = No botin"},
