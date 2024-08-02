@@ -32,32 +32,4 @@
         <Scripts><OnLoad>self:RegisterForClicks("AnyUp")</OnLoad></Scripts>
     </Button>
 
-    <!-- Define the SmallFontTemplate with OUTLINE -->
-    <Font name="AssignableSmallFontOutlineTemplate" font="Fonts\FRIZQT__.TTF" virtual="true">
-        <FontHeight>
-            <AbsValue val="5"/>
-        </FontHeight>
-    </Font>
-
-    <!-- Default buttons template -->
-    <Button name="AssignableButtonTemplate" virtual="true">
-        <Size><AbsDimension x="60" y="25" /></Size>
-        <ButtonText name="$parentText">
-            <Anchors>
-                <Anchor point="LEFT">
-                    <Offset><AbsDimension x="5" y="0" /></Offset>
-                </Anchor>
-                <Anchor point="RIGHT">
-                    <Offset><AbsDimension x="-5" y="0" /></Offset>
-                </Anchor>
-            </Anchors>
-        </ButtonText>
-        <Layers>
-        </Layers>
-        <HighlightTexture inherits="UIPanelButtonHighlightTexture" mod="ADD" />
-        <PushedTexture inherits="UIPanelButtonPushedTexture" mod="ADD" />
-        <DisabledTexture inherits="UIPanelButtonDisabledTexture" />
-        <Scripts><OnLoad>self:RegisterForClicks("AnyUp")</OnLoad></Scripts>
-    </Button>
-
 </Ui>

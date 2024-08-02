@@ -1,3 +1,5 @@
+enabledPanel = enabledPanel or {}
+
 function CreateRaidDominionOptionsTabContent(parent)
     local content = CreateFrame("Frame", "OptionsTabContent", parent)
     content:SetPoint("TOPLEFT", 10, -55)

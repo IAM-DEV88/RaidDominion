@@ -237,6 +237,5 @@ barItems = {{
 }}
 
 local currentPlayers = {}
-enabledPanel = enabledPanel or {}
 addonCache = {}
 local isMasterLooter = false

@@ -1,21 +1,23 @@
 local RaidDominion = {}
 RaidDominion.frame = CreateFrame("Frame", "RaidDominionFrame", UIParent)
 
+local LABEL_WIDTH = 185
+local LABEL_HEIGHT = 22
+local BUTTON_SIZE = 20
+local BUTTON_MARGIN = 1
+local COLUMN_SPACING = 20
+local MAX_COLUMNS = 3
+
 local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
     local menu = CreateFrame("Frame", nil, parent)
-    local labelWidth = 185
-    local labelHeight = 22
-    local buttonSize = 20
-    local buttonMargin = 1
-    local columnSpacing = 20 -- Espaciado adicional entre columnas
 
     -- Calcular el número de columnas y filas necesarias
-    local columns = math.min(3, math.ceil(#items / 10))
+    local columns = math.min(MAX_COLUMNS, math.ceil(#items / 10))
     local rows = math.ceil(#items / columns)
 
     -- Ajustar el tamaño del menú en función del número de columnas y filas
-    local menuWidth = columns * (185 + columnSpacing) - columnSpacing
-    local menuHeight = rows * labelHeight + buttonSize + buttonMargin * 4
+    local menuWidth = columns * (LABEL_WIDTH + COLUMN_SPACING) - COLUMN_SPACING
+    local menuHeight = rows * LABEL_HEIGHT + BUTTON_SIZE + BUTTON_MARGIN * 4
     menu:SetSize(menuWidth, menuHeight)
     menu:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, yOffset)
     menu:Hide()
@@ -27,23 +29,25 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
         local assignedPlayer = getAssignedPlayer(item.name)
         if Assignable then
             button:SetAttribute("player", assignedPlayer)
-            local resetButton = CreateFrame("Button", nil, menu, "AssignableButtonTemplate")
-            resetButton:SetSize(20, 20)
+            local resetButton = CreateFrame("Button", nil, menu, "RaidDominionButtonTemplate")
+            resetButton:SetSize(BUTTON_SIZE, BUTTON_SIZE)
             resetButton:SetPoint("LEFT", button, "RIGHT", 0, 0)
             resetButton:SetNormalTexture(item.icon)
             resetButton:SetScript("OnClick", function()
                 ResetRoleAssignment(item.name, button)
             end)
-            labelWidth = 167
+            button:SetSize(LABEL_WIDTH - 18, LABEL_HEIGHT) -- Ajustar el ancho del botón si es asignable
+        else
+            button:SetSize(LABEL_WIDTH, LABEL_HEIGHT)
         end
-        button:SetSize(labelWidth, labelHeight)
         local col = (i - 1) % columns
         local row = math.floor((i - 1) / columns)
-        button:SetPoint("TOPLEFT", col * (labelWidth + columnSpacing), -row * labelHeight)
+        button:SetPoint("TOPLEFT", col * (LABEL_WIDTH + COLUMN_SPACING), -row * LABEL_HEIGHT)
         button:SetText(item.name or item)
-        button:SetNormalFontObject("GameFontNormal")
+        button:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
+        button:SetNormalFontObject("GameFontHighlight")
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-        button:RegisterForClicks("AnyUp") -- Esto habilita los clics derechos y izquierdos
+        button:RegisterForClicks("AnyUp")
         button:SetScript("OnClick", function(self, button)
             if button == "LeftButton" then
                 onClick(item.name or item)
@@ -54,14 +58,14 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
     end
 
     -- Crear botones adicionales en una sola fila
-    local totalButtonWidth = (#barItems * buttonSize) + ((#barItems - 1) * (buttonMargin * 2))
+    local totalButtonWidth = (#barItems * BUTTON_SIZE) + ((#barItems - 1) * (BUTTON_MARGIN * 2))
     local xOffset = (menuWidth - totalButtonWidth) / 2 - 8
 
     for i, key in ipairs(barItems) do
         local button = CreateFrame("Button", nil, menu, "RaidDominionButtonTemplate")
-        button:SetSize(buttonSize, buttonSize)
-        button:SetPoint("TOPLEFT", xOffset, -labelHeight * rows - 8)
-        button:SetNormalTexture(key.icon) -- Asignar el icono al botón
+        button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
+        button:SetPoint("TOPLEFT", xOffset, -LABEL_HEIGHT * rows - 8)
+        button:SetNormalTexture(key.icon)
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         button:RegisterForClicks("AnyUp")
         button:SetScript("OnClick", function(self, button)
@@ -79,11 +83,11 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
         button:SetScript("OnLeave", function()
             GameTooltip:Hide()
         end)
-        xOffset = xOffset + buttonSize + (buttonMargin * 4)
+        xOffset = xOffset + BUTTON_SIZE + (BUTTON_MARGIN * 4)
     end
+
     if columns > 1 then
-        local decrement = columns > 2 and 10 or 0
-        menuWidth = menuWidth - decrement - (columns * 9)
+        menuWidth = menuWidth - (columns * 9) - (columns > 2 and 10 or 0)
     end
     return menu, menuWidth, menuHeight
 end
@@ -147,11 +151,11 @@ function RaidDominion:HandleMainOption(option)
         SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 ¿TODOS LISTOS?")
         StaticPopup_Show("CONFIRM_READY_CHECK")
     elseif option == "Cambiar Botin" then
-        isMasterLooter = not isMasterLooter -- Cambiar el estado del maestro despojador
+        isMasterLooter = not isMasterLooter
         if isMasterLooter then
-            SetLootMethod("master", UnitName("player")) -- Establecer el método de botín a "Maestro despojador"
+            SetLootMethod("master", UnitName("player"))
         else
-            SetLootMethod("group") -- Establecer el método de botín a "Botín de grupo"
+            SetLootMethod("group")
         end
     elseif option == "Recargar" then
         ReloadUI()
@@ -166,10 +170,13 @@ function RaidDominion:HandleMainOption(option)
     elseif option == "Ayuda" then
         RaidDominionWindow:Show()
         local panel = _G["RaidDominionWindow"]
-
         PanelTemplates_SetTab(panel, 2)
         _G["RaidDominionAboutTab"]:Show()
         _G["RaidDominionOptionsTab"]:Hide()
+    end
+
+    if self.currentMenu then
+        self.frame:SetSize(self.currentMenu:GetWidth() + 20, self.currentMenu:GetHeight() + 24)
     end
 end
 
@@ -179,17 +186,18 @@ function RaidDominion:ShowRulesMenu()
         table.insert(rulesList, rule)
     end
     if not self.rulesMenu then
-        self.rulesMenu, self.rulesMenuWidth, self.rulesMenuHeight = CreateMenu(self.frame, rulesList, -12, function(rule)
-            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 REGLAS")
-            local title = "===> " .. rule .. " <==="
-            local messages = raidRules[rule]
-            table.insert(messages, 1, title)
-            SendDelayedMessages(messages)
-        end)
+        self.rulesMenu, self.rulesMenuWidth, self.rulesMenuHeight =
+            CreateMenu(self.frame, rulesList, -12, function(rule)
+                SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 REGLAS")
+                local title = "===> " .. rule .. " <==="
+                local messages = raidRules[rule]
+                table.insert(messages, 1, title)
+                SendDelayedMessages(messages)
+            end)
     end
     if self.rulesMenuWidth > 210 then
         self.rulesMenuWidth = self.rulesMenuWidth + 18
-    end 
+    end
     self:ShowMenu(self.rulesMenu, self.rulesMenuWidth, self.rulesMenuHeight)
 end
 
@@ -199,17 +207,18 @@ function RaidDominion:ShowMechanicsMenu()
         table.insert(mechanicsList, mechanic)
     end
     if not self.mechanicsMenu then
-        self.mechanicsMenu, self.mechanicsMenuWidth, self.mechanicsMenuHeight = CreateMenu(self.frame, mechanicsList, -12, function(mechanic)
-            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 MECÁNICAS")
-            local title = "===> " .. mechanic .. " <==="
-            local messages = raidMechanics[mechanic]
-            table.insert(messages, 1, title)
-            SendDelayedMessages(messages)
-        end)
+        self.mechanicsMenu, self.mechanicsMenuWidth, self.mechanicsMenuHeight =
+            CreateMenu(self.frame, mechanicsList, -12, function(mechanic)
+                SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 MECÁNICAS")
+                local title = "===> " .. mechanic .. " <==="
+                local messages = raidMechanics[mechanic]
+                table.insert(messages, 1, title)
+                SendDelayedMessages(messages)
+            end)
     end
     if self.mechanicsMenuWidth > 210 then
-        self.mechanicsMenuWidth =  self.mechanicsMenuWidth + 18
-    end 
+        self.mechanicsMenuWidth = self.mechanicsMenuWidth + 18
+    end
     self:ShowMenu(self.mechanicsMenu, self.mechanicsMenuWidth, self.mechanicsMenuHeight)
 end
 
@@ -229,24 +238,30 @@ function RaidDominion:Init()
     self.frame:SetScript("OnDragStart", self.frame.StartMoving)
     self.frame:SetScript("OnDragStop", self.frame.StopMovingOrSizing)
 
-    self.mainMenu, self.mainMenuWidth, self.mainMenuHeight = CreateMenu(self.frame, mainOptions, -12, function(option)
-        RaidDominion:HandleMainOption(option)
-    end, false)
-    self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight = CreateMenu(self.frame, primaryRoles, -12, function(role)
-        RaidDominion:HandleAssignableRole(role)
-    end, true, "PrimaryRole")
-    self.primarySkillsMenu, self.primarySkillsMenuWidth, self.primarySkillsMenuHeight = CreateMenu(self.frame, primarySkills, -12, function(role)
-        RaidDominion:HandleAssignableRole(role)
-    end, true, "PrimarySkill")
-    self.secondaryMenu, self.secondaryMenuWidth, self.secondaryMenuHeight = CreateMenu(self.frame, primaryBuffs, -12, function(role)
-        RaidDominion:HandleAssignableRole(role)
-    end, true, "BUFFs")
-    self.secondaryRolesMenu, self.secondaryRolesMenuWidth, self.secondaryRolesMenuHeight = CreateMenu(self.frame, secondaryRoles, -12, function(role)
-        RaidDominion:HandleAssignableRole(role)
-    end, true, "SecondaryRole")
-    self.addonMenu, self.addonMenuWidth, self.addonMenuHeight = CreateMenu(self.frame, addonOptions, -12, function(option)
-        RaidDominion:HandleMainOption(option)
-    end, false)
+    self.mainMenu, self.mainMenuWidth, self.mainMenuHeight =
+        CreateMenu(self.frame, mainOptions, -12, function(option)
+            RaidDominion:HandleMainOption(option)
+        end, false)
+    self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight =
+        CreateMenu(self.frame, primaryRoles, -12, function(role)
+            RaidDominion:HandleAssignableRole(role)
+        end, true, "PrimaryRole")
+    self.primarySkillsMenu, self.primarySkillsMenuWidth, self.primarySkillsMenuHeight = CreateMenu(self.frame,
+        primarySkills, -12, function(role)
+            RaidDominion:HandleAssignableRole(role)
+        end, true, "PrimarySkill")
+    self.secondaryMenu, self.secondaryMenuWidth, self.secondaryMenuHeight =
+        CreateMenu(self.frame, primaryBuffs, -12, function(role)
+            RaidDominion:HandleAssignableRole(role)
+        end, true, "BUFFs")
+    self.secondaryRolesMenu, self.secondaryRolesMenuWidth, self.secondaryRolesMenuHeight = CreateMenu(self.frame,
+        secondaryRoles, -12, function(role)
+            RaidDominion:HandleAssignableRole(role)
+        end, true, "SecondaryRole")
+    self.addonMenu, self.addonMenuWidth, self.addonMenuHeight =
+        CreateMenu(self.frame, addonOptions, -12, function(option)
+            RaidDominion:HandleMainOption(option)
+        end, false)
 
     self:ShowMainMenu() -- Mostrar el menú principal directamente
 
@@ -285,10 +300,8 @@ local function OnEvent(self, event, arg1)
         -- print("RAID_ROSTER_UPDATE")
         getPlayersInfo()
     elseif event == "PLAYER_LOGOUT" then
-        -- print("PLAYER_LOGOUT")
-        enabledPanel = (enabledPanelCheckbox:GetChecked() == 1) and true or false
-
-        for k, v in (addonCache) do
+        enabledPanel = (enabledPanelCheckbox:GetChecked() == 1)
+        for k, v in pairs(addonCache) do
             raidInfo[k] = v
         end
     end

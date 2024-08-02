@@ -181,7 +181,10 @@ function ResetRoleAssignment(roleName, button)
         end
         button:SetText(roleName) -- Restaurar el texto original del button
         button:SetAttribute("player", nil)
-        SendSystemMessage("Se retiro a " .. selectedPlayer .. " del rol de [" .. roleName .. "]")
+        button:SetBackdrop({})
+        button:SetTextColor(1, 1, 1, 1) -- Cambiar el color del texto a blanco
+
+        SendSystemMessage("Se retiró a " .. selectedPlayer .. " del rol de [" .. roleName .. "]")
     else
         local hasTarget = UnitExists("target")
         local targetName = UnitName("target")
@@ -195,13 +198,20 @@ function ResetRoleAssignment(roleName, button)
                 addonCache[targetName].rol[roleName] = true
                 button:SetAttribute("player", targetName)
                 button:SetText(targetName .. " [" .. roleName .. "]") -- Concatenar el nombre del jugador al texto del label
+                button:SetBackdrop({
+                    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+                })
+                button:SetBackdropColor(0, 0, 0, 0.8)
+                button:SetTextColor(1, 1, 1, 1) -- Cambiar el color del texto a blanco
+
+                SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
             end
-            SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
         else
             SendSystemMessage("Para asignar un rol seleccione un jugador de la banda o grupo.")
         end
     end
 end
+
 
 function SendRoleAlert(roleName, player)
     local numberOfPlayers, defaultChannel = getPlayerInitialState()
