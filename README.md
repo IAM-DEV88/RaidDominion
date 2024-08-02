@@ -1,7 +1,7 @@
 # RaidDominion Tools
 > WoW 335a Addon
 
-![RaidDominionUI](https://github.com/IAM-DEV88/RaidDominion/blob/main/Captura%20de%20pantalla%202024-07-30%20130954.png)
+![RaidDominionUI](https://github.com/IAM-DEV88/RaidDominion/blob/main/rdUI.png)
 ## Descripción
 RaidDominion es una herramienta diseñada para facilitar la gestion de banda en el juego World of Warcraft. Permite asignar roles importantes a los miembros de la banda, alertar dichas asignaciones, asignar iconos a roles principales y mas.
 
