@@ -4,7 +4,7 @@ _G["RaidDominion"] = addon
 
 raidRules = {
     ["LA CAMARA DE ARCHAVON"] = {"BOTIN => PVE: Por función MAIN // PVP: Por clase"},
-    ["CULTO DEL OSARIO"] = {"Todos invitados a unirse a la hermandad."},
+    ["RAID DOMINION"] = {"Todos invitados a unirse a la hermandad // Portal: https://raid-dominion.netlify.app/"},
     ["RE-ARME RAPIDO"] = {"Por favor continuar // Ya se esta buscando por posada // Conocidos interesados que WISP"},
     ["REVISO Y REEMPLAZO"] = {"AFK/OFFs sin avisar // DPS debajo del Tanque // No respetar pulls o mecanincas = No botin"},
     ["BOTIN"] =  {"No DC = No Botin // Se rollea 20 minutos antes del ligado del item o al dar Raid Off en el orden que fueron obtenidos."},
@@ -209,7 +209,7 @@ secondaryRoles = {{
     icon = "Interface\\Icons\\spell_arcane_massdispel"
 }}
 mainOptions = {"Habilidades principales", "Roles principales", "BUFFs", "Roles secundarios", "RaidDominion Tools"}
-addonOptions = {"Reglas", "Mecanicas","Ayuda", "Recargar", "Ocultar"}
+addonOptions = {"Reglas", "Mecanicas","Revisar banda","Sorteo de hermandad","Ayuda", "Recargar", "Ocultar"}
 barItems = {{
     name = "Modo de raid",
     icon = "Interface\\Icons\\inv_misc_coin_09"
@@ -239,3 +239,4 @@ barItems = {{
 local currentPlayers = {}
 addonCache = {}
 local isMasterLooter = false
+toExport = {}

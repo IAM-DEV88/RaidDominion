@@ -163,11 +163,18 @@ function updateAllButtons()
         if button then
             local assignedPlayer = getAssignedPlayer(data.role)
             if assignedPlayer then
+                button:SetNormalFontObject("GameFontNormal")
                 button:SetText(assignedPlayer .. " [" .. data.role .. "]")
                 button:SetAttribute("player", assignedPlayer)
+                button:SetBackdrop({
+                    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background"
+                })
+                button:SetBackdropColor(0, 0, 0, 0.8)
             else
                 button:SetText(data.role)
                 button:SetAttribute("player", nil)
+                button:SetNormalFontObject("GameFontHighlight")
+                button:SetBackdrop({})
             end
         end
     end
@@ -182,7 +189,7 @@ function ResetRoleAssignment(roleName, button)
         button:SetText(roleName) -- Restaurar el texto original del button
         button:SetAttribute("player", nil)
         button:SetBackdrop({})
-        button:SetTextColor(1, 1, 1, 1) -- Cambiar el color del texto a blanco
+        button:SetNormalFontObject("GameFontHighlight")
 
         SendSystemMessage("Se retiró a " .. selectedPlayer .. " del rol de [" .. roleName .. "]")
     else
@@ -199,10 +206,10 @@ function ResetRoleAssignment(roleName, button)
                 button:SetAttribute("player", targetName)
                 button:SetText(targetName .. " [" .. roleName .. "]") -- Concatenar el nombre del jugador al texto del label
                 button:SetBackdrop({
-                    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+                    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background"
                 })
+                button:SetNormalFontObject("GameFontNormal")
                 button:SetBackdropColor(0, 0, 0, 0.8)
-                button:SetTextColor(1, 1, 1, 1) -- Cambiar el color del texto a blanco
 
                 SendSystemMessage(playerClass .. " " .. targetName .. " [" .. roleName .. "]")
             end
@@ -211,7 +218,6 @@ function ResetRoleAssignment(roleName, button)
         end
     end
 end
-
 
 function SendRoleAlert(roleName, player)
     local numberOfPlayers, defaultChannel = getPlayerInitialState()
@@ -361,7 +367,6 @@ StaticPopupDialogs["CONFIRM_PULL_COUNTDOWN"] = {
 }
 
 function AssignIconsAndAlert()
-    if IsRaidLeader() then
         local raidMembers = {
             ["ALERT"] = {
                 tanks = {},
@@ -451,9 +456,6 @@ function AssignIconsAndAlert()
         else
             SendSystemMessage("No hay tanques ni healers asignados.")
         end
-    else
-        SendSystemMessage("Debe ser lider de grupo o raid.")
-    end
 end
 
 function WhisperAssignments()
@@ -487,8 +489,8 @@ function WhisperAssignments()
     for _, playerInfo in ipairs(raidMembers) do
         local playerName = playerInfo[1]
         local message = playerInfo[2]
-            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
-            SendChatMessage(message .. " -- RaidDominion Tools", "WHISPER", nil, playerName)
+        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
+        SendChatMessage(message .. " -- RaidDominion Tools", "WHISPER", nil, playerName)
     end
 end
 
@@ -578,3 +580,280 @@ function nameTarget()
         SendDelayedMessages({targetName})
     end
 end
+
+function checkTempleGear(playerName)
+    local hasTempleGear = false
+    local isChecked = false
+
+    local slots = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot",
+                   "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot",
+                   "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
+
+    -- Nombres de los items que indican la presencia de temple
+    local templeItemNames = {"incansable", "colérico", "furioso"}
+
+    if raidInfo[playerName] then
+        -- Lista para almacenar los nombres de los items no permitidos
+        local templeItemsFound = {}
+
+        -- Iterar sobre los slots de equipamiento
+        for _, slot in pairs(slots) do
+            local itemLink = GetInventoryItemLink(playerName, GetInventorySlotInfo(slot))
+            if itemLink then
+                local itemName, _ = GetItemInfo(itemLink)
+                -- Comprobar si el nombre del item contiene palabras clave
+                for _, keyword in ipairs(templeItemNames) do
+                    if string.find(itemName, keyword) then
+                        table.insert(templeItemsFound, itemName)
+                        hasTempleGear = true
+                        break -- Salir del bucle interno, continuar con el siguiente slot
+                    end
+                end
+                isChecked = true
+            elseif not itemLink and not isChecked then
+                SendSystemMessage("El jugador " .. playerName .. " debe estar cerca para ser inspeccionado")
+                SendChatMessage(playerName .. " por favor acercate para inpección.", "WHISPER", nil, playerName)
+                break
+            end
+        end
+
+        -- Si se encontraron items no permitidos, susurrar cada uno de ellos al jugador
+        if hasTempleGear and isChecked then
+            local counter = 0
+            for _, itemName in ipairs(templeItemsFound) do
+                counter = counter + 1
+                SendChatMessage(itemName, "WHISPER", nil, playerName)
+            end
+            SendChatMessage("Tienes (" .. counter .. ") parte" .. (counter <= 1 and "" or "s") .. " PVP", "WHISPER",
+                nil, playerName)
+
+            if GetNumRaidMembers ~= 0 then
+                local numberOfPlayers, _ = getPlayerInitialState()
+                local subgroup7Count = 0
+                local subgroupForPvp = 7 -- Por defecto asignar al grupo 7
+
+                -- Contar el número de jugadores en el grupo 7
+                for i = 1, numberOfPlayers do
+                    local _, _, subgroup = GetRaidRosterInfo(i)
+                    if subgroup == 7 then
+                        subgroup7Count = subgroup7Count + 1
+                    end
+                end
+
+                -- Si el grupo 7 está lleno (5 jugadores), asignar al grupo 8
+                if subgroup7Count >= 5 then
+                    subgroupForPvp = 8
+                end
+
+                -- Asignar el jugador al grupo correspondiente
+                for i = 1, numberOfPlayers do
+                    local unit = "raid" .. i
+                    local unt = UnitName("raid" .. i)
+                    if UnitName(unit) == playerName then
+                        SetRaidSubgroup(i, subgroupForPvp)
+                    end
+                end
+            end
+
+            -- Mostrar un popup
+            local confirm = StaticPopup_Show("CONFIRM_TEMPLE_GEAR", playerName)
+            if confirm then
+                confirm.data = playerName -- Pasar el nombre del jugador al popup
+            end
+        elseif isChecked and not hasTempleGear then
+            SendSystemMessage(playerName .. " aprobado.")
+        end
+    else
+        SendSystemMessage("El jugador " .. playerName .. " no está en la raid para ser inspeccionado")
+    end
+end
+
+-- Crear el popup de confirmación
+StaticPopupDialogs["CONFIRM_TEMPLE_GEAR"] = {
+    text = "El jugador %s tiene piezas de equipamiento con temple. ¿Deseas expulsarlo de la raid?",
+    button1 = "Sí",
+    button2 = "No",
+    OnAccept = function(self, playerName)
+        -- Expulsar al jugador de la raid
+        SendChatMessage("Te agradezco, en una próxima oportunidad te espero full PVE.", "WHISPER", nil, playerName)
+        UninviteUnit(playerName)
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3
+}
+
+function CheckRaidMembersForPvPGear()
+    local numberOfPlayers, _ = getPlayerInitialState()
+    local approved = {}
+    local disapproved = {}
+
+    for i = 1, numberOfPlayers do
+        local playerName = GetRaidRosterInfo(i)
+        checkTempleGear(playerName)
+
+        -- Si el jugador ha sido aprobado o desaprobado, añadirlo a la lista correspondiente
+        if isChecked and hasTempleGear then
+            table.insert(disapproved, playerName)
+        elseif isChecked and not hasTempleGear then
+            table.insert(approved, playerName)
+        end
+    end
+
+    -- Mensaje final de aprobados y desaprobados
+    SendSystemMessage("Aprobados: " .. table.concat(approved, ", "))
+    SendSystemMessage("Desaprobados: " .. table.concat(disapproved, ", "))
+end
+
+local rewards = {{
+    name = "Bolsa de tejido de Escarcha",
+    cost = 60
+}, {
+    name = "Cinturón del noble solitario",
+    cost = 60
+}, {
+    name = "Sello de Edward el Extraño",
+    cost = 80
+}, {
+    name = "Aguijón supernumerario de Namlak",
+    cost = 120
+}, {
+    name = "Leotardos de talismanes dudosos",
+    cost = 150
+}, {
+    name = "Bufas de solidaridad de Wapach",
+    cost = 150
+}, {
+    name = "Cinturón de nova de sangre",
+    cost = 280
+}, {
+    name = "Sortija de hueso de presagista",
+    cost = 400
+}, {
+    name = "Campana de Je'Tze",
+    cost = 600
+}, {
+    name = "Hombreras de cadáver tieso",
+    cost = 800
+}, {
+    name = "Caparazón de reyes olvidados",
+    cost = 880
+}, {
+    name = "Anillo de tendones podridos",
+    cost = 900
+}, {
+    name = "Saco de maravillas de Ikfirus",
+    cost = 1900
+}, {
+    name = "Hombreras de placas de behemoth enfurecido",
+    cost = 2300
+}, {
+    name = "Ojo gélido de Tuétano",
+    cost = 4000
+}, {
+    name = "Empuñadura",
+    cost = 7000
+}, {
+    name = "Gargantilla carmesí de la Reina de Sangre",
+    cost = 14000
+}}
+
+local function SelectReward(rewards)
+    local totalWeight = 0
+    local weights = {}
+
+    for _, reward in ipairs(rewards) do
+        local probability = math.max(0.1, (1000 / reward.cost)) -- Ajustar la probabilidad
+        table.insert(weights, probability)
+        totalWeight = totalWeight + probability
+    end
+
+    local randomValue = math.random() * totalWeight
+    local cumulativeWeight = 0
+
+    for i, weight in ipairs(weights) do
+        cumulativeWeight = cumulativeWeight + weight
+        if randomValue <= cumulativeWeight then
+            return rewards[i]
+        end
+    end
+end
+
+local function GetOnlineGuildMembers()
+    local numTotalMembers, _, numOnlineMembers = GetNumGuildMembers(true)
+    local onlineMembers = {}
+
+    print(numOnlineMembers)
+
+    for i = 1, numTotalMembers do
+        local name, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
+        if isOnline then
+            table.insert(onlineMembers, name)
+        end
+    end
+
+    toExport = {}
+
+    for i = 1, numTotalMembers do
+        local name, rank, _, _, class, _, _, _, _ = GetGuildRosterInfo(i)
+        table.insert(toExport, {
+            name = name,
+            rank = rank,
+            class = class
+        })
+    end
+
+    return onlineMembers
+end
+
+local function Announce(message)
+    SendDelayedMessages({message})
+end
+
+function GuildRoulette()
+    local onlineMembers = GetOnlineGuildMembers()
+
+    local selectedReward = SelectReward(rewards)
+    Announce("¡SORTEO DE HERMANDAD, EL GANADOR DEBE RESPONDER Y RECLAMAR O SE HACE NUEVO SORTEO!")
+    Announce("El sistema selecciona un premio aleatorio del banco y lo sortea entre todos los jugadores de la hermandad que esten conectados.")
+    Announce("El premio de este sorteo es: " .. selectedReward.name .. " valorado en " .. selectedReward.cost .. "g!")
+
+    local totalSteps = #onlineMembers
+    local currentStep = 0
+
+    local frame = CreateFrame("Frame")
+
+    frame:SetScript("OnUpdate", function(self, elapsed)
+        currentStep = currentStep + 1
+
+        if currentStep > totalSteps then
+            local winnerIndex = math.random(#onlineMembers)
+            local winner = onlineMembers[winnerIndex]
+
+            -- Listar los resultados
+            Announce("Resultados del sorteo:")
+            for i, member in ipairs(onlineMembers) do
+                if i ~= winnerIndex then
+                    local minorPrize = math.random(1, selectedReward.cost - 1)
+                    Announce(member .. " ha obtenido " .. minorPrize .. " creditos.")
+                else
+                    Announce(member .. " ha obtenido el premio mayor de " .. selectedReward.cost .. " creditos!")
+                end
+            end
+            Announce("¡El ganador es " .. winner .. "! Ha ganado " .. selectedReward.cost ..
+                         " creditos para cambiar por " .. selectedReward.name .. " o cualquier item de igual valor.")
+                         Announce("SI NO RECLAMA SE HACE NUEVO SORTEO")
+            
+            SendChatMessage(
+                "¡Ha ganado " .. selectedReward.cost .. " creditos para cambiar por " .. selectedReward.name ..
+                    " o cualquier item de igual valor. RECLAME O SIGUE JUGANDO!", "WHISPER", nil, playerName)
+
+            PlaySoundFile("Sound\\Interface\\LevelUp.wav")
+
+            self:SetScript("OnUpdate", nil) -- Detener el OnUpdate
+            return
+        end
+    end)
+end
+

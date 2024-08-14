@@ -160,13 +160,25 @@ function RaidDominion:HandleMainOption(option)
     elseif option == "Recargar" then
         ReloadUI()
     elseif option == "Marcar principales" then
-        AssignIconsAndAlert()
+        if IsRaidLeader() then
+            AssignIconsAndAlert()
+        end
     elseif option == "Susurrar asignaciones" then
         WhisperAssignments()
     elseif option == "Ocultar" then
         RaidDominionFrame:Hide()
     elseif option == "Indicar discord" then
-        ShareDC()
+        if IsRaidLeader() then
+            ShareDC()
+        end
+    elseif option == "Revisar banda" then
+        if IsRaidLeader() then
+            CheckRaidMembersForPvPGear()
+        end
+    elseif option == "Sorteo de hermandad" then
+        if IsGuildMaster() then
+            GuildRoulette()
+        end
     elseif option == "Ayuda" then
         RaidDominionWindow:Show()
         local panel = _G["RaidDominionWindow"]
@@ -225,7 +237,7 @@ end
 function RaidDominion:Init()
     self.frame:SetSize(200, 0) -- Altura inicial arbitraria
     self.frame:SetPoint("CENTER")
-    self.frame:SetFrameStrata("HIGH")
+    self.frame:SetFrameStrata("MEDIUM") -- Colocar en la strata más alta disponible
     self.frame:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -304,6 +316,9 @@ local function OnEvent(self, event, arg1)
         for k, v in pairs(addonCache) do
             raidInfo[k] = v
         end
+        for k, v in pairs(toExport) do
+            toExport[k] = v
+        end
     end
 end
 
@@ -315,5 +330,20 @@ frame:RegisterEvent("PLAYER_LOGOUT")
 frame:RegisterEvent("PARTY_MEMBERS_CHANGED") -- Group changes
 frame:RegisterEvent("RAID_ROSTER_UPDATE") -- Raid roster changes
 frame:SetScript("OnEvent", OnEvent)
+
+-- -----
+-- Roster Updater
+-- -----
+local updateTime = 0
+local ROSTER_UPDATE_THROTTLE = 15
+local updateFrame = CreateFrame("frame")
+updateFrame:Hide()
+updateFrame:SetScript("OnUpdate", function(self, elapsed)
+    local value_GetTime = GetTime()
+    if value_GetTime > updateTime then
+        updateTime = value_GetTime + ROSTER_UPDATE_THROTTLE
+        GuildRoster()
+    end
+end)
 
 RaidDominion:Init()

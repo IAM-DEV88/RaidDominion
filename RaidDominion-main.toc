@@ -3,7 +3,7 @@
 ## Notes: Facilita la gestión de la raid, la asignación de roles y la coordinación de buffs.
 ## Author: Andres Muñoz - https://lambent-sundae-83e53b.netlify.app/
 ## Version: 1.0
-## SavedVariables: enabledPanel, raidInfo
+## SavedVariables: enabledPanel, raidInfo, toExport
 ## DefaultState: enabled
 
 Templates.xml
