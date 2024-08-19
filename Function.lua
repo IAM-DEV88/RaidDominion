@@ -812,48 +812,52 @@ local function Announce(message)
 end
 
 function GuildRoulette()
-    local onlineMembers = GetOnlineGuildMembers()
-
-    local selectedReward = SelectReward(rewards)
-    Announce("¡SORTEO DE HERMANDAD, EL GANADOR DEBE RESPONDER Y RECLAMAR O SE HACE NUEVO SORTEO!")
-    Announce("El sistema selecciona un premio aleatorio del banco y lo sortea entre todos los jugadores de la hermandad que esten conectados.")
-    Announce("El premio de este sorteo es: " .. selectedReward.name .. " valorado en " .. selectedReward.cost .. "g!")
-
-    local totalSteps = #onlineMembers
-    local currentStep = 0
-
-    local frame = CreateFrame("Frame")
-
-    frame:SetScript("OnUpdate", function(self, elapsed)
-        currentStep = currentStep + 1
-
-        if currentStep > totalSteps then
-            local winnerIndex = math.random(#onlineMembers)
-            local winner = onlineMembers[winnerIndex]
-
-            -- Listar los resultados
-            Announce("Resultados del sorteo:")
-            for i, member in ipairs(onlineMembers) do
-                if i ~= winnerIndex then
-                    local minorPrize = math.random(1, selectedReward.cost - 1)
-                    Announce(member .. " ha obtenido " .. minorPrize .. " creditos.")
-                else
-                    Announce(member .. " ha obtenido el premio mayor de " .. selectedReward.cost .. " creditos!")
+    if (IsGuildLeader() == true) then
+        local onlineMembers = GetOnlineGuildMembers()
+    
+        local selectedReward = SelectReward(rewards)
+        Announce("¡SORTEO DE HERMANDAD, EL GANADOR DEBE RESPONDER Y RECLAMAR O SE HACE NUEVO SORTEO!")
+        Announce("El sistema selecciona un premio aleatorio del banco y lo sortea entre todos los jugadores de la hermandad que esten conectados.")
+        Announce("El premio de este sorteo es: " .. selectedReward.name .. " valorado en " .. selectedReward.cost .. "g!")
+    
+        local totalSteps = #onlineMembers
+        local currentStep = 0
+    
+        local frame = CreateFrame("Frame")
+    
+        frame:SetScript("OnUpdate", function(self, elapsed)
+            currentStep = currentStep + 1
+    
+            if currentStep > totalSteps then
+                local winnerIndex = math.random(#onlineMembers)
+                local winner = onlineMembers[winnerIndex]
+    
+                -- Listar los resultados
+                Announce("Resultados del sorteo:")
+                for i, member in ipairs(onlineMembers) do
+                    if i ~= winnerIndex then
+                        local minorPrize = math.random(1, selectedReward.cost - 1)
+                        Announce(member .. " ha obtenido " .. minorPrize .. " creditos.")
+                    else
+                        Announce(member .. " ha obtenido el premio mayor de " .. selectedReward.cost .. " creditos!")
+                    end
                 end
+                Announce("¡El ganador es " .. winner .. "! Ha ganado " .. selectedReward.cost ..
+                             " creditos para cambiar por " .. selectedReward.name .. " o cualquier item de igual valor.")
+                             Announce("SI NO RECLAMA SE HACE NUEVO SORTEO")
+                
+                SendChatMessage(
+                    "¡Ha ganado " .. selectedReward.cost .. " creditos para cambiar por " .. selectedReward.name ..
+                        " o cualquier item de igual valor. RECLAME O SIGUE JUGANDO!", "WHISPER", nil, winner)
+    
+                PlaySoundFile("Sound\\Interface\\LevelUp.wav")
+    
+                self:SetScript("OnUpdate", nil) -- Detener el OnUpdate
+                return
             end
-            Announce("¡El ganador es " .. winner .. "! Ha ganado " .. selectedReward.cost ..
-                         " creditos para cambiar por " .. selectedReward.name .. " o cualquier item de igual valor.")
-                         Announce("SI NO RECLAMA SE HACE NUEVO SORTEO")
-            
-            SendChatMessage(
-                "¡Ha ganado " .. selectedReward.cost .. " creditos para cambiar por " .. selectedReward.name ..
-                    " o cualquier item de igual valor. RECLAME O SIGUE JUGANDO!", "WHISPER", nil, playerName)
-
-            PlaySoundFile("Sound\\Interface\\LevelUp.wav")
-
-            self:SetScript("OnUpdate", nil) -- Detener el OnUpdate
-            return
-        end
-    end)
+        end)
+    else
+        SendSystemMessage("Solo el maestro de hermandad puede inciar un sorteo.")
+    end
 end
 

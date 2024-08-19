@@ -6,19 +6,19 @@ local LABEL_HEIGHT = 22
 local BUTTON_SIZE = 20
 local BUTTON_MARGIN = 1
 local COLUMN_SPACING = 20
-local MAX_COLUMNS = 3
+local MAX_COLUMNS = 2
 
 local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
     local menu = CreateFrame("Frame", nil, parent)
 
-    -- Calcular el número de columnas y filas necesarias
-    local columns = math.min(MAX_COLUMNS, math.ceil(#items / 10))
+    -- Calcular el número de columnas, asegurando al menos 2 columnas
+    local columns = math.max(2, math.min(MAX_COLUMNS, math.ceil(#items / 10)))
     local rows = math.ceil(#items / columns)
 
-    -- Ajustar el tamaño del menú en función del número de columnas y filas
-    local menuWidth = columns * (LABEL_WIDTH + COLUMN_SPACING) - COLUMN_SPACING
+    -- Establecer un ancho fijo para todos los menús basado en el máximo número de columnas
+    local fixedMenuWidth = MAX_COLUMNS * (LABEL_WIDTH + COLUMN_SPACING) - COLUMN_SPACING
     local menuHeight = rows * LABEL_HEIGHT + BUTTON_SIZE + BUTTON_MARGIN * 4
-    menu:SetSize(menuWidth, menuHeight)
+    menu:SetSize(fixedMenuWidth, menuHeight)
     menu:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, yOffset)
     menu:Hide()
 
@@ -59,7 +59,7 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
 
     -- Crear botones adicionales en una sola fila
     local totalButtonWidth = (#barItems * BUTTON_SIZE) + ((#barItems - 1) * (BUTTON_MARGIN * 2))
-    local xOffset = (menuWidth - totalButtonWidth) / 2 - 8
+    local xOffset = (fixedMenuWidth - totalButtonWidth) / 2 - 8
 
     for i, key in ipairs(barItems) do
         local button = CreateFrame("Button", nil, menu, "RaidDominionButtonTemplate")
@@ -86,11 +86,10 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
         xOffset = xOffset + BUTTON_SIZE + (BUTTON_MARGIN * 4)
     end
 
-    if columns > 1 then
-        menuWidth = menuWidth - (columns * 9) - (columns > 2 and 10 or 0)
-    end
-    return menu, menuWidth, menuHeight
+    return menu, fixedMenuWidth, menuHeight
 end
+
+
 
 function RaidDominion:HandleAssignableRole(role)
     local assignedPlayer = getAssignedPlayer(role)
@@ -160,25 +159,21 @@ function RaidDominion:HandleMainOption(option)
     elseif option == "Recargar" then
         ReloadUI()
     elseif option == "Marcar principales" then
-        if IsRaidLeader() then
             AssignIconsAndAlert()
-        end
     elseif option == "Susurrar asignaciones" then
-        WhisperAssignments()
+        if IsRaidLeader() then
+            WhisperAssignments()
+        end
     elseif option == "Ocultar" then
         RaidDominionFrame:Hide()
     elseif option == "Indicar discord" then
-        if IsRaidLeader() then
             ShareDC()
-        end
     elseif option == "Revisar banda" then
         if IsRaidLeader() then
             CheckRaidMembersForPvPGear()
         end
     elseif option == "Sorteo de hermandad" then
-        if IsGuildMaster() then
             GuildRoulette()
-        end
     elseif option == "Ayuda" then
         RaidDominionWindow:Show()
         local panel = _G["RaidDominionWindow"]
