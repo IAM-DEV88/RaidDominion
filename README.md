@@ -1,7 +1,7 @@
 # RaidDominion Tools
 > WoW 335a Addon
 
-![RaidDominionUI](https://github.com/IAM-DEV88/RaidDominion/blob/main/rdUI.png)
+![RaidDominionUI](https://github.com/IAM-GAMECODE/RaidDominion/blob/main/rdUI.png)
 
 ## Portal web https://raid-dominion.netlify.app/
 
@@ -38,4 +38,4 @@ Indican el estado del rol si está asignado o no. Selecciona un jugador y da cli
 
 Simplifica tus interacciones en el juego con RaidDominion. Ya sea para comunicarte con rapidez o para realizar acciones específicas de manera eficiente, este addon te proporciona las herramientas necesarias para mejorar tu experiencia en World of Warcraft. ¡Descárgalo hoy y empieza a disfrutar de una experiencia de juego más fluida y organizada!
 
-> RaidDominion es desarrollado por IAM-DEV88 y está disponible de forma gratuita para la comunidad de World of Warcraft.
+> RaidDominion es desarrollado por IAM-GAMECODE y está disponible de forma gratuita para la comunidad de World of Warcraft.

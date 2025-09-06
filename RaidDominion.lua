@@ -69,8 +69,14 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         button:RegisterForClicks("AnyUp")
         button:SetScript("OnClick", function(self, button)
+<<<<<<< HEAD
             RaidDominion:HandleMainOption(key.name, button)
             if button == "RightButton" then
+=======
+            if button == "LeftButton" then
+                RaidDominion:HandleMainOption(key.name)
+            elseif button == "RightButton" then
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
                 RaidDominion:ShowMainMenu()
             end
         end)
@@ -99,6 +105,7 @@ function RaidDominion:HandleAssignableRole(role)
     end
 end
 
+<<<<<<< HEAD
 function RaidDominion:HandleBuffClick(buffName)
     local _, channel = getPlayerInitialState()
     local message 
@@ -109,6 +116,8 @@ function RaidDominion:HandleBuffClick(buffName)
     self:HandleAssignableRole(buffName)
 end
 
+=======
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 function RaidDominion:ShowMenu(menu, menuWidth, menuHeight)
     if self.currentMenu then
         self.currentMenu:Hide()
@@ -124,8 +133,12 @@ function RaidDominion:ShowMainMenu()
     self:ShowMenu(self.mainMenu, self.mainMenuWidth, self.mainMenuHeight)
 end
 
+<<<<<<< HEAD
 function RaidDominion:HandleMainOption(option, button)
     button = button or "LeftButton" -- Default to LeftButton if not provided
+=======
+function RaidDominion:HandleMainOption(option)
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     if option == "Roles principales" then
         self:ShowMenu(self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight)
     elseif option == "BUFFs" then
@@ -145,11 +158,15 @@ function RaidDominion:HandleMainOption(option, button)
     elseif option == "RaidDominion Tools" then
         self:ShowMenu(self.addonMenu, self.addonMenuWidth, self.addonMenuHeight)
     elseif option == "Nombrar objetivo" then
+<<<<<<< HEAD
         if button == "LeftButton" then
             nameTarget()
         elseif button == "RightButton" then
             showTargetInfo()
         end
+=======
+        nameTarget()
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     elseif option == "Modo de raid" then
         StaticPopup_Show("HEROIC_MODE_POPUP")
         if GetNumPartyMembers() ~= 0 then
@@ -159,6 +176,7 @@ function RaidDominion:HandleMainOption(option, button)
             SendSystemMessage("Debes estar en grupo para crear una raid.")
         end
     elseif option == "Iniciar Check" then
+<<<<<<< HEAD
         if button == "LeftButton" then
             DoReadyCheck()
         elseif button == "RightButton" then
@@ -225,6 +243,18 @@ function RaidDominion:HandleMainOption(option, button)
                 SendSystemMessage(string.format("Modo de botín: Maestro despojador (%s)", targetName))
             end
             isMasterLooter = true
+=======
+        DoReadyCheck()
+    elseif option == "Iniciar Pull" then
+        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 ¿TODOS LISTOS?")
+        StaticPopup_Show("CONFIRM_READY_CHECK")
+    elseif option == "Cambiar Botin" then
+        isMasterLooter = not isMasterLooter
+        if isMasterLooter then
+            SetLootMethod("master", UnitName("player"))
+        else
+            SetLootMethod("group")
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
         end
     elseif option == "Recargar" then
         ReloadUI()
@@ -237,6 +267,7 @@ function RaidDominion:HandleMainOption(option, button)
     elseif option == "Ocultar" then
         RaidDominionFrame:Hide()
     elseif option == "Indicar discord" then
+<<<<<<< HEAD
         if button == "LeftButton" then
             ShareDC()
         elseif button == "RightButton" then
@@ -251,6 +282,9 @@ function RaidDominion:HandleMainOption(option, button)
             end
             SendSystemMessage("Menú de opciones abierto con clic derecho")
         end
+=======
+            ShareDC()
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     elseif option == "Revisar banda" then
         if IsRaidLeader() then
             CheckRaidMembersForPvPGear()
@@ -342,7 +376,11 @@ function RaidDominion:Init()
         end, true, "PrimarySkill")
     self.secondaryMenu, self.secondaryMenuWidth, self.secondaryMenuHeight =
         CreateMenu(self.frame, primaryBuffs, -12, function(role)
+<<<<<<< HEAD
             RaidDominion:HandleBuffClick(role)
+=======
+            RaidDominion:HandleAssignableRole(role)
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
         end, true, "BUFFs")
     self.secondaryRolesMenu, self.secondaryRolesMenuWidth, self.secondaryRolesMenuHeight = CreateMenu(self.frame,
         secondaryRoles, -12, function(role)

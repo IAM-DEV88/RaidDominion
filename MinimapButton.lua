@@ -21,6 +21,7 @@ local function MyMiniMapButton_OnMouseDown(self, button)
         end
 
         -- Crear las opciones del menú
+<<<<<<< HEAD
         local menuList = {
             {
                 text = "Recargar UI",
@@ -33,6 +34,12 @@ local function MyMiniMapButton_OnMouseDown(self, button)
                 end
             }
         }
+=======
+        local menuList = {{
+            text = "Recargar UI",
+            func = OnMenuOptionClicked
+        }}
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 
         -- Mostrar el menú en la posición del cursor
         EasyMenu(menuList, menuFrame, "cursor", 0, 0, "MENU", 1)

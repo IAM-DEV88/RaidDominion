@@ -366,6 +366,7 @@ StaticPopupDialogs["CONFIRM_PULL_COUNTDOWN"] = {
     preferredIndex = 3 -- Evita problemas de tainting
 }
 
+<<<<<<< HEAD
 -- Definir el diálogo de confirmación para eliminar de la lista negra
 StaticPopupDialogs["CONFIRM_REMOVE_BLACKLIST"] = {
     text = "",
@@ -404,6 +405,8 @@ function GetBlacklistReason(playerName)
     return nil, "Jugador no encontrado en la lista negra"
 end
 
+=======
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 function AssignIconsAndAlert()
         local raidMembers = {
             ["ALERT"] = {
@@ -528,7 +531,11 @@ function WhisperAssignments()
         local playerName = playerInfo[1]
         local message = playerInfo[2]
         SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
+<<<<<<< HEAD
         SendChatMessage(message .. " -- Lider de banda", "WHISPER", nil, playerName)
+=======
+        SendChatMessage(message .. " -- RaidDominion Tools", "WHISPER", nil, playerName)
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     end
 end
 
@@ -573,7 +580,10 @@ function SendDelayedMessages(messages)
         if self.delay <= 0 then
             if index <= #messages then
                 SendSplitMessage(messages[index])
+<<<<<<< HEAD
                 -- SendSystemMessage(messages[index])
+=======
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
                 index = index + 1
                 self.delay = .1 -- Resetear retraso para el próximo mensaje
             end
@@ -584,6 +594,7 @@ function SendDelayedMessages(messages)
     end)
 end
 
+<<<<<<< HEAD
 local function FormatNumber(num)
     if num >= 1000000 then
         return string.format("%.1fM", num / 1000000)
@@ -662,6 +673,8 @@ function showTargetInfo()
 end
 
 
+=======
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 function ShareDC()
     local discordInput = _G["DiscordLinkInput"]
     local discordLink = discordInput:GetText()
@@ -685,7 +698,11 @@ function ShareDC()
         -- Alertar a la banda con el enlace de Discord
         broadcastCommand = broadcastCommand .. " CONECTEN DC"
         local message = "Enlace de Discord: " .. discordLink
+<<<<<<< HEAD
         SendDelayedMessages({message})
+=======
+        SendChatMessage(message, "RAID_WARNING")
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     end
     SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
 end
@@ -695,6 +712,7 @@ function nameTarget()
     local targetName = UnitName("target")
     if hasTarget then
         SendDelayedMessages({targetName})
+<<<<<<< HEAD
     else
         SendSystemMessage("No hay ningún objetivo seleccionado.")
     end
@@ -751,6 +769,11 @@ end
 
 
 
+=======
+    end
+end
+
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 function checkTempleGear(playerName)
     local hasTempleGear = false
     local isChecked = false
@@ -854,6 +877,7 @@ StaticPopupDialogs["CONFIRM_TEMPLE_GEAR"] = {
     preferredIndex = 3
 }
 
+<<<<<<< HEAD
 StaticPopupDialogs["CONFIRM_ALERT_FAR_PLAYERS"] = {
     text = "Hay jugadores que están fuera de rango. ¿Deseas enviar un aviso para que se acerquen?",
     button1 = "Sí, avisar",
@@ -959,6 +983,28 @@ function CheckRaidMembersForPvPGear()
     if #approved == 0 and #disapproved == 0 and #farPlayers == 0 then
         SendSystemMessage("No se encontraron jugadores para inspeccionar.")
     end
+=======
+function CheckRaidMembersForPvPGear()
+    local numberOfPlayers, _ = getPlayerInitialState()
+    local approved = {}
+    local disapproved = {}
+
+    for i = 1, numberOfPlayers do
+        local playerName = GetRaidRosterInfo(i)
+        checkTempleGear(playerName)
+
+        -- Si el jugador ha sido aprobado o desaprobado, añadirlo a la lista correspondiente
+        if isChecked and hasTempleGear then
+            table.insert(disapproved, playerName)
+        elseif isChecked and not hasTempleGear then
+            table.insert(approved, playerName)
+        end
+    end
+
+    -- Mensaje final de aprobados y desaprobados
+    SendSystemMessage("Aprobados: " .. table.concat(approved, ", "))
+    SendSystemMessage("Desaprobados: " .. table.concat(disapproved, ", "))
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 end
 
 local rewards = {{
@@ -1063,10 +1109,14 @@ local function GetOnlineGuildMembers()
 end
 
 local function Announce(message)
+<<<<<<< HEAD
     -- Mostrar el mensaje directamente en el chat
     if DEFAULT_CHAT_FRAME then
         DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[Objetivo]|r " .. message)
     end
+=======
+    SendDelayedMessages({message})
+>>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 end
 
 function GuildRoulette()

@@ -76,7 +76,7 @@ function CreateRaidDominionAboutTabContent(parent)
     youtubeLink:SetPoint("TOPLEFT", youtubeTitle, "BOTTOMLEFT", 0, -5)
     youtubeLink:SetSize(250, 20)
     youtubeLink:SetAutoFocus(false)
-    youtubeLink:SetText("https://www.youtube.com/@IAM-DEV88")
+    youtubeLink:SetText("https://www.youtube.com/@IAM-GAMECODE")
     youtubeLink:SetFontObject("ChatFontNormal")
     currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
 
@@ -90,7 +90,7 @@ function CreateRaidDominionAboutTabContent(parent)
     githubLink:SetPoint("TOPLEFT", githubTitle, "BOTTOMLEFT", 0, -5)
     githubLink:SetSize(250, 20)
     githubLink:SetAutoFocus(false)
-    githubLink:SetText("https://github.com/IAM-DEV88/RaidDominion")
+    githubLink:SetText("https://github.com/IAM-GAMECODE/RaidDominion")
     githubLink:SetFontObject("ChatFontNormal")
     currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
 
