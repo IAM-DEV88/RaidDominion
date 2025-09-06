@@ -1,24 +1,15 @@
 ## Interface: 30300
 ## Title: RaidDominion
-## Version: 1.0.0
-## Author: Ioan Andres Muñoz Martinez - https://lambent-sundae-83e53b.netlify.app/
-## SavedVariables: enabledPanel, raidInfo
+## Notes: Facilita la gestión de la raid, la asignación de roles y la coordinación de buffs.
+## Author: Andres Muñoz - https://lambent-sundae-83e53b.netlify.app/
+## Version: 1.0
+## SavedVariables: enabledPanel, raidInfo, toExport
 ## DefaultState: enabled
 
-Utils.lua
-RaidDominion.lua
-Panel.lua
-TabContainer.lua
-PlayerRolesTab.lua
-RulesAndMechanics.lua
-RoleSelection.lua
-PrimarySelection.lua
-SecondarySelection.lua
-BuffSelection.lua
-SkillSelection.lua
-ExtraSelection.lua
-About.lua
-MinimapButton.lua
 Templates.xml
-Frame.xml
-Wow.lua
+Core.lua
+Window.xml
+Resources.lua
+Function.lua
+RaidDominion.lua
+MinimapButton.lua

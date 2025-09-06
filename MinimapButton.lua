@@ -1,12 +1,12 @@
 -- Función para manejar los clics en el botón del minimapa
 local function MyMiniMapButton_OnMouseDown(self, button)
     if button == "LeftButton" then
-        if RaidDominionPanel:IsShown() then
+        if RaidDominionFrame:IsShown() then
             -- Si el panel está mostrado, ocúltalo
-            RaidDominionPanel:Hide()
+            RaidDominionFrame:Hide()
         else
             -- Si el panel está oculto, muéstralo
-            RaidDominionPanel:Show()
+            RaidDominionFrame:Show()
         end
     elseif button == "RightButton" then
         -- Crear el menú emergente
@@ -16,30 +16,23 @@ local function MyMiniMapButton_OnMouseDown(self, button)
         local function OnMenuOptionClicked(self)
             local option = self:GetID() -- Obtener el ID de la opción seleccionada
             if option == 1 then
-                RaidDominionRoleTabRaidModeBtn:GetScript("OnClick")(RaidDominionRoleTabRaidModeBtn)
-            elseif option == 2 then
-                RaidDominionRoleTabAlertFarPlayerBtn:GetScript("OnClick")(RaidDominionRoleTabAlertFarPlayerBtn)
-            elseif option == 3 then
-                RaidDominionRoleTabBuffRequestBtn:GetScript("OnClick")(RaidDominionRoleTabBuffRequestBtn)
-            elseif option == 4 then
                 ReloadUI()
             end
         end
 
         -- Crear las opciones del menú
-        local menuList = {{
-            text = "Crear raid",
-            func = OnMenuOptionClicked
-        }, {
-            text = "Revisar AFK/OFFs",
-            func = OnMenuOptionClicked
-        }, {
-            text = "Indicar BUFFs asignados",
-            func = OnMenuOptionClicked
-        }, {
-            text = "Recargar UI",
-            func = OnMenuOptionClicked
-        }}
+        local menuList = {
+            {
+                text = "Recargar UI",
+                func = OnMenuOptionClicked
+            },
+            {
+                text = "Nombrar objetivo",
+                func = function()
+                    nameTarget()
+                end
+            }
+        }
 
         -- Mostrar el menú en la posición del cursor
         EasyMenu(menuList, menuFrame, "cursor", 0, 0, "MENU", 1)
@@ -52,7 +45,7 @@ myMiniMapButton:SetSize(26, 26) -- Establecer el tamaño del botón
 myMiniMapButton:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 0, 0) -- Establecer la posición del botón
 
 -- Personalizar el aspecto del botón
-myMiniMapButton:SetNormalTexture("Interface\\Icons\\achievement_pvp_p_08") -- Establecer la textura del botón
+myMiniMapButton:SetNormalTexture("Interface\\Icons\\inv_misc_summerfest_brazierorange") -- Establecer la textura del botón
 
 -- Asignar la función para manejar los clics en el botón
 myMiniMapButton:SetScript("OnMouseDown", MyMiniMapButton_OnMouseDown)
