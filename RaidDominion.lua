@@ -69,14 +69,8 @@ local function CreateMenu(parent, items, yOffset, onClick, Assignable, roleType)
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         button:RegisterForClicks("AnyUp")
         button:SetScript("OnClick", function(self, button)
-<<<<<<< HEAD
             RaidDominion:HandleMainOption(key.name, button)
             if button == "RightButton" then
-=======
-            if button == "LeftButton" then
-                RaidDominion:HandleMainOption(key.name)
-            elseif button == "RightButton" then
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
                 RaidDominion:ShowMainMenu()
             end
         end)
@@ -105,7 +99,6 @@ function RaidDominion:HandleAssignableRole(role)
     end
 end
 
-<<<<<<< HEAD
 function RaidDominion:HandleBuffClick(buffName)
     local _, channel = getPlayerInitialState()
     local message 
@@ -116,8 +109,6 @@ function RaidDominion:HandleBuffClick(buffName)
     self:HandleAssignableRole(buffName)
 end
 
-=======
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 function RaidDominion:ShowMenu(menu, menuWidth, menuHeight)
     if self.currentMenu then
         self.currentMenu:Hide()
@@ -133,12 +124,8 @@ function RaidDominion:ShowMainMenu()
     self:ShowMenu(self.mainMenu, self.mainMenuWidth, self.mainMenuHeight)
 end
 
-<<<<<<< HEAD
 function RaidDominion:HandleMainOption(option, button)
     button = button or "LeftButton" -- Default to LeftButton if not provided
-=======
-function RaidDominion:HandleMainOption(option)
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     if option == "Roles principales" then
         self:ShowMenu(self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight)
     elseif option == "BUFFs" then
@@ -155,18 +142,18 @@ function RaidDominion:HandleMainOption(option)
         self:ShowMechanicsMenu()
     elseif option == "Roles secundarios" then
         self:ShowMenu(self.secondaryRolesMenu, self.secondaryRolesMenuWidth, self.secondaryRolesMenuHeight)
-    elseif option == "RaidDominion Tools" then
+    elseif option == "RaidDominion" then
         self:ShowMenu(self.addonMenu, self.addonMenuWidth, self.addonMenuHeight)
+    elseif option == "Opciones" then
+        if RaidDominionWindow then
+            RaidDominionWindow:Show()
+        end
     elseif option == "Nombrar objetivo" then
-<<<<<<< HEAD
         if button == "LeftButton" then
             nameTarget()
         elseif button == "RightButton" then
             showTargetInfo()
         end
-=======
-        nameTarget()
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     elseif option == "Modo de raid" then
         StaticPopup_Show("HEROIC_MODE_POPUP")
         if GetNumPartyMembers() ~= 0 then
@@ -176,7 +163,6 @@ function RaidDominion:HandleMainOption(option)
             SendSystemMessage("Debes estar en grupo para crear una raid.")
         end
     elseif option == "Iniciar Check" then
-<<<<<<< HEAD
         if button == "LeftButton" then
             DoReadyCheck()
         elseif button == "RightButton" then
@@ -184,7 +170,9 @@ function RaidDominion:HandleMainOption(option)
         end
     elseif option == "Iniciar Pull" then
         if button == "LeftButton" then
-            SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 ¿TODOS LISTOS?")
+            if not SafeDBMCommand("broadcast timer 0:10 ¿TODOS LISTOS?") then
+                SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+            end
             StaticPopup_Show("CONFIRM_READY_CHECK")
         elseif button == "RightButton" then
             if not UnitExists("target") or not UnitIsPlayer("target") then
@@ -243,23 +231,11 @@ function RaidDominion:HandleMainOption(option)
                 SendSystemMessage(string.format("Modo de botín: Maestro despojador (%s)", targetName))
             end
             isMasterLooter = true
-=======
-        DoReadyCheck()
-    elseif option == "Iniciar Pull" then
-        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 ¿TODOS LISTOS?")
-        StaticPopup_Show("CONFIRM_READY_CHECK")
-    elseif option == "Cambiar Botin" then
-        isMasterLooter = not isMasterLooter
-        if isMasterLooter then
-            SetLootMethod("master", UnitName("player"))
-        else
-            SetLootMethod("group")
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
         end
     elseif option == "Recargar" then
         ReloadUI()
     elseif option == "Marcar principales" then
-            AssignIconsAndAlert()
+            AssignIconsAndAlert(button)
     elseif option == "Susurrar asignaciones" then
         if IsRaidLeader() then
             WhisperAssignments()
@@ -267,7 +243,6 @@ function RaidDominion:HandleMainOption(option)
     elseif option == "Ocultar" then
         RaidDominionFrame:Hide()
     elseif option == "Indicar discord" then
-<<<<<<< HEAD
         if button == "LeftButton" then
             ShareDC()
         elseif button == "RightButton" then
@@ -282,26 +257,71 @@ function RaidDominion:HandleMainOption(option)
             end
             SendSystemMessage("Menú de opciones abierto con clic derecho")
         end
-=======
-            ShareDC()
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     elseif option == "Revisar banda" then
         if IsRaidLeader() then
             CheckRaidMembersForPvPGear()
         end
-    elseif option == "Sorteo de hermandad" then
-            GuildRoulette()
     elseif option == "Ayuda" then
         RaidDominionWindow:Show()
         local panel = _G["RaidDominionWindow"]
         PanelTemplates_SetTab(panel, 2)
         _G["RaidDominionAboutTab"]:Show()
         _G["RaidDominionOptionsTab"]:Hide()
+    elseif option == "Hermandad" then
+        self:ShowMenu(self.guildMenu, self.guildMenuWidth, self.guildMenuHeight)
     end
 
     if self.currentMenu then
         self.frame:SetSize(self.currentMenu:GetWidth() + 20, self.currentMenu:GetHeight() + 24)
     end
+end
+
+-- Función para manejar las opciones del menú de Hermandad
+function RaidDominion:HandleGuildOption(option)
+    if option == "Reglas" then
+        self.addonMenu:Hide()
+        self:ShowGuildRulesMenu()
+    elseif option == "Sorteo" then
+        GuildRoulette()
+    elseif option == "Lista" then
+        GetGuildMemberList()
+        SendSystemMessage("Lista de miembros de la hermandad actualizada.")
+    elseif option == "Reconocimientos" then
+        CheckGuildOfficerNotes()
+    elseif option == "Bienvenida" then
+        ShowWelcomeMessage(true)
+    elseif option == "Jerarquia" then
+        ShowGuildHierarchy()
+    end
+    
+    if self.currentMenu then
+        self.frame:SetSize(self.currentMenu:GetWidth() + 20, self.currentMenu:GetHeight() + 24)
+    end
+end
+
+-- Función para mostrar el menú de reglas de la hermandad
+function RaidDominion:ShowGuildRulesMenu()
+    local rulesList = {}
+    for rule, _ in pairs(guildRules) do
+        table.insert(rulesList, rule)
+    end
+    
+    if not self.guildRulesMenu then
+        self.guildRulesMenu, self.guildRulesMenuWidth, self.guildRulesMenuHeight =
+            CreateMenu(self.frame, rulesList, -12, function(rule)
+                local title = "===> " .. rule .. " <==="
+                local messages = {title}
+                
+                -- Para todas las reglas, incluir los mensajes correspondientes
+                for i, msg in ipairs(guildRules[rule]) do
+                    table.insert(messages, msg)
+                end
+                
+                SendDelayedMessages(messages, "GUILD")
+            end, false)
+    end
+    
+    self:ShowMenu(self.guildRulesMenu, self.guildRulesMenuWidth, self.guildRulesMenuHeight)
 end
 
 function RaidDominion:ShowRulesMenu()
@@ -312,10 +332,15 @@ function RaidDominion:ShowRulesMenu()
     if not self.rulesMenu then
         self.rulesMenu, self.rulesMenuWidth, self.rulesMenuHeight =
             CreateMenu(self.frame, rulesList, -12, function(rule)
-                SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 REGLAS")
+                if not SafeDBMCommand("broadcast timer 0:10 REGLAS") then
+                    SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+                end
                 local title = "===> " .. rule .. " <==="
-                local messages = raidRules[rule]
-                table.insert(messages, 1, title)
+                -- Create a new table with the title and a copy of the messages
+                local messages = {title}
+                for i, msg in ipairs(raidRules[rule]) do
+                    table.insert(messages, msg)
+                end
                 SendDelayedMessages(messages)
             end)
     end
@@ -333,10 +358,15 @@ function RaidDominion:ShowMechanicsMenu()
     if not self.mechanicsMenu then
         self.mechanicsMenu, self.mechanicsMenuWidth, self.mechanicsMenuHeight =
             CreateMenu(self.frame, mechanicsList, -12, function(mechanic)
-                SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 MECÁNICAS")
+                if not SafeDBMCommand("broadcast timer 0:10 MECÁNICAS") then
+                    SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+                end
                 local title = "===> " .. mechanic .. " <==="
-                local messages = raidMechanics[mechanic]
-                table.insert(messages, 1, title)
+                -- Create a new table with the title and a copy of the messages
+                local messages = {title}
+                for i, msg in ipairs(raidMechanics[mechanic]) do
+                    table.insert(messages, msg)
+                end
                 SendDelayedMessages(messages)
             end)
     end
@@ -362,9 +392,22 @@ function RaidDominion:Init()
     self.frame:SetScript("OnDragStart", self.frame.StartMoving)
     self.frame:SetScript("OnDragStop", self.frame.StopMovingOrSizing)
 
+    -- Función para obtener las opciones del menú principal según los permisos
+    local function GetMainMenuOptions()
+        local options = {"Habilidades principales", "Roles principales", "BUFFs", "Roles secundarios", "RaidDominion"}
+        
+        -- Agregar la opción de Hermandad solo si el jugador tiene los permisos necesarios
+        if self:IsPlayerTopTwoRanks() then
+            table.insert(options, "Hermandad")
+        end
+        
+        return options
+    end
+    
+    -- Crear menú principal
     self.mainMenu, self.mainMenuWidth, self.mainMenuHeight =
-        CreateMenu(self.frame, mainOptions, -12, function(option)
-            RaidDominion:HandleMainOption(option)
+        CreateMenu(self.frame, GetMainMenuOptions(), -12, function(option)
+            self:HandleMainOption(option, "LeftButton")
         end, false)
     self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight =
         CreateMenu(self.frame, primaryRoles, -12, function(role)
@@ -376,11 +419,7 @@ function RaidDominion:Init()
         end, true, "PrimarySkill")
     self.secondaryMenu, self.secondaryMenuWidth, self.secondaryMenuHeight =
         CreateMenu(self.frame, primaryBuffs, -12, function(role)
-<<<<<<< HEAD
             RaidDominion:HandleBuffClick(role)
-=======
-            RaidDominion:HandleAssignableRole(role)
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
         end, true, "BUFFs")
     self.secondaryRolesMenu, self.secondaryRolesMenuWidth, self.secondaryRolesMenuHeight = CreateMenu(self.frame,
         secondaryRoles, -12, function(role)
@@ -390,29 +429,49 @@ function RaidDominion:Init()
         CreateMenu(self.frame, addonOptions, -12, function(option)
             RaidDominion:HandleMainOption(option)
         end, false)
+        
+    -- Crear menú de Hermandad
+    self.guildMenu, self.guildMenuWidth, self.guildMenuHeight =
+        CreateMenu(self.frame, guildOptions, -12, function(option)
+            RaidDominion:HandleGuildOption(option)
+        end, false)
 
     self:ShowMainMenu() -- Mostrar el menú principal directamente
 
     self.currentMenu = self.mainMenu
 end
 
+-- Función para verificar si el jugador es uno de los dos rangos más altos de la hermandad
+function RaidDominion:IsPlayerTopTwoRanks()
+    -- Verificar si el jugador está en una hermandad
+    if not IsInGuild() then
+        return false
+    end
+    
+    -- Obtener el rango actual del jugador (0 = rango más alto, 1 = siguiente, etc.)
+    local _, _, playerRankIndex = GetGuildInfo("player")
+    
+    -- Obtener el número total de rangos en la hermandad
+    local numRanks = GuildControlGetNumRanks()
+    
+    -- Verificar si el jugador está en uno de los dos rangos más altos
+    -- (0 y 1 son los dos rangos más altos, donde 0 es el rango más alto)
+    if playerRankIndex == 0 or playerRankIndex == 1 then
+        return true
+    end
+    
+    return false
+end
+
 -- Function to handle events
 local function OnEvent(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == addonName then
-        -- print("ADDON_LOADED")
-    elseif event == "PLAYER_LOGIN" then
-        -- print("PLAYER_LOGIN")
-        getPlayersInfo()
-        RaidDominionPanelInit()
-        RaidDominionWindow:Hide()
-        if not enabledPanel then
-            print("Puedes usar /rdom para mostrar el panel de RaidDominion Tools")
-        end
-        if enabledPanel then
-            RaidDominionFrame:Show()
-        else
-            RaidDominionFrame:Hide()
-        end
+        -- Inicializar SavedVariables si es necesario
+        enabledPanel = enabledPanel or false
+        raidInfo = raidInfo or {}
+        toExport = toExport or {}
+        
+        -- Configurar el comando de consola
         SLASH_RDOM1 = "/rdom"
         SlashCmdList["RDOM"] = function()
             if RaidDominionFrame:IsShown() then
@@ -421,6 +480,41 @@ local function OnEvent(self, event, arg1)
                 RaidDominionFrame:Show()
             end
         end
+        
+        -- Registrar para el evento de interfaz cargada
+        local f = CreateFrame("Frame")
+        f:RegisterEvent("PLAYER_ENTERING_WORLD")
+        f:SetScript("OnEvent", function(self, event)
+            if event == "PLAYER_ENTERING_WORLD" then
+                self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+                -- Actualizar el estado del checkbox después de que la interfaz esté completamente cargada
+                if enabledPanelCheckbox then
+                    enabledPanelCheckbox:SetChecked(enabledPanel)
+                end
+            end
+        end)
+        
+    elseif event == "PLAYER_LOGIN" then
+        getPlayersInfo()
+        RaidDominionPanelInit()
+        
+        -- Mostrar mensaje de ayuda si el panel está desactivado
+        if not enabledPanel then
+            print("Puedes usar /rdom para mostrar el panel de RaidDominion")
+        end
+        
+        -- Configurar el estado inicial del Frame
+        if enabledPanel then
+            RaidDominionFrame:Show()
+            RaidDominionWindow:Show()
+        else
+            RaidDominionFrame:Hide()
+            RaidDominionWindow:Hide()
+        end
+        -- Asegurarse de que la ventana esté oculta al inicio
+        if RaidDominionWindow then
+            RaidDominionWindow:Hide()
+        end
     elseif event == "PARTY_MEMBERS_CHANGED" then
         -- print("PARTY_MEMBERS_CHANGED")
         getPlayersInfo()
@@ -428,13 +522,20 @@ local function OnEvent(self, event, arg1)
         -- print("RAID_ROSTER_UPDATE")
         getPlayersInfo()
     elseif event == "PLAYER_LOGOUT" then
-        enabledPanel = (enabledPanelCheckbox:GetChecked() == 1)
-        for k, v in pairs(addonCache) do
-            raidInfo[k] = v
+        -- Actualizar el estado de enabledPanel desde el checkbox si existe
+        if enabledPanelCheckbox then
+            enabledPanel = enabledPanelCheckbox:GetChecked() or false
         end
-        for k, v in pairs(toExport) do
-            toExport[k] = v
+        
+        -- Guardar datos de la caché
+        if addonCache then
+            for k, v in pairs(addonCache) do
+                raidInfo[k] = v
+            end
         end
+        
+        -- No es necesario este bucle ya que toExport ya es una SavedVariable
+        -- y se guardará automáticamente
     end
 end
 

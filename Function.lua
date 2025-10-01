@@ -1,3 +1,33 @@
+-- Global variable to store guild member list for export
+toExport = {}
+
+-- Función auxiliar para crear una estructura de jugador
+local function createPlayerStructure(playerName, className)
+    return {
+        class = className,
+        rol = {}
+    }
+end
+
+-- Función auxiliar para configurar un botón con un jugador asignado
+local function setupAssignedButton(button, playerName, roleName)
+    button:SetNormalFontObject("GameFontNormal")
+    button:SetText(string.format("%s [%s]", playerName, roleName))
+    button:SetAttribute("player", playerName)
+    button:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background"
+    })
+    button:SetBackdropColor(0, 0, 0, 0.8)
+end
+
+-- Función auxiliar para resetear un botón a su estado por defecto
+local function resetButton(button, roleName)
+    button:SetText(roleName)
+    button:SetAttribute("player", nil)
+    button:SetNormalFontObject("GameFontHighlight")
+    button:SetBackdrop({})
+end
+
 function getPlayerInitialState()
     local isInGuild = IsInGuild()
     local defaultChannel = isInGuild and "GUILD" or "SAY"
@@ -42,10 +72,7 @@ function getPlayersInfo()
         addonCache = {}
         local _, englishClass = UnitClass("player")
         local playerName = UnitName("player")
-        addonCache[playerName] = {
-            class = englishClass,
-            rol = {}
-        }
+        addonCache[playerName] = createPlayerStructure(playerName, englishClass)
         currentPlayers[playerName] = true
     else
         addonCache = raidInfo
@@ -59,10 +86,7 @@ function getPlayersInfo()
                     addonCache[playerName].rol = addonCache[playerName].rol or {}
                 else
                     local playerClass = select(2, UnitClass(unit))
-                    addonCache[playerName] = {
-                        class = playerClass,
-                        rol = {}
-                    }
+                    addonCache[playerName] = createPlayerStructure(playerName, playerClass)
                 end
             end
         end
@@ -74,10 +98,7 @@ function getPlayersInfo()
         if addonCache[playerName] then
             addonCache[playerName].rol = addonCache[playerName].rol or {}
         else
-            addonCache[playerName] = {
-                class = englishClass,
-                rol = {}
-            }
+            addonCache[playerName] = createPlayerStructure(playerName, englishClass)
         end
 
         -- Limpiar raidInfo y addonCache de jugadores que ya no están en el grupo
@@ -125,6 +146,12 @@ function getAssignedPlayer(roleName)
 end
 
 function updateAllButtons()
+    -- Asegurarse de que primaryRoles esté cargado
+    if not primaryRoles then
+        print("Error: primaryRoles no está cargado. Asegúrate de que Resources.lua se cargue primero.")
+        return {}
+    end
+    
     -- Combinar todos los roles en una única tabla con sus identificadores
     local AssignableRoles = {}
     for i, role in ipairs(primaryRoles) do
@@ -163,18 +190,9 @@ function updateAllButtons()
         if button then
             local assignedPlayer = getAssignedPlayer(data.role)
             if assignedPlayer then
-                button:SetNormalFontObject("GameFontNormal")
-                button:SetText(assignedPlayer .. " [" .. data.role .. "]")
-                button:SetAttribute("player", assignedPlayer)
-                button:SetBackdrop({
-                    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background"
-                })
-                button:SetBackdropColor(0, 0, 0, 0.8)
+                setupAssignedButton(button, assignedPlayer, data.role)
             else
-                button:SetText(data.role)
-                button:SetAttribute("player", nil)
-                button:SetNormalFontObject("GameFontHighlight")
-                button:SetBackdrop({})
+                resetButton(button, data.role)
             end
         end
     end
@@ -330,13 +348,17 @@ StaticPopupDialogs["CONFIRM_READY_CHECK"] = {
         -- Función que se llama cuando el jugador acepta el check de banda
         DoReadyCheck()
         SendChatMessage("SI CONFIRMAN TODOS MANDO PULL", "RAID_WARNING")
-        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 RAIDCHECK Y PULL")
+        if not SafeDBMCommand("broadcast timer 0:10 RAIDCHECK Y PULL") then
+            SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+        end
         StaticPopup_Show("CONFIRM_PULL_COUNTDOWN")
     end,
     OnCancel = function()
         -- Función que se llama cuando el jugador cancela el check de banda
         -- SendChatMessage("POR FAVOR, ESPEREN", "RAID_WARNING")
-        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 ¿QUE FALTA?")
+        if not SafeDBMCommand("broadcast timer 0:20 ¿QUE FALTA?") then
+            SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+        end
     end,
     timeout = 0,
     whileDead = true,
@@ -352,13 +374,19 @@ StaticPopupDialogs["CONFIRM_PULL_COUNTDOWN"] = {
     OnAccept = function()
         -- Ejecutar el comando de DBM para iniciar la cuenta regresiva
         SendChatMessage("SOLO EL TANQUE PULEA", "RAID_WARNING")
-        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 RESPETAR PULL")
-        SlashCmdList["DEADLYBOSSMODS"]("pull 10")
+        local dbmAvailable = SafeDBMCommand("broadcast timer 0:10 RESPETAR PULL")
+        if dbmAvailable then
+            SafeDBMCommand("pull 10")
+        else
+            SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+        end
     end,
     OnCancel = function()
         -- Función que se llama cuando el jugador cancela el check de banda
         SendChatMessage("ESPEREN", "RAID_WARNING")
-        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:10 PULL CANCELADO")
+        if not SafeDBMCommand("broadcast timer 0:10 PULL CANCELADO") then
+            SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+        end
     end,
     timeout = 0,
     whileDead = true,
@@ -366,7 +394,6 @@ StaticPopupDialogs["CONFIRM_PULL_COUNTDOWN"] = {
     preferredIndex = 3 -- Evita problemas de tainting
 }
 
-<<<<<<< HEAD
 -- Definir el diálogo de confirmación para eliminar de la lista negra
 StaticPopupDialogs["CONFIRM_REMOVE_BLACKLIST"] = {
     text = "",
@@ -405,15 +432,38 @@ function GetBlacklistReason(playerName)
     return nil, "Jugador no encontrado en la lista negra"
 end
 
-=======
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
-function AssignIconsAndAlert()
-        local raidMembers = {
-            ["ALERT"] = {
-                tanks = {},
-                healers = {}
-            }
+function ClearAllRaidIcons()
+    local numRaidMembers = GetNumRaidMembers()
+    for i = 1, numRaidMembers do
+        local unit = "raid" .. i
+        if UnitExists(unit) then
+            SetRaidTarget(unit, 0)
+        end
+    end
+    -- Also clear the player's own icon if in a group but not in raid
+    if not IsInRaid() and GetNumGroupMembers() > 0 then
+        for i = 1, GetNumGroupMembers() do
+            local unit = "party" .. i
+            if UnitExists(unit) then
+                SetRaidTarget(unit, 0)
+            end
+        end
+    end
+end
+
+function AssignIconsAndAlert(button)
+    -- If right-clicked, clear all raid icons and return
+    if button == "RightButton" then
+        ClearAllRaidIcons()
+        return
+    end
+    
+    local raidMembers = {
+        ["ALERT"] = {
+            tanks = {},
+            healers = {}
         }
+    }
         local numberOfPlayers, _ = getPlayerInitialState()
         local availableIcons = {2, 3, 4, 5, 6, 7, 8}
         local iconIndex = 1
@@ -527,74 +577,84 @@ function WhisperAssignments()
         end
     end
 
+    local dbmAvailable = SafeDBMCommand("broadcast timer 0:20 APLICAR BUFFS")
+    if not dbmAvailable then
+        SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+    end
+    
     for _, playerInfo in ipairs(raidMembers) do
         local playerName = playerInfo[1]
         local message = playerInfo[2]
-        SlashCmdList["DEADLYBOSSMODS"]("broadcast timer 0:20 APLICAR BUFFS")
-<<<<<<< HEAD
         SendChatMessage(message .. " -- Lider de banda", "WHISPER", nil, playerName)
-=======
-        SendChatMessage(message .. " -- RaidDominion Tools", "WHISPER", nil, playerName)
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     end
 end
 
-function SendSplitMessage(message)
-    local maxLength = 255
-    local numParts = math.ceil(#message / maxLength)
-    local delay = .5 -- Retraso en segundos entre cada parte
-    local currentPart = 1
+-- Función auxiliar global para ejecutar comandos de DBM de manera segura
+function SafeDBMCommand(command)
+    if IsAddOnLoaded("DBM-Core") and SlashCmdList["DEADLYBOSSMODS"] then
+        SlashCmdList["DEADLYBOSSMODS"](command)
+        return true
+    end
+    return false
+end
+
+-- Contador para IDs únicos de tareas
+local taskCounter = 0
+local scheduledTasks = {}
+local lastUpdate = 0
+
+
+-- Función para programar una tarea con retraso
+local function ScheduleTask(delay, callback)
+    taskCounter = taskCounter + 1
+    scheduledTasks[taskCounter] = {
+        time = GetTime() + delay,
+        callback = callback
+    }
+    return taskCounter
+end
+
+function SendDelayedMessages(messages, priorityChannel)
+    if not messages or #messages == 0 then
+        return
+    end
     local _, channel = getPlayerInitialState()
-
-    function SendNextPart()
-        local startIdx = (currentPart - 1) * maxLength + 1
-        local endIdx = currentPart * maxLength
-        local part = message:sub(startIdx, endIdx)
-
-        SendChatMessage(part, channel)
-
-        currentPart = currentPart + 1
-        if currentPart <= numParts then
-            -- Programamos el siguiente envío de parte después del retraso
-            local frame = CreateFrame("Frame")
-            frame:SetScript("OnUpdate", function(self, elapsed)
-                delay = delay - elapsed
-                if delay <= 0 then
-                    SendNextPart()
-                    self:SetScript("OnUpdate", nil)
-                end
-            end)
+    channel = priorityChannel or channel
+    
+    local maxLength = 255
+    local delay = 0.1 -- Delay in seconds between each part
+    local currentIndex = 1
+    
+    local function SendNextPart()
+        if currentIndex > #messages then
+            return -- All messages sent
+        end
+        
+        local message = messages[currentIndex]
+        local messageLength = #message
+        
+        if messageLength <= maxLength then
+            -- If message is within limit, send it as is
+            SendChatMessage(message, channel)
+            currentIndex = currentIndex + 1
+            ScheduleTask(delay, SendNextPart)
+        else
+            -- If message is too long, split it
+            local part = message:sub(1, maxLength)
+            SendChatMessage(part, channel)
+            
+            -- Update the message with remaining text
+            messages[currentIndex] = message:sub(maxLength + 1)
+            
+            -- Schedule next part of the same message
+            ScheduleTask(delay, SendNextPart)
         end
     end
-
+    
+    -- Start sending messages
     SendNextPart()
 end
 
-function SendDelayedMessages(messages)
-    local index = 1
-    local frame = CreateFrame("Frame")
-    frame.delay = 0 -- Iniciar retraso para el primer mensaje
-
-    frame:SetScript("OnUpdate", function(self, elapsed)
-        self.delay = self.delay - elapsed
-        if self.delay <= 0 then
-            if index <= #messages then
-                SendSplitMessage(messages[index])
-<<<<<<< HEAD
-                -- SendSystemMessage(messages[index])
-=======
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
-                index = index + 1
-                self.delay = .1 -- Resetear retraso para el próximo mensaje
-            end
-            if index > #messages then
-                self:SetScript("OnUpdate", nil) -- Detener el OnUpdate para evitar que siga ejecutándose
-            end
-        end
-    end)
-end
-
-<<<<<<< HEAD
 local function FormatNumber(num)
     if num >= 1000000 then
         return string.format("%.1fM", num / 1000000)
@@ -673,8 +733,6 @@ function showTargetInfo()
 end
 
 
-=======
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 function ShareDC()
     local discordInput = _G["DiscordLinkInput"]
     local discordLink = discordInput:GetText()
@@ -698,13 +756,13 @@ function ShareDC()
         -- Alertar a la banda con el enlace de Discord
         broadcastCommand = broadcastCommand .. " CONECTEN DC"
         local message = "Enlace de Discord: " .. discordLink
-<<<<<<< HEAD
         SendDelayedMessages({message})
-=======
-        SendChatMessage(message, "RAID_WARNING")
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
     end
-    SlashCmdList["DEADLYBOSSMODS"](broadcastCommand)
+    
+    -- Usar la función segura para DBM
+    if not SafeDBMCommand(broadcastCommand) then
+        SendSystemMessage("|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible.")
+    end
 end
 
 function nameTarget()
@@ -712,7 +770,6 @@ function nameTarget()
     local targetName = UnitName("target")
     if hasTarget then
         SendDelayedMessages({targetName})
-<<<<<<< HEAD
     else
         SendSystemMessage("No hay ningún objetivo seleccionado.")
     end
@@ -769,11 +826,6 @@ end
 
 
 
-=======
-    end
-end
-
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
 function checkTempleGear(playerName)
     local hasTempleGear = false
     local isChecked = false
@@ -877,7 +929,6 @@ StaticPopupDialogs["CONFIRM_TEMPLE_GEAR"] = {
     preferredIndex = 3
 }
 
-<<<<<<< HEAD
 StaticPopupDialogs["CONFIRM_ALERT_FAR_PLAYERS"] = {
     text = "Hay jugadores que están fuera de rango. ¿Deseas enviar un aviso para que se acerquen?",
     button1 = "Sí, avisar",
@@ -983,109 +1034,11 @@ function CheckRaidMembersForPvPGear()
     if #approved == 0 and #disapproved == 0 and #farPlayers == 0 then
         SendSystemMessage("No se encontraron jugadores para inspeccionar.")
     end
-=======
-function CheckRaidMembersForPvPGear()
-    local numberOfPlayers, _ = getPlayerInitialState()
-    local approved = {}
-    local disapproved = {}
-
-    for i = 1, numberOfPlayers do
-        local playerName = GetRaidRosterInfo(i)
-        checkTempleGear(playerName)
-
-        -- Si el jugador ha sido aprobado o desaprobado, añadirlo a la lista correspondiente
-        if isChecked and hasTempleGear then
-            table.insert(disapproved, playerName)
-        elseif isChecked and not hasTempleGear then
-            table.insert(approved, playerName)
-        end
-    end
-
-    -- Mensaje final de aprobados y desaprobados
-    SendSystemMessage("Aprobados: " .. table.concat(approved, ", "))
-    SendSystemMessage("Desaprobados: " .. table.concat(disapproved, ", "))
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
-end
-
-local rewards = {{
-    name = "Bolsa de tejido de Escarcha",
-    cost = 60
-}, {
-    name = "Cinturón del noble solitario",
-    cost = 60
-}, {
-    name = "Sello de Edward el Extraño",
-    cost = 80
-}, {
-    name = "Aguijón supernumerario de Namlak",
-    cost = 120
-}, {
-    name = "Leotardos de talismanes dudosos",
-    cost = 150
-}, {
-    name = "Bufas de solidaridad de Wapach",
-    cost = 150
-}, {
-    name = "Cinturón de nova de sangre",
-    cost = 280
-}, {
-    name = "Sortija de hueso de presagista",
-    cost = 400
-}, {
-    name = "Campana de Je'Tze",
-    cost = 600
-}, {
-    name = "Hombreras de cadáver tieso",
-    cost = 800
-}, {
-    name = "Caparazón de reyes olvidados",
-    cost = 880
-}, {
-    name = "Anillo de tendones podridos",
-    cost = 900
-}, {
-    name = "Saco de maravillas de Ikfirus",
-    cost = 1900
-}, {
-    name = "Hombreras de placas de behemoth enfurecido",
-    cost = 2300
-}, {
-    name = "Ojo gélido de Tuétano",
-    cost = 4000
-}, {
-    name = "Empuñadura",
-    cost = 7000
-}, {
-    name = "Gargantilla carmesí de la Reina de Sangre",
-    cost = 14000
-}}
-
-local function SelectReward(rewards)
-    local totalWeight = 0
-    local weights = {}
-
-    for _, reward in ipairs(rewards) do
-        local probability = math.max(0.1, (1000 / reward.cost)) -- Ajustar la probabilidad
-        table.insert(weights, probability)
-        totalWeight = totalWeight + probability
-    end
-
-    local randomValue = math.random() * totalWeight
-    local cumulativeWeight = 0
-
-    for i, weight in ipairs(weights) do
-        cumulativeWeight = cumulativeWeight + weight
-        if randomValue <= cumulativeWeight then
-            return rewards[i]
-        end
-    end
 end
 
 local function GetOnlineGuildMembers()
     local numTotalMembers, _, numOnlineMembers = GetNumGuildMembers(true)
     local onlineMembers = {}
-
-    print(numOnlineMembers)
 
     for i = 1, numTotalMembers do
         local name, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
@@ -1094,78 +1047,688 @@ local function GetOnlineGuildMembers()
         end
     end
 
-    toExport = {}
-
-    for i = 1, numTotalMembers do
-        local name, rank, _, _, class, _, _, _, _ = GetGuildRosterInfo(i)
-        table.insert(toExport, {
-            name = name,
-            rank = rank,
-            class = class
-        })
-    end
-
     return onlineMembers
 end
 
-local function Announce(message)
-<<<<<<< HEAD
-    -- Mostrar el mensaje directamente en el chat
-    if DEFAULT_CHAT_FRAME then
-        DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[Objetivo]|r " .. message)
+function GetGuildMemberList()
+    local numTotalMembers, _, numOnlineMembers = GetNumGuildMembers(true)
+    local onlineMembers = {}
+
+    toExport = {}
+
+    for i = 1, numTotalMembers do
+        local name, rank, _, _, class, _, publicNote, officerNote = GetGuildRosterInfo(i)
+        table.insert(toExport, {
+            name = name,
+            rank = rank,
+            class = class,
+            publicNote = publicNote or "",
+            officerNote = officerNote or ""
+        })
     end
-=======
-    SendDelayedMessages({message})
->>>>>>> 164efec0bab04d183867272dac4079a27d471da5
+
+    return toExport
+end
+
+-- Variable para almacenar el ítem seleccionado del banco de la hermandad
+local selectedGuildBankItem = nil
+
+-- Función para abrir el banco de la hermandad y obtener los ítems de la primera pestaña
+function OpenGuildBankAndGetItems()
+    if not IsInGuild() then
+        SendSystemMessage("No eres miembro de una hermandad.")
+        return
+    end
+    
+    if not CanGuildBankRepair() then
+        SendSystemMessage("No tienes permiso para acceder al banco de la hermandad.")
+        return
+    end
+    
+    -- Abrir el banco de la hermandad
+    if not GuildBankFrame:IsShown() then
+        ShowUIPanel(GuildBankFrame)
+    end
+    
+    -- Crear un frame para manejar el temporizador
+    local frame = CreateFrame("Frame")
+    frame.elapsed = 0
+    frame:SetScript("OnUpdate", function(self, elapsed)
+        self.elapsed = self.elapsed + elapsed
+        if self.elapsed >= 1 then  -- Esperar 1 segundo para que se carguen los ítems
+            self:SetScript("OnUpdate", nil)
+            
+            local tabItems = {}
+            local tab = 1  -- Primera pestaña del banco de la hermandad
+            
+            -- Obtener información de la pestaña
+            local name, icon, isViewable, canDeposit, numWithdrawals, remainingWithdrawals = GetGuildBankTabInfo(tab)
+            
+            if not isViewable then
+                SendSystemMessage("No tienes permiso para ver esta pestaña del banco de la hermandad.")
+                return
+            end
+            
+            -- Recorrer los espacios de la pestaña (máx. 98 por pestaña)
+            for slot = 1, 98 do
+                local itemLink = GetGuildBankItemLink(tab, slot)
+                if itemLink then
+                    local itemName, _, itemRarity, _, _, _, _, _, _, itemTexture = GetItemInfo(itemLink)
+                    local _, _, count = GetGuildBankItemInfo(tab, slot)
+                    
+                    table.insert(tabItems, {
+                        link = itemLink,
+                        name = itemName,
+                        texture = itemTexture,
+                        count = count or 1,
+                        slot = slot
+                    })
+                end
+            end
+            
+            if #tabItems == 0 then
+                SendSystemMessage("No hay ítems en la primera pestaña del banco de la hermandad.")
+                return
+            end
+            
+            -- Seleccionar un ítem aleatorio
+            selectedGuildBankItem = tabItems[math.random(1, #tabItems)]
+            
+            -- Mostrar diálogo de confirmación
+            StaticPopup_Show("CONFIRM_GUILD_BANK_ITEM", selectedGuildBankItem.name, selectedGuildBankItem.count)
+        end
+    end)
+end
+
+-- Función para realizar el sorteo una vez confirmado el ítem
+function PerformGuildRoulette()
+    if not selectedGuildBankItem then return end
+    
+    local onlineMembers = GetOnlineGuildMembers()
+    if #onlineMembers == 0 then
+        SendSystemMessage("No hay miembros de la hermandad conectados para el sorteo.")
+        return
+    end
+    
+    -- Siempre sortear 1 unidad
+    local itemCount = 1
+    local itemText = selectedGuildBankItem.link .. " (x1)"
+    
+    local messages = {
+        "¡SORTEO DE HERMANDAD, EL GANADOR DEBE RESPONDER Y RECLAMAR O SE HACE NUEVO SORTEO!",
+        "El sistema selecciona un ítem aleatorio del banco y lo sortea entre todos los jugadores de la hermandad que estén conectados.",
+        "El premio de este sorteo es: " .. itemText
+    }
+    
+    -- Añadir mensaje de "Sorteando..." con un pequeño retraso
+    table.insert(messages, "Sorteando...")
+    
+    -- El ganador se determinará por el puntaje más alto
+    
+    -- Añadir encabezado de resultados
+    table.insert(messages, "Resultados del sorteo:")
+    
+    -- Generar puntajes para todos los miembros
+    local scores = {}
+    local maxScore = 0
+    local winnerIndex = 1
+    
+    for i = 1, #onlineMembers do
+        scores[i] = math.random(1, 200)  -- Puntaje aleatorio entre 1 y 200
+        if scores[i] > maxScore then
+            maxScore = scores[i]
+            winnerIndex = i
+        end
+    end
+    
+    -- Ordenar miembros por puntaje (de mayor a menor)
+    local sortedIndices = {}
+    for i = 1, #onlineMembers do table.insert(sortedIndices, i) end
+    table.sort(sortedIndices, function(a, b) return scores[a] > scores[b] end)
+    
+    -- Mostrar resultados ordenados
+    for _, idx in ipairs(sortedIndices) do
+        local member = onlineMembers[idx]
+        if idx == winnerIndex then
+            table.insert(messages, member .. " ha obtenido el premio mayor: " .. itemText .. "! (Puntaje: " .. scores[idx] .. ")")
+        else
+            table.insert(messages, member .. " ha obtenido " .. scores[idx] .. " puntos.")
+        end
+    end
+    
+    local winner = onlineMembers[winnerIndex]
+    
+    -- Añadir mensaje del ganador
+    table.insert(messages, "¡El ganador es " .. winner .. "! Ha ganado " .. itemText)
+    table.insert(messages, "SI NO RECLAMA SE HACE NUEVO SORTEO")
+    
+    -- Enviar todos los mensajes con retraso
+    SendDelayedMessages(messages,"GUILD")
+    
+    -- Enviar mensaje privado al ganador
+    SendChatMessage(
+        "¡Ha ganado el sorteo de hermandad! Su premio es: " .. selectedGuildBankItem.link .. 
+        " (x" .. selectedGuildBankItem.count .. "). Por favor, contacte a un oficial para reclamar su premio.", 
+        "WHISPER", nil, winner)
+    
+    PlaySoundFile("Sound\\Interface\\LevelUp.wav")
+    
+    -- Limpiar el ítem seleccionado
+    selectedGuildBankItem = nil
 end
 
 function GuildRoulette()
-    if (IsGuildLeader() == true) then
-        local onlineMembers = GetOnlineGuildMembers()
+    local rankIndex = select(3, GetGuildInfo("player"))
+    local _, _, _, _, _, _, _, _, isGuildLeader = GetGuildRosterInfo(rankIndex)
     
-        local selectedReward = SelectReward(rewards)
-        Announce("¡SORTEO DE HERMANDAD, EL GANADOR DEBE RESPONDER Y RECLAMAR O SE HACE NUEVO SORTEO!")
-        Announce("El sistema selecciona un premio aleatorio del banco y lo sortea entre todos los jugadores de la hermandad que esten conectados.")
-        Announce("El premio de este sorteo es: " .. selectedReward.name .. " valorado en " .. selectedReward.cost .. "g!")
+    if not isGuildLeader and not CanGuildPromote() then
+        SendSystemMessage("Solo los oficiales y el maestro de hermandad pueden iniciar un sorteo.")
+        return
+    end
     
-        local totalSteps = #onlineMembers
-        local currentStep = 0
+    -- Abrir el banco de la hermandad directamente
+    if not IsInGuild() then
+        SendSystemMessage("No eres miembro de una hermandad.")
+        return
+    end
     
-        local frame = CreateFrame("Frame")
+    if not CanGuildBankRepair() then
+        SendSystemMessage("No tienes permiso para acceder al banco de la hermandad.")
+        return
+    end
     
-        frame:SetScript("OnUpdate", function(self, elapsed)
-            currentStep = currentStep + 1
+    -- Abrir el banco de la hermandad
+    if not GuildBankFrame:IsShown() then
+        ShowUIPanel(GuildBankFrame)
+    end
     
-            if currentStep > totalSteps then
-                local winnerIndex = math.random(#onlineMembers)
-                local winner = onlineMembers[winnerIndex]
+    -- Iniciar el escaneo de ítems
+    OpenGuildBankAndGetItems()
+end
+
+-- Diálogo para confirmar el ítem seleccionado
+StaticPopupDialogs["CONFIRM_GUILD_BANK_ITEM"] = {
+    text = "¿Deseas sortear el siguiente ítem?\n\n%s (x1)",
+    button1 = "Sortear",
+    button2 = "Elegir otro",
+    button3 = "Cancelar",
+    OnAccept = function()
+        -- Iniciar el sorteo
+        PerformGuildRoulette()
+    end,
+    OnCancel = function(_, _, reason)
+        if reason == "clicked" then
+            -- Botón "Elegir otro"
+            OpenGuildBankAndGetItems()
+        else
+            -- Escape presionado
+            selectedGuildBankItem = nil
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+    showAlert = true,
+    enterClicksFirstButton = true
+}
+
+-- Función para verificar los reconocimientos de los miembros de la hermandad
+function CheckGuildOfficerNotes()
+    if not IsInGuild() then
+        SendSystemMessage("No eres miembro de una hermandad.")
+        return
+    end
     
-                -- Listar los resultados
-                Announce("Resultados del sorteo:")
-                for i, member in ipairs(onlineMembers) do
-                    if i ~= winnerIndex then
-                        local minorPrize = math.random(1, selectedReward.cost - 1)
-                        Announce(member .. " ha obtenido " .. minorPrize .. " creditos.")
-                    else
-                        Announce(member .. " ha obtenido el premio mayor de " .. selectedReward.cost .. " creditos!")
-                    end
-                end
-                Announce("¡El ganador es " .. winner .. "! Ha ganado " .. selectedReward.cost ..
-                             " creditos para cambiar por " .. selectedReward.name .. " o cualquier item de igual valor.")
-                             Announce("SI NO RECLAMA SE HACE NUEVO SORTEO")
-                
-                SendChatMessage(
-                    "¡Ha ganado " .. selectedReward.cost .. " creditos para cambiar por " .. selectedReward.name ..
-                        " o cualquier item de igual valor. RECLAME O SIGUE JUGANDO!", "WHISPER", nil, winner)
+    -- Obtener el número total de miembros, incluyendo los que no están en línea
+    local numTotalMembers = GetNumGuildMembers(true)  -- true para incluir offline
+    if numTotalMembers == 0 then 
+        SendSystemMessage("No hay miembros en la hermandad.")
+        return 
+    end
     
-                PlaySoundFile("Sound\\Interface\\LevelUp.wav")
+    -- Palabras clave de reconocimientos
+    local reconocimientos = {
+        "ESPIRITU",
+        "SABIO",
+        "CAZADOR",
+        "DOMINION",
+        "GUARDIAN"
+    }
     
-                self:SetScript("OnUpdate", nil) -- Detener el OnUpdate
-                return
+    -- Inicializar tabla para agrupar reconocimientos por jugador
+    local jugadores = {}
+    local encontrados = false
+    
+    -- Recolectar las notas de oficial, rangos y clases de todos los miembros
+    local miembros = {}
+    -- Primero obtener los nombres de los rangos
+    local rankNames = {}
+    for i = 1, GuildControlGetNumRanks() do
+        rankNames[i] = GuildControlGetRankName(i)
+    end
+    
+    -- Luego procesar los miembros
+    for i = 1, numTotalMembers do
+        local name, _, rankIndex, _, _, _, _, officerNote, _, _, classFileName = GetGuildRosterInfo(i)
+        if officerNote and officerNote ~= "" then
+            local rankName = rankNames[rankIndex + 1] or "Recluta"  -- rankIndex es 0-based
+            local className = classFileName and LOCALIZED_CLASS_NAMES_MALE[classFileName] or ""
+            miembros[name] = {
+                note = officerNote:upper(),
+                rank = rankName,
+                class = className
+            }
+        end
+    end
+    
+    -- Procesar las notas de todos los miembros
+    for name, data in pairs(miembros) do
+        local reconocimientosJugador = {}
+        
+        -- Verificar cada palabra clave en la nota de oficial
+        for _, clave in ipairs(reconocimientos) do
+            if string.find(data.note, clave, 1, true) then  -- búsqueda literal
+                table.insert(reconocimientosJugador, clave)
+                encontrados = true
             end
-        end)
+        end
+        
+        if #reconocimientosJugador > 0 then
+            table.sort(reconocimientosJugador)
+            jugadores[name] = {
+                reconocimientos = reconocimientosJugador,
+                rank = data.rank,
+                class = data.class
+            }
+        end
+    end
+    
+    -- Construir el mensaje de salida
+    local mensajes = {}
+    
+    if not encontrados then
+        table.insert(mensajes, "=== JERARQUÍA DE LA HERMANDAD ===")
+        table.insert(mensajes, "No se encontraron reconocimientos en las notas de los miembros.")
+        table.insert(mensajes, "Puedes agregar las palabras clave en tu nota de oficial:")
+        table.insert(mensajes, "ESPÍRITU, SABIO, CAZADOR, DOMINION, GUARDIÁN")
     else
-        SendSystemMessage("Solo el maestro de hermandad puede inciar un sorteo.")
+        -- Agrupar jugadores por rango
+        local jugadoresPorRango = {}
+        local contadorPorRango = {}
+        
+        -- Inicializar tablas
+        for _, rankName in pairs({"Recluta", "Élite", "Comandante"}) do
+            jugadoresPorRango[rankName] = {}
+            contadorPorRango[rankName] = 0
+        end
+        
+        -- Agrupar jugadores por rango
+        for nombre, data in pairs(jugadores) do
+            local rank = data.rank
+            if not jugadoresPorRango[rank] then
+                jugadoresPorRango[rank] = {}
+                contadorPorRango[rank] = 0
+            end
+            table.insert(jugadoresPorRango[rank], {
+                nombre = nombre,
+                clase = data.class ~= "" and data.class or "Sin Clase",
+                reconocimientos = data.reconocimientos
+            })
+            contadorPorRango[rank] = contadorPorRango[rank] + 1
+        end
+        
+        -- Ordenar jugadores alfabéticamente dentro de cada rango
+        for rank, jugadores in pairs(jugadoresPorRango) do
+            table.sort(jugadores, function(a, b) return a.nombre < b.nombre end)
+        end
+        
+        -- Construir el mensaje
+        table.insert(mensajes, "=== JERARQUÍA DE LA HERMANDAD ===")
+        table.insert(mensajes, "NIVELES: 1.Recluta 2.Élite 3.Comandante // RECONOCIMIENTOS: ESPÍRITU, SABIO, CAZADOR, DOMINION, GUARDIÁN")
+        
+        -- Función para formatear una línea de jugadores
+        local function agregarLineaJugadores(jugadores, inicio, fin)
+            local linea = {}
+            for i = inicio, math.min(fin, #jugadores) do
+                local j = jugadores[i]
+                table.insert(linea, string.format("%s %s (%s)", j.clase, j.nombre, table.concat(j.reconocimientos, ", ")))
+            end
+            if #linea > 0 then
+                table.insert(mensajes, table.concat(linea, " // "))
+            end
+        end
+        
+        -- Mostrar por rangos en orden descendente
+        local rangosEnOrden = {
+            {nombre = "COMANDANTES (Nivel 3)", clave = "Comandante"},
+            {nombre = "ÉLITE (Nivel 2)", clave = "Élite"},
+            {nombre = "RECLUTAS (Nivel 1)", clave = "Recluta"}
+        }
+        
+        for _, rango in ipairs(rangosEnOrden) do
+            local jugadoresRango = jugadoresPorRango[rango.clave] or {}
+            local totalJugadores = #jugadoresRango
+            local sufix = totalJugadores == 1 and "jugador" or "jugadores"
+            
+            if totalJugadores > 0 then
+                table.insert(mensajes, string.format("\n=== %s [%d %s] ===", rango.nombre, totalJugadores, sufix))
+                
+                -- Mostrar de 4 en 4 jugadores por línea
+                for i = 1, totalJugadores, 4 do
+                    agregarLineaJugadores(jugadoresRango, i, i + 3)
+                end
+            end
+        end
+        
+        table.insert(mensajes, "")
+        table.insert(mensajes, "¡Gracias por su compromiso y dedicación con la hermandad!")
+    end
+    
+    -- Mostrar los mensajes
+    SendDelayedMessages(mensajes,"GUILD")
+end     
+
+-- Frame para manejar eventos de la interfaz de usuario
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("CHAT_MSG_SYSTEM")
+eventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
+
+-- Tabla para rastrear jugadores recién unidos
+local pendingWelcomes = {}
+
+-- Función para obtener la clase de un jugador en la hermandad
+local function GetPlayerClassFromGuild(playerName, maxRetries)
+    maxRetries = maxRetries or 0
+    
+    -- Limpiar el nombre
+    playerName = playerName:gsub(" %-.*$", ""):trim()
+    
+    -- Asegurarse de que tenemos los datos de la hermandad
+    if not IsInGuild() then 
+        print("Error: El jugador no está en la hermandad")
+        return nil 
+    end
+    
+    -- Forzar actualización de la lista de la hermandad
+    GuildRoster()
+    
+    -- Obtener el número total de miembros (incluyendo los fuera de línea)
+    local totalMembers = GetNumGuildMembers()
+    
+    -- Buscar al jugador en la lista de la hermandad
+    for i = 1, totalMembers do
+        -- Obtener la información del miembro
+        local name, _, _, _, class, _, _, _, _, _, classFileName = GetGuildRosterInfo(i)
+        
+        if name and name:lower() == playerName:lower() then
+            -- Devolver la clase encontrada
+            return class or classFileName or "Jugador"
+        end
+    end
+    
+    -- Si no encontramos al jugador y aún tenemos intentos
+    if maxRetries > 0 then
+        return nil, maxRetries - 1
+    end
+    
+    return nil
+end
+
+-- Crear un frame para manejar los temporizadores
+local timerFrame = CreateFrame("Frame")
+timerFrame:SetScript("OnUpdate", function(self, elapsed)
+    lastUpdate = lastUpdate + elapsed
+    if lastUpdate < 0.1 then return end -- Actualizar cada 100ms
+    lastUpdate = 0
+    
+    local currentTime = GetTime()
+    local toRemove = {}
+    
+    -- Procesar tareas programadas
+    for id, task in pairs(scheduledTasks) do
+        if currentTime >= task.time then
+            task.callback()
+            table.insert(toRemove, id)
+        end
+    end
+    
+    -- Eliminar tareas completadas
+    for _, id in ipairs(toRemove) do
+        scheduledTasks[id] = nil
+    end
+end)
+
+-- Función para cancelar una tarea programada
+local function CancelScheduledTask(id)
+    if id then
+        scheduledTasks[id] = nil
     end
 end
 
+-- Función para manejar la bienvenida con reintentos
+local welcomeTimers = {}
+
+local function SendGuildRules(playerName)
+    local guildRules = {
+        -- ENLACES DE LA HERMANDAD
+        "ENLACES DE LA HERMANDAD",
+        "POSADA → https://discord.gg/BwdpNV9sky",
+        "REGLAS DE RAIDS → https://discord.gg/4t43agyGpv",
+        "REGLAS DEL BANCO → https://discord.gg/DUVmhumcYV",
+        "WEB COLMILLO DE ACERO → https://colmillo.netlify.app/",
+        "CODIGOS DE NOTA → Pronto validador en nuestra web"
+    }
+    -- Enviar cada línea como un susurro separado con un pequeño retraso
+    for i, rule in ipairs(guildRules) do
+        ScheduleTask(i * 0.3, function()
+            SendChatMessage(rule, "WHISPER", nil, playerName)
+        end)
+    end
+end
+
+local function HandleGuildWelcome(playerName, retries)
+    retries = retries or 3 -- Número de reintentos
+    
+    -- Cancelar temporizador anterior si existe
+    if welcomeTimers[playerName] then
+        CancelScheduledTask(welcomeTimers[playerName])
+    end
+    
+    -- Programar la tarea
+    welcomeTimers[playerName] = ScheduleTask(1, function()
+        local class = GetPlayerClassFromGuild(playerName, retries)
+        -- Obtener el total de miembros y contar cuántos están en línea
+        local totalMembers, _, _ = GetNumGuildMembers(true)
+    
+        -- Contar miembros en línea manualmente para mayor precisión
+        local actualOnline = 0
+        for i = 1, totalMembers do
+            local _, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
+            if isOnline then
+                actualOnline = actualOnline + 1
+            end
+        end
+    
+        -- Asegurarse de que tenemos valores válidos
+        totalMembers = totalMembers or 0
+    
+        
+        if class then
+            -- Limpiar
+            pendingWelcomes[playerName] = nil
+            welcomeTimers[playerName] = nil
+            
+            -- Obtener el nombre de la hermandad
+            local guildName = GetGuildInfo("player") or "la hermandad"
+            
+            -- Enviar mensaje de bienvenida
+            local messages = {
+                string.format("¡Bienvenido a %s %s %s!", guildName, class or "", playerName),
+                string.format("¡Ya somos %d!", totalMembers)
+            }
+            SendDelayedMessages(messages,"GUILD")
+            
+            -- Enviar reglas por susurro
+            SendGuildRules(playerName)
+        elseif retries > 0 then
+            -- Reintentar
+            HandleGuildWelcome(playerName, retries - 1)
+        else
+            -- Agotados los reintentos
+            pendingWelcomes[playerName] = nil
+            welcomeTimers[playerName] = nil
+            SendSystemMessage(string.format("¡%s se ha unido a la jauría! (Clase no detectada)", playerName))
+        end
+    end)
+end
+
+StaticPopupDialogs["CONFIRM_WELCOME_MESSAGE"] = {
+    text = "¿Deseas darle la bienvenida a %s?",
+    button1 = "Sí",
+    button2 = "No",
+    OnShow = function(self)
+        -- El nombre llega como "data" al popup
+        self.playerName = self.data
+    end,
+    OnAccept = function(self)
+        local playerName = self.playerName
+        if playerName then
+            HandleGuildWelcome(playerName)
+        end
+    end,
+    OnCancel = function(self)
+        if self and self.playerName then
+            pendingWelcomes[self.playerName] = nil
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3
+}
+
+
+-- Manejador de eventos
+eventFrame:SetScript("OnEvent", function(self, event, ...)
+    if event == "CHAT_MSG_SYSTEM" then
+        local msg = ...
+        -- Verificar si es un mensaje de unión a la hermandad
+        local playerName = msg:match("^(.-) se ha unido a la hermandad")
+        if playerName and IsInGuild() then
+            -- Limpiar el nombre
+            playerName = playerName:gsub(" %-.*$", ""):trim()
+            
+            -- Agregar a la lista de pendientes si no está ya en ella
+            if not pendingWelcomes[playerName] then
+                print("Nuevo jugador detectado:", playerName)
+                pendingWelcomes[playerName] = true
+                StaticPopup_Show("CONFIRM_WELCOME_MESSAGE", playerName, nil, playerName)
+
+
+                -- HandleGuildWelcome(playerName)
+            end
+        end
+    end
+end)
+
+
+
+-- Función para mostrar la jerarquía de la hermandad agrupada por rangos
+function ShowGuildHierarchy()
+    if not IsInGuild() then
+        SendSystemMessage("No eres miembro de una hermandad.")
+        return
+    end
+    
+    local numTotalMembers = GetNumGuildMembers(true)
+    if numTotalMembers == 0 then 
+        SendSystemMessage("No hay miembros en la hermandad.")
+        return 
+    end
+    
+    -- Obtener los nombres de los rangos
+    local rankNames = {}
+    local numRanks = GuildControlGetNumRanks()
+    for i = 1, numRanks do
+        rankNames[i] = GuildControlGetRankName(i)
+    end
+    
+    -- Contadores por rango
+    local rankCounts = {}
+    
+    -- Contar miembros por rango
+    for i = 1, numTotalMembers do
+        local _, _, rankIndex = GetGuildRosterInfo(i)
+        local rankName = rankNames[rankIndex + 1] or "Recluta"  -- rankIndex es 0-based
+        rankCounts[rankName] = (rankCounts[rankName] or 0) + 1
+    end
+    
+    -- Construir el mensaje
+    local messages = {"=== COMPOSICION DE LA HERMANDAD ==="}
+    
+    -- Combinar los dos primeros rangos si existen
+    if #rankNames >= 2 then
+        local rank1 = rankNames[1] or ""
+        local rank2 = rankNames[2] or ""
+        local count1 = rankCounts[rank1] or 0
+        local count2 = rankCounts[rank2] or 0
+        
+        if count1 > 0 or count2 > 0 then
+            table.insert(messages, string.format("→ %s [%d] + %s [%d] = Maestro de la hermandad", 
+                rank1, count1, rank2, count2))
+        end
+        
+        -- Empezar desde el tercer rango
+        for rankIndex = 3, #rankNames do
+            local rankName = rankNames[rankIndex]
+            local total = rankCounts[rankName] or 0
+            if total > 0 then
+                local description = ""
+                if rankIndex == 3 then
+                    description = "Maestros del Codigo"
+                elseif rankIndex == 4 then
+                    description = "Conocedores del Codigo"
+                elseif rankIndex == 5 then
+                    description = "Deben enviar su codigo de nota al GM/Alter para ser asendidos"
+                end
+                table.insert(messages, string.format("→ %s [%d] = %s", rankName, total, description))
+            end
+        end
+    else
+        -- Si hay menos de 2 rangos, mostrarlos todos normalmente
+        for rankIndex = 1, #rankNames do
+            local rankName = rankNames[rankIndex]
+            local total = rankCounts[rankName] or 0
+            if total > 0 then
+                table.insert(messages, string.format("%s: %d", rankName, total))
+            end
+        end
+    end
+    
+    -- Calcular totales
+    local totalMembers = 0
+    local totalOnline = 0
+    local totalOffline = 0
+    
+    -- Contar miembros en línea y desconectados
+    for i = 1, numTotalMembers do
+        local _, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
+        if isOnline then
+            totalOnline = totalOnline + 1
+        else
+            totalOffline = totalOffline + 1
+        end
+    end
+    totalMembers = totalOnline + totalOffline
+    
+    -- Añadir línea de total con contadores de conexión
+    table.insert(messages, string.format("Total: %d miembros (%d en línea, %d desconectados)", 
+        totalMembers, totalOnline, totalOffline))
+    
+    -- Mostrar los mensajes
+    -- for _, message in ipairs(messages) do
+    --     SendSystemMessage(message)
+    -- end
+    SendDelayedMessages(messages,"GUILD")
+end

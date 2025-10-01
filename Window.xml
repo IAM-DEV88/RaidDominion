@@ -24,7 +24,7 @@
         </Backdrop>
         <Layers>
             <Layer level="ARTWORK">
-                <FontString inherits="GameFontHighlightSmall" name="$parentTitle" text="RaidDominion Tools">
+                <FontString inherits="GameFontHighlightSmall" name="$parentTitle" text="RaidDominion">
                     <Anchors>
                         <Anchor point="LEFT" relativeTo="$parentTitleBG" relativePoint="LEFT">
                             <Offset>

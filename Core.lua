@@ -1,4 +1,46 @@
-enabledPanel = enabledPanel or {}
+-- Inicializar la variable si no existe
+enabledPanel = enabledPanel or false
+
+-- Variable para rastrear si ya hemos inicializado el checkbox
+local checkboxInitialized = false
+
+-- Función para actualizar el estado del checkbox y la visibilidad de la ventana
+local function UpdateUIState()
+    -- Actualizar el estado del checkbox si existe
+    if enabledPanelCheckbox and enabledPanelCheckbox.SetChecked then
+        enabledPanelCheckbox:SetChecked(enabledPanel)
+    end
+end
+
+-- Registrar para eventos de carga
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
+f:RegisterEvent("VARIABLES_LOADED")
+f:RegisterEvent("ADDON_LOADED")
+
+-- Variable para rastrear si ya hemos actualizado el estado
+local uiStateUpdated = false
+
+f:SetScript("OnEvent", function(self, event, ...)
+    if event == "VARIABLES_LOADED" or event == "ADDON_LOADED" then
+        local addonName = ...
+        if addonName == "RaidDominion" or not addonName then
+            -- Esperar al siguiente frame para asegurar que todo esté listo
+            self:SetScript("OnUpdate", function(self, elapsed)
+                self:SetScript("OnUpdate", nil)
+                UpdateUIState()
+                uiStateUpdated = true
+            end)
+        end
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        if not uiStateUpdated then
+            -- Si por alguna razón aún no se ha actualizado, hacerlo ahora
+            UpdateUIState()
+            uiStateUpdated = true
+        end
+        self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    end
+end)
 
 function CreateRaidDominionOptionsTabContent(parent)
     local content = CreateFrame("Frame", "OptionsTabContent", parent)
@@ -26,20 +68,32 @@ function CreateRaidDominionOptionsTabContent(parent)
     end
 
     discordInput = CreateFrame("EditBox", "DiscordLinkInput", content, "InputBoxTemplate")
-    discordInput:SetPoint("TOPLEFT", 80, -26) -- Ajusta la posición según sea necesario
+    discordInput:SetPoint("TOPLEFT", 90, -26) -- Ajusta la posición según sea necesario
     discordInput:SetSize(200, 20)
     discordInput:SetAutoFocus(false)
     discordInput:SetFontObject("ChatFontNormal")
     discordInput:SetText("")
 
-    enabledPanelCheckbox = CreateFrame("CheckButton", nil, DiscordLinkInput, "UICheckButtonTemplate")
-    enabledPanelCheckbox:SetPoint("TOPLEFT", 60, -30)
-
+    -- Crear el checkbox
+    enabledPanelCheckbox = CreateFrame("CheckButton", "RaidDominionEnabledCheckbox", DiscordLinkInput, "UICheckButtonTemplate")
+    enabledPanelCheckbox:SetPoint("TOPLEFT", 80, -30)
     enabledPanelCheckbox:SetSize(20, 20)
+    
+    -- Configurar el estado inicial
     enabledPanelCheckbox:SetChecked(enabledPanel)
+    
+    -- Manejar cambios en el checkbox
     enabledPanelCheckbox:SetScript("OnClick", function(self)
-        enabledPanel = (self:GetChecked() == 1) and true or false
+        enabledPanel = self:GetChecked()
+        -- Actualizar la interfaz de usuario
+        UpdateUIState()
     end)
+    
+    -- Marcar como inicializado
+    checkboxInitialized = true
+    
+    -- Actualizar la interfaz de usuario
+    UpdateUIState()
 end
 
 function CreateRaidDominionAboutTabContent(parent)
@@ -90,7 +144,7 @@ function CreateRaidDominionAboutTabContent(parent)
     githubLink:SetPoint("TOPLEFT", githubTitle, "BOTTOMLEFT", 0, -5)
     githubLink:SetSize(250, 20)
     githubLink:SetAutoFocus(false)
-    githubLink:SetText("https://github.com/IAM-GAMECODE/RaidDominion")
+    githubLink:SetText("https://raid-dominion.netlify.app/")
     githubLink:SetFontObject("ChatFontNormal")
     currentYOffset = currentYOffset - 30 -- Ajusta la posición vertical
 

@@ -1,4 +1,4 @@
-# RaidDominion Tools
+# RaidDominion
 > WoW 335a Addon
 
 ![RaidDominionUI](https://github.com/IAM-GAMECODE/RaidDominion/blob/main/rdUI.png)
