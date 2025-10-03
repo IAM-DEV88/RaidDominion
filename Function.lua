@@ -36,7 +36,7 @@ function getPlayerInitialState()
     local inParty = GetNumPartyMembers() > 0 and true or false
     local inRaid = GetNumRaidMembers() ~= 0 and true or false
 
-    local playerRol = IsRaidLeader() and "RAID_WARNING" or "RAID"
+    local playerRol = (IsRaidLeader() or IsRaidOfficer()) and "RAID_WARNING" or "RAID"
     local inBG = UnitInBattleground("player")
 
     numberOfPlayers = inRaid and GetNumRaidMembers() or inBG and GetNumRaidMembers() or GetNumPartyMembers()

@@ -211,40 +211,26 @@ secondaryRoles = {{
 }}
 -- Reglas de la hermandad
 guildRules = {
-    -- USO DE LA NOTA PUBLICA
-    ["USO DE LA NOTA PÚBLICA"] = {
-        "Recuerden enviar su codigo de nota al GM/Alter para ser ascendidos y tener mas beneficios.",
-        "Ejemplo:",
-        "• [Alt=A] [Healer=H] [5.9] [Dual DPS=D] [5.5] [Alquimista=AL] [Herborista=HB]",
-        "Seria → AH5.9D5.5ALHB",
-        "Solo quienes conozcan el uso de la nota publica pueden mostrar detalles de sus personajes publicamente en nuestra web."
+    -- USO DE LA NOTA PÚBLICA
+    ["CÓDIGO DE NOTA"] = {
+        "Recuerden enviar su código de nota al GM/Alt para ser ascendidos y tener más beneficios:",
+        "ROSTER → https://colmillo.netlify.app/roster",
+        "GUÍA → https://colmillo.netlify.app/guides/nota-publica/",
+        "Solo quienes conozcan el uso de su código de nota pueden mostrar detalles de sus personajes públicamente en nuestra web."
     },
     -- ENLACES DE LA HERMANDAD
     ["ENLACES DE LA HERMANDAD"] = {
         "POSADA → https://discord.gg/BwdpNV9sky",
         "REGLAS DE RAIDS → https://discord.gg/4t43agyGpv",
         "REGLAS DEL BANCO → https://discord.gg/DUVmhumcYV",
-        "WEB COLMILLO DE ACERO → https://colmillo.netlify.app/",
-        "CODIGOS DE NOTA → Pronto validador en nuestra web"
-    },
-    -- Banco de la hermandad
-    ["BANCO DE LA HERMANDAD"] = {
-        "PESTAÑA 1 → (DONACIONES)",
-        "• Donaciones de ítems y farmeo de alto valor (80+)",
-        "• Las donaciones son tranformadas en usables para la hermandad",
-        "• Los artículos pueden intercambiarse por farmeo u oro",
-        "• BOEs disponibles en sorteo para miembros activos",
-        "PESTAÑAS 2, 3 y 4 (USO LIBRE)",
-        "• Espacio para donaciones entre miembros",
-        "REGLAS DEL BANCO → https://discord.gg/DUVmhumcYV"
+        "WEB COLMILLO DE ACERO → https://colmillo.netlify.app/"
     },
     -- Raid de oficiales y GM
     ["RAIDS DE HERMANDAD"] = {
-        "¿Organizas raids? Anota el siguiente formato en tus notas:",
-        "Ejemplo:",
-        "• [Lunes=L, Martes=M y Miercoles=X] [a las 20:30 hora server=20:30x]  [Armo=RL] [ICC 25H]",
-        "Seria → LMX20:30xRLICC25H",
-        "Solo quienes conozcan el uso de la nota publica pueden mostrar sus raids publicamente en nuestra web."
+        "¿Organizan raids? Recuerden enviar su código de nota al GM/Alt:",
+        "RAIDS → https://colmillo.netlify.app/raids",
+        "GUÍA → https://colmillo.netlify.app/guides/nota-publica/",
+        "Solo quienes conozcan el uso de su código de nota pueden mostrar sus raids públicamente en nuestra web."
     }
 }
 
@@ -253,7 +239,7 @@ mainOptions = {"Habilidades principales", "Roles principales", "BUFFs", "Roles s
 addonOptions = {"Reglas", "Mecanicas", "Opciones", "Ayuda", "Recargar", "Ocultar"}
 
 -- Opciones del menú de hermandad
-guildOptions = {"Reglas", "Sorteo", "Lista", "Reconocimientos", "Bienvenida", "Jerarquia"}
+guildOptions = {"Reglas", "Sorteo", "Lista", "Reconocimientos", "Jerarquia"}
 barItems = {{
     name = "Modo de raid",
     icon = "Interface\\Icons\\inv_misc_coin_09"

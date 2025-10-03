@@ -268,7 +268,11 @@ function RaidDominion:HandleMainOption(option, button)
         _G["RaidDominionAboutTab"]:Show()
         _G["RaidDominionOptionsTab"]:Hide()
     elseif option == "Hermandad" then
-        self:ShowMenu(self.guildMenu, self.guildMenuWidth, self.guildMenuHeight)
+        if self:IsPlayerTopTwoRanks() then
+            self:ShowMenu(self.guildMenu, self.guildMenuWidth, self.guildMenuHeight)
+        else
+            SendSystemMessage("Solo los dos rangos más altos de la hermandad pueden acceder a esta opción.")
+        end
     end
 
     if self.currentMenu then
@@ -288,8 +292,6 @@ function RaidDominion:HandleGuildOption(option)
         SendSystemMessage("Lista de miembros de la hermandad actualizada.")
     elseif option == "Reconocimientos" then
         CheckGuildOfficerNotes()
-    elseif option == "Bienvenida" then
-        ShowWelcomeMessage(true)
     elseif option == "Jerarquia" then
         ShowGuildHierarchy()
     end
@@ -392,22 +394,9 @@ function RaidDominion:Init()
     self.frame:SetScript("OnDragStart", self.frame.StartMoving)
     self.frame:SetScript("OnDragStop", self.frame.StopMovingOrSizing)
 
-    -- Función para obtener las opciones del menú principal según los permisos
-    local function GetMainMenuOptions()
-        local options = {"Habilidades principales", "Roles principales", "BUFFs", "Roles secundarios", "RaidDominion"}
-        
-        -- Agregar la opción de Hermandad solo si el jugador tiene los permisos necesarios
-        if self:IsPlayerTopTwoRanks() then
-            table.insert(options, "Hermandad")
-        end
-        
-        return options
-    end
-    
-    -- Crear menú principal
     self.mainMenu, self.mainMenuWidth, self.mainMenuHeight =
-        CreateMenu(self.frame, GetMainMenuOptions(), -12, function(option)
-            self:HandleMainOption(option, "LeftButton")
+        CreateMenu(self.frame, mainOptions, -12, function(option)
+            RaidDominion:HandleMainOption(option)
         end, false)
     self.primaryMenu, self.primaryMenuWidth, self.primaryMenuHeight =
         CreateMenu(self.frame, primaryRoles, -12, function(role)
