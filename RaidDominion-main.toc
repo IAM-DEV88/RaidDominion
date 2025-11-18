@@ -6,10 +6,15 @@
 ## SavedVariables: enabledPanel, raidInfo, toExport
 ## DefaultState: enabled
 
+# Core files
+Resources.lua
 Templates.xml
 Core.lua
 Window.xml
-Resources.lua
+
+# Main functionality
 Function.lua
 RaidDominion.lua
+
+# UI Elements
 MinimapButton.lua
