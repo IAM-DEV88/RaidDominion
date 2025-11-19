@@ -354,7 +354,7 @@ StaticPopupDialogs["CONFIRM_READY_CHECK"] = {
 				"|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible."
 			)
 		end
-		StaticPopup_Show("CONFIRM_PULL_COUNTDOWN")
+		StaticPopup_Show("PULL_TIMER_INPUT")
 	end,
 	OnCancel = function()
 		-- Función que se llama cuando el jugador cancela el check de banda
@@ -369,31 +369,6 @@ StaticPopupDialogs["CONFIRM_READY_CHECK"] = {
 	whileDead = true,
 	hideOnEscape = true,
 	preferredIndex = 3, -- Evita problemas de tainting
-}
-
--- Definir el diálogo de confirmación para el pull
-StaticPopupDialogs["CONFIRM_PULL_COUNTDOWN"] = {
-	text = "¿Deseas iniciar un pull con cuenta regresiva?",
-	button1 = "Sí",
-	button2 = "No",
-	hasEditBox = false,
-	OnAccept = function()
-		-- Mostrar diálogo para ingresar los segundos
-		StaticPopup_Show("PULL_TIMER_INPUT")
-	end,
-	OnCancel = function()
-		-- Función que se llama cuando el jugador cancela el pull
-		SendChatMessage("ESPEREN", "RAID_WARNING")
-		if not SafeDBMCommand("broadcast timer 0:10 PULL CANCELADO") then
-			SendSystemMessage(
-				"|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible."
-			)
-		end
-	end,
-	timeout = 0,
-	whileDead = true,
-	hideOnEscape = true,
-	exclusive = 1,
 }
 
 -- Diálogo para ingresar los segundos del pull
@@ -425,6 +400,14 @@ StaticPopupDialogs["PULL_TIMER_INPUT"] = {
 		else
 			SendSystemMessage("|cFFFF0000Error:|r Por favor ingresa un número válido de segundos.")
 			StaticPopup_Show("PULL_TIMER_INPUT")
+		end
+	end,
+	OnCancel = function()
+		SendChatMessage("PULL CANCELADO", "RAID_WARNING")
+		if not SafeDBMCommand("broadcast timer 0:10 PULL CANCELADO") then
+			SendSystemMessage(
+				"|cFFFFFF00Advertencia:|r DBM no está instalado. La función de temporizador no está disponible."
+			)
 		end
 	end,
 	timeout = 0,
