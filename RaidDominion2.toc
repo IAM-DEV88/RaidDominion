@@ -1,0 +1,42 @@
+## Interface: 30300
+## Title: RaidDominion2
+## Notes: Facilita la gestión de la raid, la asignación de responsabilidades en la banda.
+## Author: Andres Muñoz - https://colmillo.netlify.app/
+## Version: 2.0.0
+## SavedVariables: RaidDominionDB
+## DefaultState: enabled
+## X-Category: Raid
+## X-License: All Rights Reserved
+## X-Website: https://colmillo.netlify.app/
+## X-Credits: Andres Muñoz
+## X-Localizations: esMX
+
+# Core Files (Load First)
+RD_Events.lua
+RD_Constants.lua
+RD_Config.lua
+RD_Init.lua
+
+# Module Files
+RD_Module_RoleManager.lua
+RD_Module_MessageManager.lua
+
+# UI Framework
+RD_UI_Utils.lua
+RD_UI_TabSystem.lua
+
+# Configuration System
+RD_UI_ConfigManager.lua
+
+# UI Components - DynamicMenus debe cargarse antes que MenuActions
+RD_UI_DynamicMenus.lua
+RD_UI_MainFrame.lua
+RD_UI_MenuFactory.lua
+RD_UI_Dialogs.lua
+RD_UI_MinimapButton.lua
+
+# Utility Files - MenuActions debe cargarse después de DynamicMenus
+RD_Utils_Group.lua
+
+# Menu Actions - Cargar después de que todos los módulos de UI estén listos
+RD_MenuActions.lua
