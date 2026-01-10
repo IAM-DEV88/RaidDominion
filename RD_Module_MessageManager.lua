@@ -856,20 +856,20 @@ function messageManager:HandleSystemMessage(msg, ...)
     }
     
     -- Verificar si el mensaje coincide con algún patrón de unión a la hermandad
-    for _, pattern in ipairs(patterns) do
-        local playerName = cleanMsg:match(pattern)
-        if playerName and self:IsTopTwoRanks() then
-            -- Limpiar el nombre del jugador
-            playerName = playerName:gsub("-", ""):gsub(" ", "")
-            
-            -- Verificar si ya estamos procesando a este jugador
-            if not self.pendingWelcomes[playerName] then
-                self.pendingWelcomes[playerName] = true
-                self:HandleGuildWelcome(playerName)
+        for _, pattern in ipairs(patterns) do
+            local playerName = cleanMsg:match(pattern)
+            if playerName and self:IsTopThreeRanks() then
+                -- Limpiar el nombre del jugador
+                playerName = playerName:gsub("-", ""):gsub(" ", "")
+                
+                -- Verificar si ya estamos procesando a este jugador
+                if not self.pendingWelcomes[playerName] then
+                    self.pendingWelcomes[playerName] = true
+                    self:HandleGuildWelcome(playerName)
+                end
+                return
             end
-            return
         end
-    end
     
     -- Aquí puedes agregar más manejadores para otros tipos de mensajes del sistema
     -- por ejemplo, mensajes de banda, mazmorra, etc.
@@ -879,7 +879,7 @@ local function trim(str)
     return tostring(str or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-function messageManager:IsTopTwoRanks()
+function messageManager:IsTopThreeRanks()
     -- Verificar si estamos en una hermandad
     if not IsInGuild() then 
         return false 
@@ -894,8 +894,8 @@ function messageManager:IsTopTwoRanks()
         return false
     end
     
-    -- Comprobar si el rango está entre los dos más altos (0 y 1)
-    return rankIndex == 0 or rankIndex == 1
+    -- Comprobar si el rango está entre los tres más altos (0, 1 y 2)
+    return rankIndex == 0 or rankIndex == 1 or rankIndex == 2
 end
 
 function messageManager:CountGuildOnline()

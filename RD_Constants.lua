@@ -382,7 +382,7 @@ RaidDominion.constants = {
     
     GUILD_MESSAGES = {
         ["NOTA PUBLICA Y DE OFICIAL"] = {
-            "» WISP función y GS al GM/Alter/Oficial para subir de rango y actualizar su nota.",
+            "» WISP función y GS al General Admin/Oficial en linea para subir de rango y actualizar su nota.",
             "» Así podrán participar en raideos, sorteos y mostrar detalles de sus personajes en la web.",
             "→ MAS INFORMACIÓN: https://colmillo.netlify.app/ ",
         },
@@ -400,7 +400,7 @@ RaidDominion.constants = {
         ["PRIMERA Y SEGUNDA PESTAÑA DEL BANCO"] = {
             "→ Se reciben donaciones de oro, equipamiento o farm lvl 74+ para ayudar a la hermandad.",
             "→ Sorteos diarios entre los rangos Iniciado y superiores.",
-            "» WISP función y GS al GM/Alter/Oficial para subir de rango.",
+            "» WISP función y GS al General Admin/Oficial en linea para subir de rango.",
         },
         ["PESTAÑA DE EQUIPAMIENTO DEL BANCO"] = {
             "» Acceso a los elementos del baul de equipamiento. A consideración del General Administrador.",

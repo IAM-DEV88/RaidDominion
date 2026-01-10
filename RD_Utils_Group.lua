@@ -15,6 +15,8 @@ RD.events = RD.events or {}
 -- Variables locales
 local playerAssignments = {}
 local previousGroupMembers = {}
+local currentGroupMembers = {}
+local playerClasses = {} -- Table to track player classes
 local groupUtils = {}
 RD.utils.group = groupUtils
 
@@ -1016,13 +1018,15 @@ function groupUtils:UpdateGroupCache(forceUpdate)
     -- Obtener estado actual del grupo de forma segura
     local inRaid, inParty, groupType, numMembers = getGroupInfo()
     
-    -- Get current group members
+    -- Get current group members with their classes
     local newGroup = {}
+    local newPlayerClasses = {}
     
     -- Asegurarse de incluir al jugador primero
     local playerName = self:GetFullPlayerName("player")
     if playerName then
         newGroup[playerName] = true
+        newPlayerClasses[playerName] = UnitClass("player") -- Store player's class
     end
     
     -- Obtener miembros del grupo si es posible
@@ -1038,6 +1042,7 @@ function groupUtils:UpdateGroupCache(forceUpdate)
                     local name = self:GetFullPlayerName(unitId)
                     if name and name ~= playerName then  -- Evitar duplicar al jugador
                         newGroup[name] = true
+                        newPlayerClasses[name] = UnitClass(unitId) -- Store member's class
                     end
                 end
             end
@@ -1048,14 +1053,26 @@ function groupUtils:UpdateGroupCache(forceUpdate)
     if inRaid then
         local numMembers = GetNumRaidMembers() or 0
         for i = 1, numMembers do
-            local name = self:GetFullPlayerName("raid"..i)
-            if name then newGroup[name] = true end
+            local unitId = "raid"..i
+            local name = self:GetFullPlayerName(unitId)
+            if name then 
+                newGroup[name] = true
+                if not newPlayerClasses[name] then
+                    newPlayerClasses[name] = UnitClass(unitId) -- Ensure class is stored
+                end
+            end
         end
     elseif inParty then
         local numMembers = GetNumPartyMembers() or 0
         for i = 1, numMembers do
-            local name = self:GetFullPlayerName("party"..i)
-            if name then newGroup[name] = true end
+            local unitId = "party"..i
+            local name = self:GetFullPlayerName(unitId)
+            if name then 
+                newGroup[name] = true
+                if not newPlayerClasses[name] then
+                    newPlayerClasses[name] = UnitClass(unitId) -- Ensure class is stored
+                end
+            end
         end
     end
     
@@ -1081,10 +1098,10 @@ function groupUtils:UpdateGroupCache(forceUpdate)
         if not newGroup[playerName] then
             -- Player left the group
             local baseName = GetBasePlayerName(playerName)
+            local playerClass = playerClasses[playerName] or "Desconocida" -- Get player's class
             
-            if DEFAULT_CHAT_FRAME then
-                DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff33ff99RaidDominion:|r %s ha abandonado el grupo. Limpiando asignaciones...", baseName or playerName))
-            end
+            -- Send system message when player leaves
+            SendSystemMessage(string.format("RaidDominion: %s (%s) ha abandonado el grupo.", baseName or playerName, playerClass))
             
             -- Reset all assignments for the player who left
             local rolesReset = self:ResetPlayerRoles(playerName)
@@ -1100,19 +1117,18 @@ function groupUtils:UpdateGroupCache(forceUpdate)
                 aurasReset = self:ResetPlayerAuras(baseName) or aurasReset
             end
             
-            -- Log what was reset
+            -- Send system message with reset information
             if rolesReset or buffsReset or abilitiesReset or aurasReset then
                 anyChanges = true
-                if DEFAULT_CHAT_FRAME then
-                    local resetMessages = {}
-                    if rolesReset then table.insert(resetMessages, "roles") end
-                    if buffsReset then table.insert(resetMessages, "buffs") end
-                    if abilitiesReset then table.insert(resetMessages, "habilidades") end
-                    if aurasReset then table.insert(resetMessages, "auras") end
-                    
-                    if #resetMessages > 0 then
-                        DEFAULT_CHAT_FRAME:AddMessage("  - Asignaciones reiniciadas: " .. table.concat(resetMessages, ", "))
-                    end
+                local resetMessages = {}
+                if rolesReset then table.insert(resetMessages, "roles") end
+                if buffsReset then table.insert(resetMessages, "buffs") end
+                if abilitiesReset then table.insert(resetMessages, "habilidades") end
+                if aurasReset then table.insert(resetMessages, "auras") end
+                
+                if #resetMessages > 0 then
+                    SendSystemMessage(string.format("RaidDominion: Asignaciones reiniciadas para %s: %s", 
+                        baseName or playerName, table.concat(resetMessages, ", ")))
                 end
             end
             
@@ -1136,6 +1152,21 @@ function groupUtils:UpdateGroupCache(forceUpdate)
     for k, v in pairs(newGroup) do
         if type(k) == "string" then  -- Only add string keys (player names)
             currentGroupMembers[k] = true
+        end
+    end
+    
+    -- Update player classes
+    -- Clear old classes for players who left
+    for k in pairs(playerClasses) do
+        if not newGroup[k] then
+            playerClasses[k] = nil
+        end
+    end
+    
+    -- Add/update classes for current players
+    for k, v in pairs(newPlayerClasses) do
+        if type(k) == "string" then
+            playerClasses[k] = v
         end
     end
     

@@ -314,11 +314,6 @@ local function OpenGuildBankAndGetItems()
         return
     end
 
-    if not CanGuildBankRepair() then
-        SendSystemMessage(MSG.NO_GUILD_BANK_ACCESS)
-        return
-    end
-
     -- Abrir el banco de la hermandad si no está abierto
     if not GuildBankFrame:IsShown() then
         ShowUIPanel(GuildBankFrame)
@@ -403,23 +398,17 @@ local function GuildLottery()
     -- Obtener constantes
     local MSG = RD.constants.GUILD_LOTTERY.MESSAGES
 
-    -- Verificar permisos de oficial o líder de hermandad
-    local rankIndex = select(3, GetGuildInfo("player"))
-    local _, _, _, _, _, _, _, _, isGuildLeader = GetGuildRosterInfo(rankIndex)
-
-    if not isGuildLeader and not CanGuildPromote() then
-        SendSystemMessage(MSG.NOT_AUTHORIZED)
-        return
-    end
-
     -- Verificar membresía y permisos
     if not IsInGuild() then
         SendSystemMessage(MSG.NOT_IN_GUILD)
         return
     end
 
-    if not CanGuildBankRepair() then
-        SendSystemMessage(MSG.NO_GUILD_BANK_ACCESS)
+    -- Verificar permisos de oficial o líder de hermandad (Top 3 rangos: 0, 1, 2)
+    local _, _, rankIndex = GetGuildInfo("player")
+    
+    if not rankIndex or rankIndex > 2 then
+        SendSystemMessage(MSG.NOT_AUTHORIZED)
         return
     end
 
