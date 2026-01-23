@@ -42,8 +42,6 @@ function groupUtils.GetGuildMemberList()
         gsPlayers = gsData[realmName]["Players"]
     end
     
-    -- Obtener datos de KRT antes de procesar la lista
-    local krtData = groupUtils.GetKRTRaidData()
     local updatesNeeded = {}
     
     for i = 1, numTotalMembers do
@@ -61,36 +59,6 @@ function groupUtils.GetGuildMemberList()
                 if type(pData) == "table" then
                     gearScore = tonumber(pData["GearScore"]) or 0
                     race = pData["Race"]
-                end
-            end
-            
-            -- Calcular estadísticas de KRT para este jugador
-            local raidStats = {
-                total = 0,
-                byZone = {},
-                bossKills = {}
-            }
-            
-            if krtData and krtData.raids then
-                for _, raid in ipairs(krtData.raids) do
-                    local pRaidData = raid.players[cleanName]
-                    if pRaidData then
-                        raidStats.total = raidStats.total + 1
-                        raidStats.byZone[raid.zone] = (raidStats.byZone[raid.zone] or 0) + 1
-                        
-                        for _, boss in ipairs(raid.bossKills) do
-                            -- Filtrar _TrashMob_ y verificar si el jugador estuvo presente para el boss
-                            if boss.name and boss.name ~= "_TrashMob_" and 
-                               boss.date >= (pRaidData.join - 300) and 
-                               (pRaidData.leave == 0 or boss.date <= (pRaidData.leave + 300)) then
-                                local difficulty = boss.difficulty or 0
-                                if not raidStats.bossKills[boss.name] then
-                                    raidStats.bossKills[boss.name] = {}
-                                end
-                                raidStats.bossKills[boss.name][difficulty] = (raidStats.bossKills[boss.name][difficulty] or 0) + 1
-                            end
-                        end
-                    end
                 end
             end
             
@@ -125,8 +93,7 @@ function groupUtils.GetGuildMemberList()
                 publicNote = publicNote or "",
                 officerNote = officerNote or "",
                 gearScore = gearScore,
-                race = race,
-                raidStats = raidStats
+                race = race
             })
         end
     end
@@ -147,85 +114,7 @@ function groupUtils.GetGuildMemberList()
     _G.RaidDominionDB.Guild.generatedBy = UnitName("player")
     _G.RaidDominionDB.Guild.update = nil
     
-    return guildMembers, updatesNeeded, krtData
-end
-
--- Función para obtener y procesar datos de KRT_Raids
-function groupUtils.GetKRTRaidData()
-    local krtRaids = _G["KRT_Raids"]
-    if not krtRaids then 
-        return { raids = {} } 
-    end
-    
-    local result = { raids = {} }
-    
-    -- Si KRT_Raids es una tabla, procesarla
-    if type(krtRaids) == "table" then
-        for i, raid in ipairs(krtRaids) do
-            local raidData = {
-                zone = raid.zone or "Desconocido",
-                startTime = raid.startTime or raid.start or 0,
-                endTime = raid.endTime or raid["end"] or 0,
-                size = raid.size or 0,
-                difficulty = raid.difficulty or 0, -- Añadir dificultad de la raid
-                players = {},
-                loot = {},
-                bossKills = {}
-            }
-            
-            -- Procesar jugadores
-            if raid.players and type(raid.players) == "table" then
-                for pID, pInfo in pairs(raid.players) do
-                    if type(pInfo) == "table" then
-                        local pName = pInfo.name or pID
-                        -- Limpiar nombre de reino
-                        pName = string.match(pName, "^([^-]+)") or pName
-                        
-                        raidData.players[pName] = {
-                            name = pName,
-                            join = pInfo.join or 0,
-                            leave = pInfo.leave or 0,
-                            id = pInfo.id or tonumber(pID) or 0
-                        }
-                    end
-                end
-            end
-            
-            -- Procesar botín
-            if raid.loot and type(raid.loot) == "table" then
-                for _, lInfo in ipairs(raid.loot) do
-                    if type(lInfo) == "table" then
-                        table.insert(raidData.loot, {
-                            itemName = lInfo.itemName or lInfo.item or "Ítem desconocido",
-                            looter = lInfo.looter or lInfo.player or "Desconocido"
-                        })
-                    end
-                end
-            end
-            
-            -- Procesar jefes derrotados (excluyendo _TrashMob_)
-            local bosses = raid.bossKills or raid.bosses
-            if bosses and type(bosses) == "table" then
-                for _, bInfo in ipairs(bosses) do
-                    if type(bInfo) == "table" then
-                        local bossName = bInfo.name or "Jefe desconocido"
-                        -- Filtrar _TrashMob_
-                        if bossName ~= "_TrashMob_" then
-                            table.insert(raidData.bossKills, {
-                                name = bossName,
-                                date = bInfo.date or bInfo.time or 0,
-                                difficulty = bInfo.difficulty or 0
-                            })
-                        end
-                    end
-                end
-            end
-            
-            table.insert(result.raids, raidData)
-        end
-    end
-    
-    return result
+    return guildMembers, updatesNeeded
 end
 
 -- Variables de estado del grupo
@@ -1581,3 +1470,9 @@ end)
 RaidDominion.utils.group = groupUtils
 
 return groupUtils
+
+
+
+
+
+

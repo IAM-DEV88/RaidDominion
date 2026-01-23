@@ -82,7 +82,9 @@ RaidDominion.constants = {
             { name = "Mensajes", action = "GuildMessages", tooltip = "Mensajes de hermandad" },
             { name = "Sorteo", action = "GuildLottery", tooltip = "Sorteo/azar" },
             { name = "Lista", action = "GuildRoster", tooltip = "Guardar lista de miembros" },
-            { name = "Composicion", action = "GuildComposition", tooltip = "Ver composición" }
+            { name = "Composicion", action = "GuildComposition", tooltip = "Ver composición" },
+            { name = "Gearscore", action = "ShowGuildGearscore", tooltip = "Lista de jugadores con Gearscore y notas" },
+            { name = "Core", action = "ShowCoreBands", tooltip = "Bandas Core" }
         }
     },
 
@@ -371,7 +373,7 @@ RaidDominion.constants = {
         },
         ["ICC 10 N"] = { "PRIORIDAD DE LOTEO: Por función MAIN > DUAL." },
         ["ICC 25 N"] = {
-            "PRIORIDAD DE LOTEO: Por función MAIN > DUAL. // MARCAS: Debe linkear 1 t10 engemado/encantado. // ABACO: top3 cerrado  en Reina. // TARRO: top5 daño en Panza cerrado + 5% en bestias, rollea paladín retry, pícaro asesinato.",
+            "PRIORIDAD DE LOTEO: Por función MAIN > DUAL. // MARCAS: Debe linkear 1 t10 engemado/encantado. // ABACO: top3 cerrado  en Reina. // TARRO: top5 daño en Panza cerrado + 5% en bestias, rollea paladín retry, pícaro asesinato, mejora.",
             "TESTAMENTO: top5 daño en Panza cerrado + 5% en bestias. Rollean warrior fury, dk profano/escarcha, pícaro combate y druida feral, hunter punteria, mejora. Bajo rendimiento/Inactivo = NoLoot // OBJETO: top5 cerrado daño en Panza + 3% en bestias.",
             "FILACTERIA: top3 cerrado daño en Profe + 10% en mocos. // COLMILLO: prioridad tanques activos en su rol, luego el resto. // Un abalorio, Un arma, Dos marcas por raid. Un ítem por main(excepto tankes), sin limite por dual. Marcas tambien por dual.",
             "RESERVADOS: Fragmentos, Sangres, Items no ligados y Saros. // ARMAS LK: top10 daño en LK + 5% en Valkyrs y top3 conteo de sanacion en LK.",
@@ -382,7 +384,7 @@ RaidDominion.constants = {
     
     GUILD_MESSAGES = {
         ["NOTA PUBLICA Y DE OFICIAL"] = {
-            "» WISP función y GS al General Admin/Oficial en linea para subir de rango y actualizar su nota.",
+            "» WISP función y GS al Administrador/Oficial en linea para subir de rango y actualizar su nota.",
             "» Así podrán participar en raideos, sorteos y mostrar detalles de sus personajes en la web.",
             "→ MAS INFORMACIÓN: https://colmillo.netlify.app/ ",
         },
@@ -400,10 +402,10 @@ RaidDominion.constants = {
         ["PRIMERA Y SEGUNDA PESTAÑA DEL BANCO"] = {
             "→ Se reciben donaciones de oro, equipamiento o farm lvl 74+ para ayudar a la hermandad.",
             "→ Sorteos diarios entre los rangos Iniciado y superiores.",
-            "» WISP función y GS al General Admin/Oficial en linea para subir de rango.",
+            "» WISP función y GS al Administrador/Oficial en linea para subir de rango.",
         },
         ["PESTAÑA DE EQUIPAMIENTO DEL BANCO"] = {
-            "» Acceso a los elementos del baul de equipamiento. A consideración del General Administrador.",
+            "» Acceso a los elementos del baul de equipamiento. A consideración del Administradoristrador.",
             "→ Solicita equipamiento en el servidor de Discord kMK2ZRRCza.",
         },
     },
@@ -591,6 +593,20 @@ RaidDominion.constants = {
         },
     },
     
+cfg_data = {
+        G = "\067\111\108\109\105\108\108\111\032\100\101\032\065\099\101\114\111",
+        R = {
+            A = "\065\100\109\105\110\105\115\116\114\097\100\111\114",
+            O = "\079\102\105\099\105\097\108"
+        },
+        P = {
+    "\086\102\114", 
+    "\067\115\113",  
+    "\086\101\114\119\097\108\116\101\114",
+    "\084\103\098", 
+}
+    },
+
     -- Mensajes de inicialización
     MESSAGES = {
         -- Mensajes de ayuda

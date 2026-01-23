@@ -72,6 +72,21 @@ local function SetupSlashCommands()
         elseif command == "help" or command == "h" or command == "?" then
             -- Mostrar ayuda
             ShowHelp()
+        elseif command == "testcore" then
+            -- Comando de prueba para bandas Core
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Probando bandas Core...")
+            if RD.utils and RD.utils.coreBands and RD.utils.coreBands.ShowCoreBandsWindow then
+                RD.utils.coreBands.ShowCoreBandsWindow()
+            else
+                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: RD.utils.coreBands no está disponible")
+                if not RD.utils then
+                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r RD.utils no está disponible")
+                elseif not RD.utils.coreBands then
+                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r RD.utils.coreBands no está disponible")
+                else
+                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r RD.utils.coreBands.ShowCoreBandsWindow no está disponible")
+                end
+            end
         else
             -- Comando desconocido
             print(MSG.UNKNOWN_COMMAND or "Comando desconocido. /rdh para ayuda.")

@@ -121,6 +121,14 @@ function mainFrame:Create()
     self.frame:SetMovable(true)
     self.frame:EnableMouse(true)
     self.frame:RegisterForDrag("LeftButton")
+    self.frame:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+    })
+    self.frame:SetBackdropColor(0, 0, 0, 0.9)
+    self.frame:SetBackdropBorderColor(1, 1, 1, 0.5)
     self.frame:SetScript("OnDragStart", self.frame.StartMoving)
     self.frame:SetScript("OnDragStop", function()
         self.frame:StopMovingOrSizing()
@@ -266,11 +274,11 @@ function mainFrame:Create()
     self.frame:SetScript("OnDragStart", self.frame.StartMoving)
     self.frame:SetScript("OnDragStop", self.frame.StopMovingOrSizing)
     
-    -- Crear fondo oscuro
-    local bg = self.frame:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints(true)
-    bg:SetTexture(0, 0, 0, 0.6)  -- Fondo negro semitransparente
-    bg:SetBlendMode("BLEND")
+    -- Crear fondo oscuro (eliminado para usar Backdrop)
+    -- local bg = self.frame:CreateTexture(nil, "BACKGROUND")
+    -- bg:SetAllPoints(true)
+    -- bg:SetTexture(0, 0, 0, 0.6)  -- Fondo negro semitransparente
+    -- bg:SetBlendMode("BLEND")
     
     -- Asegurarse de que el frame sea visible
     self.frame:Show()
@@ -388,7 +396,7 @@ function mainFrame:CreateActionBar()
         local button = CreateStyledButton("RaidDominionActionButton"..i, actionBar, buttonSize, buttonSize)
         
         -- Posicionar el botón
-        button:SetPoint("LEFT", actionBar, "LEFT", (i-1) * (buttonSize + padding), -2)
+        button:SetPoint("LEFT", actionBar, "LEFT", (i-1) * (buttonSize + padding), -1)
         
         -- Configurar icono
         local icon = button.iconContainer:CreateTexture("$parentIcon", "ARTWORK")

@@ -311,12 +311,12 @@ local function CreateCheckboxList(container, data, configKeyPrefix, topMargin)
     
     -- Apply top margin if provided, otherwise use default 5
     local topMargin = topMargin or 5
-    scrollFrame:SetPoint("TOPLEFT", 5, -topMargin)
-    scrollFrame:SetPoint("BOTTOMRIGHT", -25, 5)
+    scrollFrame:SetPoint("TOPLEFT", 0, -topMargin) -- Shifted 5px left (1px more)
+    scrollFrame:SetPoint("BOTTOMRIGHT", -29, 5) -- Shifted 4px left (no change to right)
     
     -- Create content frame with background
     local content = CreateFrame("Frame", "RD_CheckboxContent"..configKeyPrefix, scrollFrame)
-    content:SetWidth(scrollFrame:GetWidth() - (scrollBar:GetWidth() + 5))
+    content:SetWidth(scrollFrame:GetWidth() - (scrollBar:GetWidth() + 3)) -- 2px more to the right (reduced padding)
     content:SetHeight(1)  -- Will be updated with content
     
     -- Set up scrolling
@@ -575,12 +575,12 @@ local tabDefinitions = {
             
             local scrollFrame = CreateFrame("ScrollFrame", "RD_ConfigScrollFrame", container, "UIPanelScrollFrameTemplate")
             local scrollBar = _G["RD_ConfigScrollFrameScrollBar"]
-            scrollFrame:SetPoint("TOPLEFT", titleFrame, "BOTTOMLEFT", 0, -5)
-            scrollFrame:SetPoint("BOTTOMRIGHT", -25, 5)
+            scrollFrame:SetPoint("TOPLEFT", titleFrame, "BOTTOMLEFT", -5, -5) -- Shifted 5px left (1px more)
+            scrollFrame:SetPoint("BOTTOMRIGHT", -29, 5) -- Shifted 4px left (no change to right)
             
             -- Create content frame with background
             local content = CreateFrame("Frame", "RD_ConfigContent", scrollFrame)
-            content:SetWidth(scrollFrame:GetWidth() - (scrollBar:GetWidth() + 5))
+            content:SetWidth(scrollFrame:GetWidth() - (scrollBar:GetWidth() + 3)) -- 2px more to the right (reduced padding)
             content:SetHeight(1)  -- Will be updated with content
             
             -- Set up scrolling
@@ -932,18 +932,18 @@ local tabDefinitions = {
             local scrollFrame = CreateFrame("ScrollFrame", "RD_HelpScrollFrame", container, "UIPanelScrollFrameTemplate")
             local scrollBar = _G["RD_HelpScrollFrameScrollBar"]
             
-            scrollFrame:SetPoint("TOPLEFT", titleFrame, "BOTTOMLEFT", 0, -5)
-            scrollFrame:SetPoint("BOTTOMRIGHT", -25, 5)
+            scrollFrame:SetPoint("TOPLEFT", titleFrame, "BOTTOMLEFT", -5, -5) -- Shifted 5px left (1px more)
+            scrollFrame:SetPoint("BOTTOMRIGHT", -29, 5) -- Shifted 4px left (no change to right)
             
             -- Create content frame with background
             local content = CreateFrame("Frame", "RD_HelpContent", scrollFrame)
-            content:SetWidth(scrollFrame:GetWidth() - (scrollBar:GetWidth() + 5))
+            content:SetWidth(scrollFrame:GetWidth() - (scrollBar:GetWidth() + 3)) -- 2px more to the right (reduced padding)
             content:SetHeight(1)  -- Will be updated with content
             
             -- Set up scrolling
             scrollFrame:SetScrollChild(content)
             scrollFrame:SetScript("OnSizeChanged", function(self)
-                content:SetWidth(self:GetWidth() - (scrollBar:GetWidth() + 5))
+                content:SetWidth(self:GetWidth() - (scrollBar:GetWidth() + 3)) -- 2px more to the right (reduced padding)
             end)
             
             -- Set background
@@ -1088,51 +1088,64 @@ function ConfigManager:CreateWindow()
     frame:SetScript("OnDragStart", function() frame:StartMoving() end)
     frame:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
     
-    -- Create background
-    local bg = frame:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Background")
-    bg:SetAllPoints()
+    -- Make the window closable with ESC key
+    tinsert(UISpecialFrames, "RaidDominionConfig")
     
-    -- Create border
+    -- Set the unified backdrop style
     frame:SetBackdrop({
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true,
-        tileSize = 32,
-        edgeSize = 32,
-        insets = { left = 11, right = 12, top = 12, bottom = 11 }
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
     })
+    frame:SetBackdropColor(0, 0, 0, 0.9)
+    frame:SetBackdropBorderColor(1, 1, 1, 0.5)
     
-    -- Create title bar background
-    local titleBg = frame:CreateTexture(nil, "ARTWORK")
-    titleBg:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
-    titleBg:SetSize(frame:GetWidth(), 64)
-    titleBg:SetPoint("TOP", 0, 30)
-    
-    -- Make title bar draggable
+    -- Make title area draggable
     local titleDrag = CreateFrame("Button", nil, frame)
-    titleDrag:SetPoint("TOPLEFT", titleBg, "TOPLEFT", 0, 0)
-    titleDrag:SetPoint("TOPRIGHT", titleBg, "TOPRIGHT", 0, 0)
-    titleDrag:SetHeight(64)  -- Altura de la barra de título
+    titleDrag:SetPoint("TOPLEFT", 0, 0)
+    titleDrag:SetPoint("TOPRIGHT", 0, 0)
+    titleDrag:SetHeight(30)  -- Altura de la barra de título
     titleDrag:SetScript("OnMouseDown", function() frame:StartMoving() end)
     titleDrag:SetScript("OnMouseUp", function() frame:StopMovingOrSizing() end)
     titleDrag:SetScript("OnHide", function() frame:StopMovingOrSizing() end)
-    titleDrag:EnableMouse(true)
+    titleDrag:EnableMouse(true)    
+    titleDrag:SetFrameLevel(frame:GetFrameLevel() + 1)
     
-    -- Add title text
-    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOP", 0, 16)
-    title:SetText("RaidDominion - Configuración")
+    -- Create title background with the same style as the main frame
+    local titleBg = CreateFrame("Frame", nil, frame)
+    titleBg:SetPoint("TOP", 0, 19)
+    titleBg:SetSize(200, 24)  -- Width enough for title text
+    titleBg:SetBackdrop({
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+    })
+    titleBg:SetBackdropColor(0, 0, 0, 0.9)
+    titleBg:SetBackdropBorderColor(1, 1, 1, 0.5)
+    titleBg:SetFrameLevel(frame:GetFrameLevel() + 1)
+    titleBg:EnableMouse(true)
+    titleBg:SetScript("OnMouseDown", function() frame:StartMoving() end)
+    titleBg:SetScript("OnMouseUp", function() frame:StopMovingOrSizing() end)
+    -- Set frame level lower than parent so it stays behind
+    titleBg:SetFrameLevel(frame:GetFrameLevel() - 1)
+    
+    -- Add title text on top of the background
+    local title = titleBg:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("CENTER")
+    title:SetText("RaidDominion")
     title:SetTextColor(1, 0.82, 0)  -- Gold color
     
     -- Add close button
     local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", -5, -5)
+    closeButton:SetPoint("TOPRIGHT", -5, 1) -- Moved up by 6 pixels to match other elements
     closeButton:SetFrameLevel(frame:GetFrameLevel() + 10)  -- Asegurar que esté por encima
     closeButton:SetScript("OnClick", function() self:Hide() end)
     
     -- Create content background
     local contentBg = CreateFrame("Frame", nil, frame)
-    contentBg:SetPoint("TOPLEFT", 10, -30)
+    contentBg:SetPoint("TOPLEFT", 10, -24) -- Moved up by 6 pixels to match tabContainer
     contentBg:SetPoint("BOTTOMRIGHT", -10, 8)
     contentBg:SetBackdrop({
         bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -1150,7 +1163,7 @@ function ConfigManager:CreateWindow()
     -- Create tab container
     local tabContainer = CreateFrame("Frame", nil, frame)
     tabContainer:SetHeight(tabHeight + 4)  -- Add padding
-    tabContainer:SetPoint("TOPLEFT", 10, -10)
+    tabContainer:SetPoint("TOPLEFT", 10, -4)
     tabContainer:SetPoint("BOTTOMRIGHT", -4, 4)
     
     -- Create tab buttons

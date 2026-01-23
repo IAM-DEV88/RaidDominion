@@ -37,6 +37,7 @@ RD_UI_MinimapButton.lua
 
 # Utility Files - MenuActions debe cargarse después de DynamicMenus
 RD_Utils_Group.lua
+RD_Utils_CoreBands.lua
 
-# Menu Actions - Cargar después de que todos los módulos de UI estén listos
+# Menu Actions - Cargar después de que todos los módulos de UI y utilidades estén listos
 RD_MenuActions.lua

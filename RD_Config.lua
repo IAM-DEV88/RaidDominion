@@ -38,7 +38,8 @@ local defaultConfig = {
         showMechanicsMenu = true,
         showGuildMenu = true,
         showMainMenuOnStart = true
-    }
+    },
+    Core = {}
 }
 
 -- Variables privadas

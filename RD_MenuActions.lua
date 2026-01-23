@@ -404,11 +404,12 @@ local function GuildLottery()
         return
     end
 
-    -- Verificar permisos de oficial o líder de hermandad (Top 3 rangos: 0, 1, 2)
-    local _, _, rankIndex = GetGuildInfo("player")
+    -- Verificar permisos según el nuevo sistema (Mínimo Nivel 2: Oficial)
+    local mm = RD.modules and RD.modules.messageManager
+    local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
     
-    if not rankIndex or rankIndex > 2 then
-        SendSystemMessage(MSG.NOT_AUTHORIZED)
+    if permLevel < 2 then
+        SendSystemMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos de Oficial para iniciar el sorteo.")
         return
     end
 
@@ -421,7 +422,274 @@ local function GuildLottery()
     OpenGuildBankAndGetItems()
 end
 
-function MenuActions.RegisterDefaultActions()
+-- Función para mostrar/ocultar las ventanas de Gearscore
+    local function ToggleGearscoreWindows(forceShow)
+        -- Verificar si las ventanas ya existen y están visibles
+        local f = _G["RaidDominionUpdateListFrame"]
+        local f2 = _G["RaidDominionNoNoteListFrame"]
+        
+        -- Si alguna ventana está visible y no es un refresco forzado, ocultarlas todas
+        if not forceShow and ((f and f:IsVisible()) or (f2 and f2:IsVisible())) then
+            if f then f:Hide() end
+            if f2 then f2:Hide() end
+            return
+        end
+        
+        -- Si es un refresco forzado pero ninguna ventana está visible, no hacer nada
+        if forceShow and (not f or not f:IsVisible()) and (not f2 or not f2:IsVisible()) then
+            return
+        end
+        
+        -- Obtener la lista de miembros de la hermandad
+        if not RD.utils or not RD.utils.group then return end
+        local guildMembers = RD.utils.group.GetGuildMemberList()
+        
+        if #guildMembers > 0 then
+            -- Filtrar jugadores que tienen GearScore y Nota Pública
+            local playersWithData = {}
+            -- Filtrar jugadores que tienen GearScore pero NO tienen Nota Pública
+            local playersNoNote = {}
+            
+            for _, member in ipairs(guildMembers) do
+                if member.gearScore and member.gearScore > 0 then
+                    if member.publicNote and member.publicNote ~= "" then
+                        table.insert(playersWithData, member)
+                    else
+                        table.insert(playersNoNote, member)
+                    end
+                end
+            end
+            
+            -- Ordenar ambos por GearScore descendente para mejor usabilidad
+            local sortFunc = function(a, b) return (a.gearScore or 0) > (b.gearScore or 0) end
+            table.sort(playersWithData, sortFunc)
+            table.sort(playersNoNote, sortFunc)
+
+            -- Mostrar ventana de jugadores con datos
+            if #playersWithData > 0 then
+                local f = _G["RaidDominionUpdateListFrame"]
+                if not f then
+                    f = CreateFrame("Frame", "RaidDominionUpdateListFrame", UIParent)
+                    f:SetSize(450, 400)
+                    f:SetPoint("CENTER", -230, 0)
+                    f:SetBackdrop({
+                        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+                        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                        tile = true, tileSize = 16, edgeSize = 12,
+                        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+                    })
+                    f:SetBackdropColor(0, 0, 0, 0.9)
+                    f:SetBackdropBorderColor(1, 1, 1, 0.5)
+                    f:EnableMouse(true)
+                    f:SetMovable(true)
+                    f:RegisterForDrag("LeftButton")
+                    f:SetScript("OnDragStart", f.StartMoving)
+                    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+                    
+                    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    f.title:SetPoint("TOP", 0, -15)
+                    
+                    f.closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+                    f.closeBtn:SetPoint("TOPRIGHT", -5, -5)
+                    
+                    f.scroll = CreateFrame("ScrollFrame", "RaidDominionUpdateListScroll", f, "UIPanelScrollFrameTemplate")
+                    f.scroll:SetPoint("TOPLEFT", 20, -40)
+                    f.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
+                    
+                    f.content = CreateFrame("Frame", nil, f.scroll)
+                    f.content:SetSize(390, 10)
+                    f.scroll:SetScrollChild(f.content)
+                end
+                
+                f.title:SetText(string.format("Jugadores con GS y Nota (%d)", #playersWithData))
+                local children = {f.content:GetChildren()}
+                for _, child in ipairs(children) do child:Hide() child:SetParent(nil) end
+                
+                local yOffset = 0
+                for i, member in ipairs(playersWithData) do
+                    local line = CreateFrame("Frame", nil, f.content)
+                    line:SetSize(390, 20)
+                    line:SetPoint("TOPLEFT", 0, -yOffset)
+                    
+                    local nameBtn = CreateFrame("Button", nil, line)
+                    nameBtn:SetSize(120, 20)
+                    nameBtn:SetPoint("LEFT", 0, 0)
+                    local nameText = nameBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                    nameText:SetPoint("LEFT")
+                    nameBtn:SetFontString(nameText)
+                    
+                    local color = RAID_CLASS_COLORS[member.classFileName] or {r=1, g=1, b=1}
+                    nameBtn:SetText(member.name)
+                    nameText:SetTextColor(color.r, color.g, color.b)
+                    
+                    nameBtn:SetScript("OnClick", function()
+                        -- Verificar permisos para editar notas (Nivel 1: Miembro autorizado de Colmillo de Acero)
+                        local mm = RD.modules and RD.modules.messageManager
+                        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
+                        
+                        if permLevel >= 1 then
+                            StaticPopup_Show("RAID_DOMINION_EDIT_GUILD_NOTE", member.name, nil, { index = member.index, currentNote = member.publicNote, name = member.name })
+                        else
+                            SendSystemMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas de hermandad.")
+                        end
+                    end)
+                    nameBtn:SetScript("OnEnter", function(self)
+                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                        GameTooltip:SetText("Clic para editar nota", 1, 1, 1)
+                        GameTooltip:Show()
+                    end)
+                    nameBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+                    local gsColor = "|cffaaaaaa"
+                    local noteGS = string.match(member.publicNote, "(%d+%.%d+)")
+                    if noteGS then
+                        local baseGS = math.floor(tonumber(noteGS) * 1000)
+                        local nextBaseGS = baseGS + 100
+                        if member.gearScore >= nextBaseGS then gsColor = "|cffff9900"
+                        elseif member.gearScore >= baseGS then gsColor = "|cff00ff00"
+                        else gsColor = "|cffff0000" end
+                    end
+
+                    local infoText = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                    infoText:SetPoint("LEFT", nameBtn, "RIGHT", 5, 0)
+                    infoText:SetText(string.format("%s |cff888888[%s]|r %s(GS: %d)|r", member.publicNote, member.rank, gsColor, member.gearScore))
+                    yOffset = yOffset + 20
+                end
+                f.content:SetHeight(yOffset)
+                f:Show()
+            end
+
+            -- Mostrar ventana de jugadores sin nota
+            if #playersNoNote > 0 then
+                local f2 = _G["RaidDominionNoNoteListFrame"]
+                if not f2 then
+                    f2 = CreateFrame("Frame", "RaidDominionNoNoteListFrame", UIParent)
+                    f2:SetSize(300, 400)
+                    f2:SetPoint("CENTER", 230, 0)
+                    f2:SetBackdrop({
+                        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+                        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                        tile = true, tileSize = 16, edgeSize = 12,
+                        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+                    })
+                    f2:SetBackdropColor(0, 0, 0, 0.9)
+                    f2:SetBackdropBorderColor(1, 1, 1, 0.5)
+                    f2:EnableMouse(true)
+                    f2:SetMovable(true)
+                    f2:RegisterForDrag("LeftButton")
+                    f2:SetScript("OnDragStart", f2.StartMoving)
+                    f2:SetScript("OnDragStop", f2.StopMovingOrSizing)
+                    
+                    f2.title = f2:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                    f2.title:SetPoint("TOP", 0, -15)
+                    
+                    f2.closeBtn = CreateFrame("Button", nil, f2, "UIPanelCloseButton")
+                    f2.closeBtn:SetPoint("TOPRIGHT", -5, -5)
+                    
+                    f2.scroll = CreateFrame("ScrollFrame", "RaidDominionNoNoteListScroll", f2, "UIPanelScrollFrameTemplate")
+                    f2.scroll:SetPoint("TOPLEFT", 20, -40)
+                    f2.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
+                    
+                    f2.content = CreateFrame("Frame", nil, f2.scroll)
+                    f2.content:SetSize(240, 10)
+                    f2.scroll:SetScrollChild(f2.content)
+                end
+                
+                f2.title:SetText(string.format("Jugadores con GS sin Nota (%d)", #playersNoNote))
+                local children = {f2.content:GetChildren()}
+                for _, child in ipairs(children) do child:Hide() child:SetParent(nil) end
+                
+                local yOffset = 0
+                for i, member in ipairs(playersNoNote) do
+                    local line = CreateFrame("Frame", nil, f2.content)
+                    line:SetSize(240, 20)
+                    line:SetPoint("TOPLEFT", 0, -yOffset)
+                    
+                    local nameBtn = CreateFrame("Button", nil, line)
+                    nameBtn:SetSize(100, 20)
+                    nameBtn:SetPoint("LEFT", 0, 0)
+                    local nameText = nameBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                    nameText:SetPoint("LEFT")
+                    nameBtn:SetFontString(nameText)
+                    
+                    local color = RAID_CLASS_COLORS[member.classFileName] or {r=1, g=1, b=1}
+                    nameBtn:SetText(member.name)
+                    nameText:SetTextColor(color.r, color.g, color.b)
+                    
+                    nameBtn:SetScript("OnClick", function()
+                        StaticPopup_Show("RAID_DOMINION_EDIT_GUILD_NOTE", member.name, nil, { index = member.index, currentNote = member.publicNote, name = member.name })
+                    end)
+                    nameBtn:SetScript("OnEnter", function(self)
+                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                        GameTooltip:SetText("Clic para editar nota", 1, 1, 1)
+                        GameTooltip:Show()
+                    end)
+                    nameBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+                    local infoText = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                    infoText:SetPoint("LEFT", nameBtn, "RIGHT", 5, 0)
+                    infoText:SetText(string.format("|cff888888[%s]|r |cffaaaaaa(GS: %d)|r", member.rank, member.gearScore))
+                    yOffset = yOffset + 20
+                end
+                f2.content:SetHeight(yOffset)
+                f2:Show()
+            end
+        end
+    end
+
+    function MenuActions.RegisterDefaultActions()
+        -- Registrar diálogos de StaticPopup
+        if not StaticPopupDialogs["RAID_DOMINION_CONFIRM_PROMOTE"] then
+            StaticPopupDialogs["RAID_DOMINION_CONFIRM_PROMOTE"] = {
+                text = "¿Deseas promover a %s a Iniciado?",
+                button1 = "Sí",
+                button2 = "No",
+                OnAccept = function(self)
+                    GuildPromote(self.data.name)
+                end,
+                timeout = 0,
+                whileDead = 1,
+                hideOnEscape = 1,
+                preferredIndex = 3,
+            }
+        end
+
+        if not StaticPopupDialogs["RAID_DOMINION_EDIT_GUILD_NOTE"] then
+            StaticPopupDialogs["RAID_DOMINION_EDIT_GUILD_NOTE"] = {
+                text = "Editar nota pública de %s",
+                button1 = "Aceptar",
+                button2 = "Cancelar",
+                hasEditBox = 1,
+                maxLetters = 31,
+                OnShow = function(self)
+                    local currentNote = ""
+                    if self.data and self.data.currentNote then
+                        currentNote = self.data.currentNote
+                    end
+                    self.editBox:SetText(currentNote)
+                    self.editBox:SetFocus()
+                end,
+                OnAccept = function(self)
+                    local text = self.editBox:GetText()
+                    local index = self.data.index
+                    
+                    GuildRosterSetPublicNote(index, text)
+                    GuildRoster() -- Solicitar actualización
+                end,
+                EditBoxOnEnterPressed = function(self)
+                    local parent = self:GetParent()
+                    local text = parent.editBox:GetText()
+                    local index = parent.data.index
+                    
+                    GuildRosterSetPublicNote(index, text)
+                    GuildRoster() -- Solicitar actualización
+                    parent:Hide()
+                end,
+                timeout = 0,
+                whileDead = 1,
+                hideOnEscape = 1
+            }
+        end
 
     
     -- Función generadora para abrir menús
@@ -554,698 +822,12 @@ function MenuActions.RegisterDefaultActions()
     end)
     MenuActions.Register("GuildLottery", function() end)
     MenuActions.Register("GuildRoster", function() 
-        -- Registrar diálogo de confirmación de promoción
-        if not StaticPopupDialogs["RAID_DOMINION_CONFIRM_PROMOTE"] then
-            StaticPopupDialogs["RAID_DOMINION_CONFIRM_PROMOTE"] = {
-                text = "¿Deseas promover a %s a Iniciado?",
-                button1 = YES,
-                button2 = NO,
-                OnAccept = function(self)
-                    GuildPromote(self.data.name)
-                end,
-                timeout = 0,
-                whileDead = 1,
-                hideOnEscape = 1,
-                preferredIndex = 3,
-            }
-        end
-
-        -- Registrar el diálogo de edición de nota si no existe
-        if not StaticPopupDialogs["RAID_DOMINION_EDIT_GUILD_NOTE"] then
-            StaticPopupDialogs["RAID_DOMINION_EDIT_GUILD_NOTE"] = {
-                text = "Editar nota pública de %s",
-                button1 = ACCEPT,
-                button2 = CANCEL,
-                hasEditBox = 1,
-                maxLetters = 31,
-                OnShow = function(self)
-                    local currentNote = ""
-                    if self.data and self.data.currentNote then
-                        currentNote = self.data.currentNote
-                    end
-                    self.editBox:SetText(currentNote)
-                    self.editBox:SetFocus()
-                end,
-                OnAccept = function(self)
-                    local text = self.editBox:GetText()
-                    local index = self.data.index
-                    local name = self.data.name
-                    local wasEmpty = (self.data.currentNote == nil or self.data.currentNote == "")
-                    
-                    GuildRosterSetPublicNote(index, text)
-                    
-                    -- Si no tenía nota y ahora tiene, preguntar si promover
-                    if wasEmpty and text ~= "" then
-                        local dialog = StaticPopup_Show("RAID_DOMINION_CONFIRM_PROMOTE", name)
-                        if dialog then
-                            dialog.data = { index = index, name = name }
-                        end
-                    end
-                end,
-                EditBoxOnEnterPressed = function(self)
-                    local parent = self:GetParent()
-                    local text = parent.editBox:GetText()
-                    local index = parent.data.index
-                    local name = parent.data.name
-                    local wasEmpty = (parent.data.currentNote == nil or parent.data.currentNote == "")
-                    
-                    GuildRosterSetPublicNote(index, text)
-                    parent:Hide()
-                    
-                    if wasEmpty and text ~= "" then
-                        local dialog = StaticPopup_Show("RAID_DOMINION_CONFIRM_PROMOTE", name)
-                        if dialog then
-                            dialog.data = { index = index, name = name }
-                        end
-                    end
-                end,
-
-                timeout = 0,
-                whileDead = 1,
-                hideOnEscape = 1
-            }
-        end
-
-        -- Obtener la lista de miembros de la hermandad
-        -- Obtener la lista de miembros de la hermandad y datos de KRT
-        local guildMembers, updatesNeeded, krtData = RD.utils.group.GetGuildMemberList()
-        
-        -- Mostrar un mensaje con el resultado
-        if #guildMembers > 0 then
-            local message = "Lista de miembros de la hermandad actualizada. Total: " .. #guildMembers
-            if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-                DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[RaidDominion]|r " .. message)
-            end
-            
-            -- Filtrar jugadores que tienen GearScore y Nota Pública
-            local playersWithData = {}
-            -- Filtrar jugadores que tienen GearScore pero NO tienen Nota Pública
-            local playersNoNote = {}
-            
-            for _, member in ipairs(guildMembers) do
-                if member.gearScore and member.gearScore > 0 then
-                    if member.publicNote and member.publicNote ~= "" then
-                        table.insert(playersWithData, member)
-                    else
-                        table.insert(playersNoNote, member)
-                    end
-                end
-            end
-            
-            -- Si hay jugadores con datos, mostrar una ventana con la lista
-            if #playersWithData > 0 then
-                if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-                    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[RaidDominion]|r Se encontraron " .. #playersWithData .. " jugadores con GS y Nota.")
-                end
-                
-                -- Crear marco para mostrar la lista
-                local f = _G["RaidDominionUpdateListFrame"]
-                if not f then
-                    f = CreateFrame("Frame", "RaidDominionUpdateListFrame", UIParent)
-                    f:SetSize(450, 400)
-                    f:SetPoint("CENTER", -230, 0) -- Mover a la izquierda
-                    f:SetBackdrop({
-                        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-                        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-                        tile = true, tileSize = 32, edgeSize = 32,
-                        insets = { left = 11, right = 12, top = 12, bottom = 11 }
-                    })
-                    f:SetBackdropColor(0, 0, 0, 0.9)
-                    f:EnableMouse(true)
-                    f:SetMovable(true)
-                    f:RegisterForDrag("LeftButton")
-                    f:SetScript("OnDragStart", f.StartMoving)
-                    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-                    
-                    -- Título
-                    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    f.title:SetPoint("TOP", 0, -15)
-                    
-                    -- Botón Cerrar
-                    f.closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-                    f.closeBtn:SetPoint("TOPRIGHT", -5, -5)
-                    
-                    -- ScrollFrame
-                    f.scroll = CreateFrame("ScrollFrame", "RaidDominionUpdateListScroll", f, "UIPanelScrollFrameTemplate")
-                    f.scroll:SetPoint("TOPLEFT", 20, -40)
-                    f.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
-                    
-                    f.content = CreateFrame("Frame", nil, f.scroll)
-                    f.content:SetSize(390, 10) -- Altura dinámica
-                    f.scroll:SetScrollChild(f.content)
-                end
-                
-                f.title:SetText(string.format("Jugadores con GS y Nota (%d)", #playersWithData))
-                
-                -- Limpiar contenido anterior
-                local children = {f.content:GetChildren()}
-                for _, child in ipairs(children) do
-                    child:Hide()
-                    child:SetParent(nil)
-                end
-                
-                -- Llenar lista
-                local yOffset = 0
-                for i, member in ipairs(playersWithData) do
-                    local line = CreateFrame("Frame", nil, f.content)
-                    line:SetSize(390, 20)
-                    line:SetPoint("TOPLEFT", 0, -yOffset)
-                    
-                    -- Botón para el nombre (Clic para editar)
-                    local nameBtn = CreateFrame("Button", nil, line)
-                    nameBtn:SetSize(120, 20)
-                    nameBtn:SetPoint("LEFT", 0, 0)
-                    
-                    local nameText = nameBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                    nameText:SetPoint("LEFT")
-                    nameBtn:SetFontString(nameText)
-                    
-                    local color = RAID_CLASS_COLORS[member.classFileName] or {r=1, g=1, b=1}
-                    nameBtn:SetText(member.name)
-                    nameText:SetTextColor(color.r, color.g, color.b)
-                    
-                    nameBtn:SetScript("OnClick", function()
-                        local dialog = StaticPopup_Show("RAID_DOMINION_EDIT_GUILD_NOTE", member.name)
-                        if dialog then
-                            dialog.data = { index = member.index, currentNote = member.publicNote, name = member.name }
-                            if dialog.editBox then
-                                dialog.editBox:SetText(member.publicNote or "")
-                                dialog.editBox:HighlightText()
-                            end
-                        end
-                    end)
-                    nameBtn:SetScript("OnEnter", function(self)
-                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                        GameTooltip:SetText("Clic para editar nota", 1, 1, 1)
-                        GameTooltip:Show()
-                    end)
-                    nameBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-                    -- Determinar color del GS basado en la nota
-                    local gsColor = "|cffaaaaaa" -- Gris por defecto
-                    local noteGS = string.match(member.publicNote, "(%d+%.%d+)")
-                    if noteGS then
-                        local baseGS = math.floor(tonumber(noteGS) * 1000)  -- 5.2 -> 5200
-                        local nextBaseGS = baseGS + 100  -- 5.2 -> 5300 (límite superior)
-                        
-                        if member.gearScore >= nextBaseGS then
-                            gsColor = "|cffff9900" -- Naranja (GS actual > rango de la nota)
-                        elseif member.gearScore >= baseGS then
-                            gsColor = "|cff00ff00" -- Verde (GS actual dentro del rango de la nota)
-                        else
-                            gsColor = "|cffff0000" -- Rojo (GS actual < rango de la nota)
-                        end
-                    end
-
-                    -- Texto de información (Sin nombre de clase, con Rango)
-                    local infoText = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    infoText:SetPoint("LEFT", nameBtn, "RIGHT", 5, 0)
-                    infoText:SetText(string.format("%s |cff888888[%s]|r %s(GS: %d)|r", member.publicNote, member.rank, gsColor, member.gearScore))
-                    
-                    yOffset = yOffset + 20
-                end
-                
-                f.content:SetHeight(yOffset)
-                f:Show()
-            end
-
-            -- Si hay jugadores SIN nota pero con GS, mostrar otra ventana
-            if #playersNoNote > 0 then
-                if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-                    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[RaidDominion]|r Se encontraron " .. #playersNoNote .. " jugadores con GS pero SIN Nota.")
-                end
-                
-                -- Crear marco para mostrar la lista de SIN NOTA
-                local f2 = _G["RaidDominionNoNoteListFrame"]
-                if not f2 then
-                    f2 = CreateFrame("Frame", "RaidDominionNoNoteListFrame", UIParent)
-                    f2:SetSize(300, 400)
-                    f2:SetPoint("CENTER", 230, 0) -- Mover a la derecha
-                    f2:SetBackdrop({
-                        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-                        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-                        tile = true, tileSize = 32, edgeSize = 32,
-                        insets = { left = 11, right = 12, top = 12, bottom = 11 }
-                    })
-                    f2:SetBackdropColor(0, 0, 0, 0.9)
-                    f2:EnableMouse(true)
-                    f2:SetMovable(true)
-                    f2:RegisterForDrag("LeftButton")
-                    f2:SetScript("OnDragStart", f2.StartMoving)
-                    f2:SetScript("OnDragStop", f2.StopMovingOrSizing)
-                    
-                    -- Título
-                    f2.title = f2:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    f2.title:SetPoint("TOP", 0, -15)
-                    
-                    -- Botón Cerrar
-                    f2.closeBtn = CreateFrame("Button", nil, f2, "UIPanelCloseButton")
-                    f2.closeBtn:SetPoint("TOPRIGHT", -5, -5)
-                    
-                    -- ScrollFrame
-                    f2.scroll = CreateFrame("ScrollFrame", "RaidDominionNoNoteListScroll", f2, "UIPanelScrollFrameTemplate")
-                    f2.scroll:SetPoint("TOPLEFT", 20, -40)
-                    f2.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
-                    
-                    f2.content = CreateFrame("Frame", nil, f2.scroll)
-                    f2.content:SetSize(240, 10) -- Altura dinámica
-                    f2.scroll:SetScrollChild(f2.content)
-                end
-                
-                f2.title:SetText(string.format("Jugadores con GS sin Nota (%d)", #playersNoNote))
-                
-                -- Limpiar contenido anterior
-                local children = {f2.content:GetChildren()}
-                for _, child in ipairs(children) do
-                    child:Hide()
-                    child:SetParent(nil)
-                end
-                
-                -- Llenar lista
-                local yOffset = 0
-                for i, member in ipairs(playersNoNote) do
-                    local line = CreateFrame("Frame", nil, f2.content)
-                    line:SetSize(240, 20)
-                    line:SetPoint("TOPLEFT", 0, -yOffset)
-                    
-                    -- Botón para el nombre (Clic para editar)
-                    local nameBtn = CreateFrame("Button", nil, line)
-                    nameBtn:SetSize(100, 20)
-                    nameBtn:SetPoint("LEFT", 0, 0)
-                    
-                    local nameText = nameBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                    nameText:SetPoint("LEFT")
-                    nameBtn:SetFontString(nameText)
-                    
-                    local color = RAID_CLASS_COLORS[member.classFileName] or {r=1, g=1, b=1}
-                    nameBtn:SetText(member.name)
-                    nameText:SetTextColor(color.r, color.g, color.b)
-                    
-                    nameBtn:SetScript("OnClick", function()
-                        local dialog = StaticPopup_Show("RAID_DOMINION_EDIT_GUILD_NOTE", member.name)
-                        if dialog then
-                            dialog.data = { index = member.index, currentNote = member.publicNote, name = member.name }
-                            if dialog.editBox then
-                                dialog.editBox:SetText(member.publicNote or "")
-                                dialog.editBox:HighlightText()
-                            end
-                        end
-                    end)
-                    nameBtn:SetScript("OnEnter", function(self)
-                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                        GameTooltip:SetText("Clic para editar nota", 1, 1, 1)
-                        GameTooltip:Show()
-                    end)
-                    nameBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-                    -- Texto de información (Sin nombre de clase, con Rango)
-                    local infoText = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    infoText:SetPoint("LEFT", nameBtn, "RIGHT", 5, 0)
-                    infoText:SetText(string.format("|cff888888[%s]|r |cffaaaaaa(GS: %d)|r", member.rank, member.gearScore))
-                    
-                    yOffset = yOffset + 20
-                end
-                
-                f2.content:SetHeight(yOffset)
-                f2:Show()
-            end
-            
-            -- Mostrar ventana de KRT si hay datos
-            if krtData and krtData.raids and #krtData.raids > 0 then
-                if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-                    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[RaidDominion]|r Se encontraron " .. #krtData.raids .. " raids en el historial de KRT.")
-                end
-                
-                local f3 = _G["RaidDominionKRTListFrame"]
-                if not f3 then
-                    f3 = CreateFrame("Frame", "RaidDominionKRTListFrame", UIParent)
-                    f3:SetSize(400, 400)
-                    f3:SetPoint("BOTTOM", 0, 50) -- Centrado abajo
-                    f3:SetBackdrop({
-                        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-                        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-                        tile = true, tileSize = 32, edgeSize = 32,
-                        insets = { left = 11, right = 12, top = 12, bottom = 11 }
-                    })
-                    f3:SetBackdropColor(0, 0, 0, 0.9)
-                    f3:EnableMouse(true)
-                    f3:SetMovable(true)
-                    f3:RegisterForDrag("LeftButton")
-                    f3:SetScript("OnDragStart", f3.StartMoving)
-                    f3:SetScript("OnDragStop", f3.StopMovingOrSizing)
-                    
-                    -- Título
-                    f3.title = f3:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    f3.title:SetPoint("TOP", 0, -15)
-                    
-                    -- Botón Cerrar
-                    f3.closeBtn = CreateFrame("Button", nil, f3, "UIPanelCloseButton")
-                    f3.closeBtn:SetPoint("TOPRIGHT", -5, -5)
-                    
-                    -- ScrollFrame
-                    f3.scroll = CreateFrame("ScrollFrame", "RaidDominionKRTListScroll", f3, "UIPanelScrollFrameTemplate")
-                    f3.scroll:SetPoint("TOPLEFT", 20, -40)
-                    f3.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
-                    
-                    f3.content = CreateFrame("Frame", nil, f3.scroll)
-                    f3.content:SetSize(340, 10)
-                    f3.scroll:SetScrollChild(f3.content)
-                end
-                
-                f3.title:SetText(string.format("Historial de Raids (KRT) (%d)", #krtData.raids))
-                
-                -- Ordenar raids de más reciente a más antigua
-                table.sort(krtData.raids, function(a, b)
-                    return a.endTime > b.endTime
-                end)
-
-                -- Limpiar contenido
-                local children = {f3.content:GetChildren()}
-                for _, child in ipairs(children) do
-                    child:Hide()
-                    child:SetParent(nil)
-                end
-                
-                -- Crear mapa de hermandad para búsqueda rápida
-                local guildMap = {}
-                for _, m in ipairs(guildMembers) do
-                    local cleanName = string.match(m.name, "^([^-]+)") or m.name
-                    guildMap[cleanName] = m
-                end
-
-                -- Llenar lista
-                local yOffset = 0
-                for i, raid in ipairs(krtData.raids) do
-                    -- Encontrar miembros de la hermandad que asistieron
-                    local attendees = {}
-                    for pName, pData in pairs(raid.players) do
-                        if guildMap[pName] then
-                            -- Encontrar el último boss para este jugador
-                            local lastBoss = "Ninguno"
-                            local lastBossTime = 0
-                            
-                            for _, boss in ipairs(raid.bossKills) do
-                                -- Si el boss murió mientras el jugador estaba (con margen de 5 min)
-                                if boss.date >= (pData.join - 300) and (pData.leave == 0 or boss.date <= (pData.leave + 300)) then
-                                    if boss.date >= lastBossTime then
-                                        lastBoss = boss.name
-                                        lastBossTime = boss.date
-                                    end
-                                end
-                            end
-                            
-                            table.insert(attendees, {
-                                name = pName,
-                                lastBoss = lastBoss,
-                                class = guildMap[pName].classFileName
-                            })
-                        end
-                    end
-                    
-                    -- Ordenar asistentes por nombre
-                    table.sort(attendees, function(a, b) return a.name < b.name end)
-
-                    local raidFrame = CreateFrame("Frame", nil, f3.content)
-                    raidFrame:SetSize(340, 45 + (#attendees * 15))
-                    raidFrame:SetPoint("TOPLEFT", 0, -yOffset)
-                    
-                    local raidTitle = raidFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                    raidTitle:SetPoint("TOPLEFT", 5, 0)
-                    raidTitle:SetText(string.format("|cffffff00%s|r (%d jugadores)", raid.zone, raid.size))
-                    
-                    local raidTime = raidFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    raidTime:SetPoint("TOPLEFT", 5, -15)
-                    local startDateStr = date("%d/%m/%y %H:%M", raid.startTime)
-                    local endDateStr = date("%H:%M", raid.endTime)
-                    raidTime:SetText(string.format("|cffaaaaaaInicio:|r %s |cffaaaaaaFin:|r %s", startDateStr, endDateStr))
-                    
-                    local bossCount = #raid.bossKills
-                    local lootCount = #raid.loot
-                    local raidStats = raidFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    raidStats:SetPoint("TOPLEFT", 5, -30)
-                    raidStats:SetText(string.format("|cffaaaaaaJefes:|r %d  |cffaaaaaaLoot:|r %d", bossCount, lootCount))
-                    
-                    -- Mostrar asistentes de la hermandad
-                    local pYOffset = -45
-                    if #attendees > 0 then
-                        local header = raidFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                        header:SetPoint("TOPLEFT", 15, pYOffset)
-                        header:SetText("|cff00ff00Miembros de Hermandad:|r")
-                        pYOffset = pYOffset - 15
-                        
-                        for _, attendee in ipairs(attendees) do
-                            local pBtn = CreateFrame("Button", nil, raidFrame)
-                            pBtn:SetSize(300, 15)
-                            pBtn:SetPoint("TOPLEFT", 25, pYOffset)
-                            
-                            local pText = pBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                            pText:SetPoint("LEFT", 0, 0)
-                            
-                            local classColor = RAID_CLASS_COLORS[attendee.class] or {r=1, g=1, b=1}
-                            local colorStr = string.format("|cff%02x%02x%02x", classColor.r*255, classColor.g*255, classColor.b*255)
-                            
-                            local playerStatusText = ""
-                            local pData = raid.players[attendee.name]
-                            if pData and pData.leave > 0 and raid.endTime > 0 then
-                                local timeDiff = raid.endTime - pData.leave
-                                if timeDiff > 0 then
-                                    local minutesLeft = math.floor(timeDiff / 60)
-                                    playerStatusText = string.format("|cffff0000Abandonó: %d min antes|r", minutesLeft)
-                                else
-                                    playerStatusText = "|cff00ff00Completó|r"
-                                end
-                            else
-                                playerStatusText = "|cff00ff00Completó|r" -- Asumir que completó si no hay datos de salida o raid no terminó
-                            end
-
-                            pText:SetText(string.format("%s%s|r -> %s", colorStr, attendee.name, playerStatusText))
-                            
-                            -- Acción al hacer clic: Mostrar detalles del jugador
-                            pBtn:SetScript("OnClick", function()
-                                local f4 = _G["RaidDominionPlayerDetailFrame"]
-                                if not f4 then
-                                    f4 = CreateFrame("Frame", "RaidDominionPlayerDetailFrame", UIParent)
-                                    f4:SetSize(300, 350)
-                                    f4:SetPoint("CENTER", 400, 0)
-                                    f4:SetBackdrop({
-                                        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-                                        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-                                        tile = true, tileSize = 32, edgeSize = 32,
-                                        insets = { left = 11, right = 12, top = 12, bottom = 11 }
-                                    })
-                                    f4:SetBackdropColor(0, 0, 0, 0.95)
-                                    f4:EnableMouse(true)
-                                    f4:SetMovable(true)
-                                    f4:RegisterForDrag("LeftButton")
-                                    f4:SetScript("OnDragStart", f4.StartMoving)
-                                    f4:SetScript("OnDragStop", f4.StopMovingOrSizing)
-                                    
-                                    f4.title = f4:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                                    f4.title:SetPoint("TOP", 0, -15)
-                                    
-                                    f4.closeBtn = CreateFrame("Button", nil, f4, "UIPanelCloseButton")
-                                    f4.closeBtn:SetPoint("TOPRIGHT", -5, -5)
-                                    
-                                    f4.scroll = CreateFrame("ScrollFrame", "RaidDominionPlayerDetailScroll", f4, "UIPanelScrollFrameTemplate")
-                                    f4.scroll:SetPoint("TOPLEFT", 20, -40)
-                                    f4.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
-                                    
-                                    f4.content = CreateFrame("Frame", nil, f4.scroll)
-                                    f4.content:SetSize(240, 10)
-                                    f4.scroll:SetScrollChild(f4.content)
-                                end
-                                
-                                f4.title:SetText(string.format("Detalles: %s%s|r", colorStr, attendee.name))
-                                
-                                -- Limpiar contenido (hijos y regiones como FontStrings)
-                                local children = {f4.content:GetChildren()}
-                                for _, child in ipairs(children) do child:Hide() child:SetParent(nil) end
-                                local regions = {f4.content:GetRegions()}
-                                for _, region in ipairs(regions) do region:Hide() end
-                                
-                                local dy = 0
-
-                                -- Helper function to get difficulty string
-                                local function GetDifficultyString(difficulty)
-                                    if difficulty == 1 then return "Normal"
-                                    elseif difficulty == 2 then return "Heroico"
-                                    elseif difficulty == 3 then return "Mítico"
-                                    else return "Desconocido"
-                                    end
-                                end
-                                
-                                -- Rango del jugador
-                                local rText = f4.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                                rText:SetPoint("TOPLEFT", 0, -dy)
-                                local pRank = guildMap[attendee.name] and guildMap[attendee.name].rank or "Desconocido"
-                                rText:SetText(string.format("|cffffff00Rango:|r %s", pRank))
-                                dy = dy + 15
-
-                                -- Información de tiempo (Ingreso/Salida en ESTA raid)
-                                local tHeader = f4.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                                tHeader:SetPoint("TOPLEFT", 0, -dy)
-                                tHeader:SetText("|cffffff00Tiempos en esta Raid:|r")
-                                dy = dy + 15
-                                
-                                local pDataThisRaid = raid.players[attendee.name]
-                                local joinStr = date("%H:%M:%S", pDataThisRaid.join)
-                                local leaveStr = pDataThisRaid.leave > 0 and date("%H:%M:%S", pDataThisRaid.leave) or "Fin de Raid"
-                                
-                                local tText = f4.content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                                tText:SetPoint("TOPLEFT", 10, -dy)
-                                tText:SetText(string.format("Entrada: %s\nSalida: %s", joinStr, leaveStr))
-                                dy = dy + 30
-                                
-                                -- Botones de Rango (Ascender/Degradar)
-                                local btnContainer = CreateFrame("Frame", nil, f4.content)
-                                btnContainer:SetSize(240, 30)
-                                btnContainer:SetPoint("TOPLEFT", 0, -dy)
-                                
-                                local promoteBtn = CreateFrame("Button", nil, btnContainer, "UIPanelButtonTemplate")
-                                promoteBtn:SetSize(110, 22)
-                                promoteBtn:SetPoint("LEFT", 0, 0)
-                                promoteBtn:SetText("Ascender")
-                                promoteBtn:SetScript("OnClick", function()
-                                    if attendee.name then
-                                        GuildPromote(attendee.name)
-                                        if DEFAULT_CHAT_FRAME then
-                                            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff33ff99[RaidDominion]|r Intentando ascender a %s...", attendee.name))
-                                        end
-                                    end
-                                end)
-                                
-                                local demoteBtn = CreateFrame("Button", nil, btnContainer, "UIPanelButtonTemplate")
-                                demoteBtn:SetSize(110, 22)
-                                demoteBtn:SetPoint("LEFT", promoteBtn, "RIGHT", 5, 0)
-                                demoteBtn:SetText("Degradar")
-                                demoteBtn:SetScript("OnClick", function()
-                                    if attendee.name then
-                                        GuildDemote(attendee.name)
-                                        if DEFAULT_CHAT_FRAME then
-                                            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff33ff99[RaidDominion]|r Intentando degradar a %s...", attendee.name))
-                                        end
-                                    end
-                                end)
-                                dy = dy + 30
-
-                                -- --- ESTADÍSTICAS GLOBALES (KRT History) ---
-                                local zoneStats = {}
-                                local bossStats = {}
-                                local totalRaids = 0
-                                
-                                for _, r in ipairs(krtData.raids) do
-                                    local pRaidData = r.players[attendee.name]
-                                    if pRaidData then
-                                        totalRaids = totalRaids + 1
-                                        zoneStats[r.zone] = (zoneStats[r.zone] or 0) + 1
-                                        
-                                        for _, boss in ipairs(r.bossKills) do
-                                            if boss.date >= (pRaidData.join - 300) and (pRaidData.leave == 0 or boss.date <= (pRaidData.leave + 300)) then
-                                                local difficulty = boss.difficulty or 0 -- Assuming difficulty is available in boss object
-                                                if not bossStats[boss.name] then
-                                                    bossStats[boss.name] = {}
-                                                end
-                                                bossStats[boss.name][difficulty] = (bossStats[boss.name][difficulty] or 0) + 1
-                                            end
-                                        end
-                                    end
-                                end
-
-                                -- Mostrar Raids por Zona
-                                local zHeader = f4.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                                zHeader:SetPoint("TOPLEFT", 0, -dy)
-                                zHeader:SetText(string.format("|cffffff00Total Raids (%d):|r", totalRaids))
-                                dy = dy + 15
-                                
-                                for zName, count in pairs(zoneStats) do
-                                    local zText = f4.content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                                    zText:SetPoint("TOPLEFT", 10, -dy)
-                                    zText:SetText(string.format("- %s: %d", zName, count))
-                                    dy = dy + 12
-                                end
-                                dy = dy + 10
-
-                                -- Mostrar Bosses (Contador por dificultad)
-                                local bHeader = f4.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                                bHeader:SetPoint("TOPLEFT", 0, -dy)
-                                bHeader:SetText("|cffffff00Contador de Jefes (por dificultad):|r")
-                                dy = dy + 15
-                                
-                                -- Ordenar bosses alfabéticamente
-                                local sortedBossNames = {}
-                                for bName, _ in pairs(bossStats) do table.insert(sortedBossNames, bName) end
-                                table.sort(sortedBossNames)
-
-                                for _, bName in ipairs(sortedBossNames) do
-                                    local bText = f4.content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                                    bText:SetPoint("TOPLEFT", 10, -dy)
-                                    bText:SetText(string.format("- %s:", bName))
-                                    dy = dy + 12
-
-                                    -- Ordenar dificultades (Normal, Heroico, Mítico)
-                                    local sortedDifficulties = {}
-                                    for diff, _ in pairs(bossStats[bName]) do table.insert(sortedDifficulties, diff) end
-                                    table.sort(sortedDifficulties)
-
-                                    for _, difficulty in ipairs(sortedDifficulties) do
-                                        local count = bossStats[bName][difficulty]
-                                        local diffStr = GetDifficultyString(difficulty)
-                                        local dText = f4.content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                                        dText:SetPoint("TOPLEFT", 20, -dy)
-                                        dText:SetText(string.format("  %s: |cff00ff00%d|r", diffStr, count))
-                                        dy = dy + 12
-                                    end
-                                end
-                                dy = dy + 10
-
-                                -- Loot obtenido por este jugador (EN ESTA RAID)
-                                local lHeader = f4.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                                lHeader:SetPoint("TOPLEFT", 0, -dy)
-                                lHeader:SetText("|cffffff00Botín en esta Raid:|r")
-                                dy = dy + 15
-                                
-                                local gotLoot = false
-                                for _, item in ipairs(raid.loot) do
-                                    if item.looter == attendee.name or item.looter == (attendee.name .. "-" .. GetRealmName()) then
-                                        local iText = f4.content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                                        iText:SetPoint("TOPLEFT", 10, -dy)
-                                        iText:SetText("- " .. item.itemName)
-                                        dy = dy + 12
-                                        gotLoot = true
-                                    end
-                                end
-                                if not gotLoot then
-                                    local iText = f4.content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                                    iText:SetPoint("TOPLEFT", 10, -dy)
-                                    iText:SetText("|cff888888Sin botín|r")
-                                    dy = dy + 12
-                                end
-                                
-                                f4.content:SetHeight(dy)
-                                f4:Show()
-                            end)
-                            
-                            pBtn:SetScript("OnEnter", function(self)
-                                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                                GameTooltip:SetText("Clic para ver detalles de bosses y loot", 1, 1, 1)
-                                GameTooltip:Show()
-                            end)
-                            pBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-                            pYOffset = pYOffset - 15
-                        end
-                    end
-                    
-                    yOffset = yOffset + (45 + (#attendees > 0 and (#attendees + 1) * 15 or 0)) + 10
-                end
-                f3.content:SetHeight(yOffset)
-                f3:Show()
-            end
-            
-        else
-            local message = "No se pudo obtener la lista de la hermandad o no estás en una hermandad."
-            if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r " .. message)
+        -- Generar la lista de miembros de la hermandad y guardarla en RaidDominionDB.Guild.memberList
+        if RD.utils and RD.utils.group then
+            local guildMembers, updatesNeeded = RD.utils.group.GetGuildMemberList()
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Lista de hermandad generada con " .. #guildMembers .. " miembros.")
+            if #updatesNeeded > 0 then
+                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Se requieren actualizaciones de notas para " .. #updatesNeeded .. " miembros.")
             end
         end
     end)
@@ -1366,6 +948,32 @@ function MenuActions.RegisterDefaultActions()
     
     -- Registrar el comando de sorteo de hermandad
     MenuActions.Register("GuildLottery", GuildLottery)
+    
+    -- Crear un frame para escuchar actualizaciones de la hermandad
+    local gsUpdateFrame = CreateFrame("Frame", "RaidDominionGSUpdateFrame", UIParent)
+    gsUpdateFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
+    gsUpdateFrame:SetScript("OnEvent", function(self, event)
+        if event == "GUILD_ROSTER_UPDATE" then
+            -- Refrescar las ventanas de Gearscore si están abiertas
+            ToggleGearscoreWindows(true)
+        end
+    end)
+    
+    -- Nuevas acciones para Gearscore y Core Bands
+    MenuActions.Register("ShowGuildGearscore", function() 
+        ToggleGearscoreWindows()
+    end)
+    
+    MenuActions.Register("ShowCoreBands", function() 
+        local f = _G["RaidDominionCoreListFrame"]
+        if f and f:IsVisible() then
+            f:Hide()
+            return
+        end
+        if RD.utils and RD.utils.coreBands then
+            RD.utils.coreBands.ShowCoreBandsWindow()
+        end
+    end)
 end
 
 -- Inicialización
@@ -1415,3 +1023,5 @@ frame:SetScript("OnEvent", function(self, event, addonName)
 end)
 
 return MenuActions
+
+

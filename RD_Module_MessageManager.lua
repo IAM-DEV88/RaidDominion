@@ -26,11 +26,40 @@ RD.modules = RD.modules or {}
 local constants = RD.constants
 local events = RD.events
 
+-- Cola de mensajes para envío diferido (evitar desconexiones por inundación de datos)
+local addonMessageQueue = {}
+local messageTimerFrame = CreateFrame("Frame")
+local elapsedSinceLastMessage = 0
+local MESSAGE_INTERVAL = 0.05 -- 50ms entre mensajes
+
+messageTimerFrame:Hide()
+messageTimerFrame:SetScript("OnUpdate", function(self, elapsed)
+    elapsedSinceLastMessage = elapsedSinceLastMessage + elapsed
+    if elapsedSinceLastMessage >= MESSAGE_INTERVAL then
+        if #addonMessageQueue > 0 then
+            local nextMsg = table.remove(addonMessageQueue, 1)
+            SendAddonMessage(nextMsg.prefix, nextMsg.text, nextMsg.channel)
+            elapsedSinceLastMessage = 0
+        else
+            self:Hide()
+        end
+    end
+end)
+
+local function QueuedAddonSend(prefix, text, channel)
+    table.insert(addonMessageQueue, {prefix = prefix, text = text, channel = channel})
+    messageTimerFrame:Show()
+end
+
 -- Módulo de gestión de mensajes
 local messageManager = {}
 
 -- Prefijo para comunicación entre addons
 local COMM_PREFIX = "RD_COMM"
+
+function messageManager:SendAddonMsg(text, channel)
+    QueuedAddonSend(COMM_PREFIX, text, channel or "RAID")
+end
 
 -- Registrar el módulo
 RD.messageManager = messageManager
@@ -322,6 +351,14 @@ function messageManager:HandleIncomingMessage(prefix, message, channel, sender)
              self:BroadcastRaidData(channel)
              self:ShowAlert("Datos enviados a " .. sender, "SUCCESS")
          end
+    elseif message == "REQUEST_CORE_DATA" then
+         -- Cualquier usuario con permisos puede responder a la solicitud
+         -- (Incluyendo ayudantes que tengan datos más actualizados)
+         local coreData = RaidDominionDB and RaidDominionDB.Core
+         if coreData and #coreData > 0 then
+             self:BroadcastCoreData(channel)
+             self:ShowAlert("Datos de bandas enviados al grupo (solicitado por " .. sender .. ")", "SUCCESS")
+         end
     elseif message == "DATA_START" then
         self.incomingData = {}
         self:ShowAlert("Recibiendo datos del líder...", "INFO")
@@ -336,6 +373,25 @@ function messageManager:HandleIncomingMessage(prefix, message, channel, sender)
             if not self.incomingData[type] then self.incomingData[type] = {} end
             if not self.incomingData[type][key] then self.incomingData[type][key] = {} end
             self.incomingData[type][key][tonumber(idx)] = content
+        end
+    elseif message:match("^CORE_DATA_CHUNK:") then
+        local idx, total, content = message:match("^CORE_DATA_CHUNK:(%d+):(%d+):(.+)$")
+        if idx then
+            if not self.incomingCoreData then self.incomingCoreData = {} end
+            self.incomingCoreData[tonumber(idx)] = content
+        end
+    elseif message:match("^SHARE_PLAYER_SPEC:") then
+        local playerName, spec = message:match("^SHARE_PLAYER_SPEC:([^:]+):(.+)$")
+        if playerName and spec then
+            -- Actualizar en la base de datos de CoreBands si existe
+            if RD.utils and RD.utils.coreBands and RD.utils.coreBands.UpdateMemberSpec then
+                RD.utils.coreBands.UpdateMemberSpec(playerName, spec)
+            end
+        end
+    elseif message == "REQUEST_SPECS" then
+        -- Responder con mi propia spec
+        if RD.utils and RD.utils.coreBands and RD.utils.coreBands.BroadcastMySpec then
+            RD.utils.coreBands.BroadcastMySpec(channel)
         end
     end
 end
@@ -362,7 +418,7 @@ function messageManager:BroadcastRaidData(channel)
     if not RaidDominion.constants then return end
     
     local function SafeSend(msg)
-        SendAddonMessage(COMM_PREFIX, msg, channel)
+        QueuedAddonSend(COMM_PREFIX, msg, channel)
     end
     
     SafeSend("DATA_START")
@@ -443,7 +499,90 @@ function messageManager:BroadcastRaidData(channel)
     SafeSend("DATA_END")
 end
 
+function messageManager:BroadcastCoreData(channel)
+    local coreData = RaidDominionDB and RaidDominionDB.Core
+    if not coreData then return end
+    
+    local function SafeSend(msg)
+        QueuedAddonSend(COMM_PREFIX, msg, channel)
+    end
+    
+    SafeSend("DATA_START")
+    
+    -- Serializar tabla completa
+    local function serialize(t)
+        local s = "{"
+        for k, v in pairs(t) do
+            local key = type(k) == "number" and "["..k.."]" or "['"..tostring(k).."']"
+            if type(v) == "table" then
+                s = s .. key .. "=" .. serialize(v) .. ","
+            elseif type(v) == "string" then
+                s = s .. key .. "='" .. v:gsub("'", "\\'") .. "',"
+            elseif type(v) == "number" or type(v) == "boolean" then
+                s = s .. key .. "=" .. tostring(v) .. ","
+            end
+        end
+        return s .. "}"
+    end
+    
+    local content = serialize(coreData)
+    local maxLen = 200
+    local totalLen = #content
+    local numChunks = math.ceil(totalLen / maxLen)
+    
+    for i = 1, numChunks do
+        local sub = string.sub(content, (i-1)*maxLen + 1, i*maxLen)
+        SafeSend(string.format("CORE_DATA_CHUNK:%d:%d:%s", i, numChunks, sub))
+    end
+    
+    SafeSend("DATA_END")
+end
+
 function messageManager:ProcessIncomingData()
+    -- Procesar datos de bandas (CORE)
+    if self.incomingCoreData then
+        local content = ""
+        local maxIdx = 0
+        for k, _ in pairs(self.incomingCoreData) do if k > maxIdx then maxIdx = k end end
+        for i = 1, maxIdx do content = content .. (self.incomingCoreData[i] or "") end
+        
+        local func, err = loadstring("return " .. content)
+        if func then
+            local success, newCoreData = pcall(func)
+            if success and type(newCoreData) == "table" then
+                if not RaidDominionDB then RaidDominionDB = {} end
+                if not RaidDominionDB.Core then RaidDominionDB.Core = {} end
+                
+                -- Fusionar o actualizar datos
+                for _, newBand in ipairs(newCoreData) do
+                    local existingIndex = nil
+                    for i, existingBand in ipairs(RaidDominionDB.Core) do
+                        if existingBand.name == newBand.name then
+                            existingIndex = i
+                            break
+                        end
+                    end
+                    
+                    if existingIndex then
+                        -- Si ya existe, actualizarla por completo (incluyendo miembros con roles)
+                        RaidDominionDB.Core[existingIndex] = newBand
+                    else
+                        -- Si no existe, añadirla como nueva
+                        table.insert(RaidDominionDB.Core, newBand)
+                    end
+                end
+                
+                -- Actualizar UI si el administrador de core está abierto
+                if RaidDominionCoreListFrame and RaidDominionCoreListFrame:IsShown() then
+                    -- Re-renderizar contenido si existe una función global para ello
+                    -- O simplemente notificar al usuario que debe reabrir
+                    self:ShowAlert("Nuevas bandas añadidas. Reabre el administrador para ver los cambios.", "SUCCESS")
+                end
+            end
+        end
+        self.incomingCoreData = nil
+    end
+
     if not self.incomingData then return end
     
     local function Reconstruct(typeTable, targetTable)
@@ -896,6 +1035,34 @@ function messageManager:IsTopThreeRanks()
     
     -- Comprobar si el rango está entre los tres más altos (0, 1 y 2)
     return rankIndex == 0 or rankIndex == 1 or rankIndex == 2
+end
+
+function messageManager:GetPermissionLevel()
+    local playerName = UnitName("player")
+    local cfg = RaidDominion.constants and RaidDominion.constants.cfg_data
+    
+    if cfg and cfg.P then
+        for _, nameEntry in ipairs(cfg.P) do
+            if playerName == nameEntry then
+                return 3
+            end
+        end
+    end
+
+    if IsInGuild() then
+        local guildName, rankName, rankIndex = GetGuildInfo("player")
+        if cfg and guildName == cfg.G then
+            if rankName == cfg.R.A then
+                return 3
+            end
+            if rankName == cfg.R.O then
+                return 2
+            end
+            return 1
+        end
+    end
+
+    return 0
 end
 
 function messageManager:CountGuildOnline()
