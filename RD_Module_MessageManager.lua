@@ -57,10 +57,6 @@ local messageManager = {}
 -- Prefijo para comunicación entre addons
 local COMM_PREFIX = "RD_COMM"
 
-function messageManager:SendAddonMsg(text, channel)
-    QueuedAddonSend(COMM_PREFIX, text, channel or "RAID")
-end
-
 -- Registrar el módulo
 RD.messageManager = messageManager
 RD.modules.messageManager = messageManager
@@ -379,19 +375,6 @@ function messageManager:HandleIncomingMessage(prefix, message, channel, sender)
         if idx then
             if not self.incomingCoreData then self.incomingCoreData = {} end
             self.incomingCoreData[tonumber(idx)] = content
-        end
-    elseif message:match("^SHARE_PLAYER_SPEC:") then
-        local playerName, spec = message:match("^SHARE_PLAYER_SPEC:([^:]+):(.+)$")
-        if playerName and spec then
-            -- Actualizar en la base de datos de CoreBands si existe
-            if RD.utils and RD.utils.coreBands and RD.utils.coreBands.UpdateMemberSpec then
-                RD.utils.coreBands.UpdateMemberSpec(playerName, spec)
-            end
-        end
-    elseif message == "REQUEST_SPECS" then
-        -- Responder con mi propia spec
-        if RD.utils and RD.utils.coreBands and RD.utils.coreBands.BroadcastMySpec then
-            RD.utils.coreBands.BroadcastMySpec(channel)
         end
     end
 end

@@ -24,7 +24,7 @@ local function CleanName(name)
     return string_lower(clean)
 end
 
--- Helper para capitalizar nombres correctamente
+-- Función auxiliar para capitalizar nombres correctamente (primera letra en mayúscula, resto en minúsculas)
 local function CapitalizeName(name)
     if not name or name == "" then return "" end
     -- Eliminar reino si existe
@@ -291,7 +291,7 @@ local function ReleaseFrame(pool, frame)
 end
 
 -- Función para inicializar los datos del Core si no existen
-EnsureCoreData = function()
+local function EnsureCoreData()
     if not _G.RaidDominionDB then
         _G.RaidDominionDB = {}
     end
@@ -691,20 +691,12 @@ local function addPlayerToBand(bandIndex, playerData)
     end
     
     -- Crear el nuevo miembro con datos básicos, explicitamente inicializando isLeader e isSanctioned en false
-    local cleanName = CleanName(playerData.name)
-    local localPlayerName = CleanName(UnitName("player"))
-    local spec = ""
-    if cleanName == localPlayerName then
-        spec = GetPrimaryTalentSpec("player")
-    end
-
     local newMember = {
         name = CapitalizeName(playerData.name),
         role = playerData.role or "nuevo", -- Rol por defecto cambiado a "nuevo"
         class = playerData.class or "", -- Clase del jugador, vacía si no se proporciona
         isLeader = false,
-        isSanctioned = false,
-        spec = spec
+        isSanctioned = false
     }
     
     -- Agregar el miembro a la banda
@@ -1137,11 +1129,9 @@ local function getOrCreatePlayerEditFrame(playerData)
             local name = playerEditFrame.nameEdit:GetText()
             local role = playerEditFrame.selectedRole
             
-            -- Asegurar que el rol no esté vacío. Si lo está, asignar "nuevo" como predeterminado
+            -- Asegurar que el rol no esté vacío. Si lo está, asignar "Nuevo" como predeterminado
             if not role or role == "" or role == "Seleccionar Rol" then
-                role = "nuevo"
-            else
-                role = role:lower()
+                role = "Nuevo"
             end
             
             local isLeader = playerEditFrame.isLeaderCheck:GetChecked()
@@ -1191,13 +1181,13 @@ local function getOrCreatePlayerEditFrame(playerData)
                 if sourceBand and sourceBand.members and sourceBand.members[context.memberIndex] then
                     -- Datos del miembro preservando campos no editables (como clase original si existe)
                     local currentMember = sourceBand.members[context.memberIndex]
-                    
-                    -- ACTUALIZAR LOS DATOS EXISTENTES en lugar de reemplazarlos por una tabla nueva incompleta
-                    currentMember.name = name
-                    currentMember.role = role
-                    currentMember.class = playerEditFrame.playerClass or currentMember.class
-                    currentMember.isLeader = isLeader
-                    currentMember.isSanctioned = isSanctioned
+                    local memberData = {
+                        name = name,
+                        role = role,
+                        class = playerEditFrame.playerClass or currentMember.class,
+                        isLeader = isLeader,
+                        isSanctioned = isSanctioned
+                    }
                     
                     -- Si se seleccionó una banda destino diferente
                     if targetBandIndex and targetBandIndex ~= context.bandIndex then
@@ -1206,11 +1196,12 @@ local function getOrCreatePlayerEditFrame(playerData)
                             -- Eliminar de la banda actual y añadir a la nueva
                             table.remove(sourceBand.members, context.memberIndex)
                             if not targetBand.members then targetBand.members = {} end
-                            table.insert(targetBand.members, currentMember)
+                            table.insert(targetBand.members, memberData)
                             DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Jugador trasladado a: " .. (targetBand.name or targetBandIndex))
                         end
                     else
-                        -- Ya se actualizó currentMember que es una referencia a sourceBand.members[context.memberIndex]
+                        -- Actualizar en la banda actual
+                        sourceBand.members[context.memberIndex] = memberData
                         DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Jugador actualizado: " .. name)
                     end
                     
@@ -1323,8 +1314,11 @@ local function getGuildNoteByName(playerName)
     return ""
 end
 
+-- Tabla global para almacenar las memberCards activas por nombre de jugador
+local activeMemberCards = {}
+
 -- Función para actualizar todas las tarjetas visibles (Throttleada por OnUpdate)
--- refreshPending ahora se define al inicio del archivo
+local refreshPending = false
 RD.utils.coreBands.RefreshAllVisibleCards = function()
     refreshPending = true
 end
@@ -1346,9 +1340,10 @@ RD_CoreBands_UpdateFrame:SetScript("OnEvent", function(self, event)
     end
 end)
 
+local elapsedSinceLastUpdate = 0
 RD_CoreBands_UpdateFrame:SetScript("OnUpdate", function(self, elapsed)
-    local now = GetTime()
-    if now - lastUIUpdate > UI_UPDATE_THROTTLE then
+    elapsedSinceLastUpdate = elapsedSinceLastUpdate + elapsed
+    if elapsedSinceLastUpdate > 0.1 then -- Throttle de 100ms para actualizaciones visuales
         if refreshPending then
             local rosterCache = BuildRosterCache()
             for _, cards in pairs(activeMemberCards) do
@@ -1360,7 +1355,7 @@ RD_CoreBands_UpdateFrame:SetScript("OnUpdate", function(self, elapsed)
             end
             refreshPending = false
         end
-        lastUIUpdate = now
+        elapsedSinceLastUpdate = 0
     end
 end)
 
@@ -1417,13 +1412,12 @@ local function renderBandMembers(band, parentFrame, bandIndex)
     end
 
     -- Agrupar miembros por rol
-    -- Agrupar miembros por categorías según requerimientos
     local membersByRole = {
         en_grupo = {}, exploradores = {}, hermandad = {}, posada = {}, 
         desconectados = {}, sancionados = {}
     }
     
-    -- Clasificar miembros, preservando el índice original
+    -- Clasificar miembros por rol, preservando el índice original
     UpdateGuildOnlineCache()
     local localPlayerName = CleanName(UnitName("player"))
     for originalIndex, member in ipairs(bandMembers) do
@@ -1671,24 +1665,7 @@ local function renderBandMembers(band, parentFrame, bandIndex)
                 end
                 if self.memberText then 
                     local capitalizedName = CapitalizeName(name)
-                    local spec = memberData and memberData.spec
-                    if spec and spec ~= "" and spec ~= "Sin Talento" then
-                        -- Mostrar nombre y rama abreviada de 3 letras
-                        local abbr = SPEC_ABBR_MAP[spec] or spec:sub(1, 3):upper()
-                        self.memberText:SetText(string.format("%s (|cffffffff%s|r)", capitalizedName, abbr))
-                        
-                        -- Si ya tenemos spec pero el rol es "nuevo", intentar inferir el rol
-                        local role = memberData and memberData.role or "nuevo"
-                        if role == "nuevo" and isOnline then
-                            RD.utils.coreBands.UpdateMemberSpec(name, spec)
-                        end
-                    else
-                        self.memberText:SetText(capitalizedName)
-                        -- Auto-detectar si está online y en rango
-                        if isOnline and name then
-                            TryInspectMember(name)
-                        end
-                    end
+                    self.memberText:SetText(capitalizedName)
                     self.memberText:SetTextColor(nameColor.r, nameColor.g, nameColor.b) 
                 end
 
@@ -1738,10 +1715,7 @@ local function renderBandMembers(band, parentFrame, bandIndex)
 
                 -- Actualizar indicador de Líder (L)
                 if self.leaderIndicator then
-                    local isManualLeader = memberData and (memberData.isLeader == true or memberData.isLeader == 1)
-                    local isGroupLeader = memberData and (memberData.isGroupLeader == true or memberData.isGroupLeader == 1)
-                    
-                    if isManualLeader or isGroupLeader then
+                    if memberData and (memberData.isLeader == true or memberData.isLeader == 1) then
                         self.leaderIndicator:Show()
                     else
                         self.leaderIndicator:Hide()
@@ -1752,11 +1726,11 @@ local function renderBandMembers(band, parentFrame, bandIndex)
                 local rightOffset = -5
                 if self.sanctionedIndicator:IsShown() then
                     self.sanctionedIndicator:SetPoint("RIGHT", rightOffset, 0)
-                    rightOffset = rightOffset - 15 -- Aumentado de 12 a 15 para mejor separación
+                    rightOffset = rightOffset - 12
                 end
                 if self.leaderIndicator:IsShown() then
                     self.leaderIndicator:SetPoint("RIGHT", rightOffset, 0)
-                    rightOffset = rightOffset - 15 -- Aumentado de 12 a 15 para mejor separación
+                    rightOffset = rightOffset - 12
                 end
                 if self.guildIndicator:IsShown() then
                     self.guildIndicator:SetPoint("RIGHT", rightOffset, 0)
@@ -1768,49 +1742,12 @@ local function renderBandMembers(band, parentFrame, bandIndex)
             self:SetBackdropColor(0.25, 0.25, 0.35, 1)
             self:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
             
-            local name = self.playerName
-            local cleanName = CleanName(name)
-            local localPlayerName = CleanName(UnitName("player"))
-            
-            -- Si es el jugador local, asegurar que su spec esté actualizada
-             if cleanName == localPlayerName then
-                 local currentSpec = GetPrimaryTalentSpec("player")
-                 if currentSpec ~= "Sin Talento" then
-                     local coreData = EnsureCoreData()
-                     local band = coreData[self.bandIndex]
-                     local memberData = band and band.members and band.members[self.memberIndex]
-                     if memberData and memberData.spec ~= currentSpec then
-                         memberData.spec = currentSpec
-                         self:Refresh()
-                         -- Notificar al grupo si estamos en uno
-                         if RD.utils.coreBands.BroadcastMySpec then
-                             RD.utils.coreBands.BroadcastMySpec()
-                         end
-                     end
-                 end
-             end
-
-            -- Obtener datos del miembro para el tooltip
-            local coreData = EnsureCoreData()
-            local band = coreData[self.bandIndex]
-            local memberData = band and band.members and band.members[self.memberIndex]
-            local spec = memberData and memberData.spec
-            local guildNote = guildNotesCache and guildNotesCache[cleanName] or getGuildNoteByName(name)
-
-            if (guildNote and guildNote ~= "") or (spec and spec ~= "" and spec ~= "Sin Talento") then
+            -- Mostrar tooltip con la nota pública
+            local guildNote = getGuildNoteByName(member.name)
+            if guildNote and guildNote ~= "" then
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:ClearLines()
-                GameTooltip:AddLine(CapitalizeName(name), 1, 1, 1)
-                
-                if spec and spec ~= "" and spec ~= "Sin Talento" then
-                    GameTooltip:AddLine("Especialización: |cffffffff" .. spec .. "|r")
-                end
-                
-                if guildNote and guildNote ~= "" then
-                    if spec and spec ~= "" then GameTooltip:AddLine(" ") end
-                    GameTooltip:AddLine("Nota Pública:")
-                    GameTooltip:AddLine(guildNote, 1, 1, 1, true)
-                end
+                GameTooltip:AddLine("Nota Pública:")
+                GameTooltip:AddLine(guildNote, 1, 1, 1, true)
                 GameTooltip:Show()
             end
         end)
@@ -1853,16 +1790,6 @@ local function renderBandMembers(band, parentFrame, bandIndex)
                 InviteUnit(self.playerName)
                 SendChatMessage(string.format("[RaidDominion] Invitado a %s.", band.name or "Core"), "WHISPER", nil, self.playerName)
             else
-                -- Intentar detectar talento antes de abrir el editor
-                if self.playerName then
-                    local coreData = EnsureCoreData()
-                    local band = coreData[self.bandIndex]
-                    local memberData = band and band.members and band.members[self.memberIndex]
-                    if not memberData or not memberData.spec or memberData.spec == "" or memberData.spec == "Sin Talento" then
-                        TryInspectMember(self.playerName)
-                    end
-                end
-
                 -- Limpiar el contexto antes de abrir para asegurar carga fresca
                 local editFrame = getOrCreatePlayerEditFrame()
                 editFrame.context = nil
@@ -1998,11 +1925,6 @@ function coreBandsUtils.ShowCoreBandsWindow()
     -- Actualizar caché de hermandad al abrir
     UpdateGuildOnlineCache(true)
     
-    -- Solicitar specs al grupo
-    if RD.utils.coreBands and RD.utils.coreBands.RequestGroupSpecs then
-        RD.utils.coreBands.RequestGroupSpecs()
-    end
-    
     -- Capitalizar todos los nombres de jugadores en las bandas
     CapitalizeAllMemberNames()
     
@@ -2032,9 +1954,8 @@ function coreBandsUtils.ShowCoreBandsWindow()
         -- Make the window closable with ESC key
         tinsert(UISpecialFrames, "RaidDominionCoreListFrame")
         
-        -- Título dinámico con nombre de hermandad
-        local guildName = GetGuildInfo("player") or ""
-        f3.title = UI.CreateLabel(f3, string.format("RaidDominion - Core %s", guildName), "GameFontNormal")
+        -- Título
+        f3.title = UI.CreateLabel(f3, "Raid Dominion - Administrador de Core", "GameFontNormal")
         f3.title:SetPoint("TOP", 0, -15)
         
         -- Botón Cerrar
@@ -2057,9 +1978,9 @@ function coreBandsUtils.ShowCoreBandsWindow()
             createFrame.isEditing = false
             createFrame.bandIndex = nil
             createFrame.title:SetText("Crear Nueva Banda")
-            createFrame.nameEdit:SetText("Nombre")
+            createFrame.nameEdit:SetText("")
             createFrame.gsEdit:SetText("5000")
-            createFrame.scheduleEdit:SetText("Hora servidor")
+            createFrame.scheduleEdit:SetText("Lunes y Miércoles 20:00")
             createFrame.withNoteCheck:SetChecked(false) -- Inicia desmarcado
             createFrame:Show()
         end)
@@ -2499,8 +2420,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                             name = member.name,
                             role = member.role,
                             class = member.class,
-                            isSanctioned = member.isSanctioned,
-                            spec = member.spec or ""
+                            isSanctioned = member.isSanctioned
                         })
                     end
                 end
