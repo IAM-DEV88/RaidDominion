@@ -17,52 +17,283 @@ local math_min, math_max, math_ceil = math.min, math.max, math.ceil
 local tinsert, tremove, tsort = table.insert, table.remove, table.sort
 local string_gsub, string_upper, string_lower, string_sub, string_find, string_format, string_match = string.gsub, string.upper, string.lower, string.sub, string.find, string.format, string.match
 
+-- Tabla de abreviaturas de especialización por clase (Tres letras)
+local SPEC_ABBR = {
+    ["WARRIOR"] = { [1] = "Arm", [2] = "Fur", [3] = "Pro" },
+    ["PALADIN"] = { [1] = "Hol", [2] = "Pro", [3] = "Ret" },
+    ["HUNTER"] = { [1] = "BM", [2] = "Pun", [3] = "Sup" },
+    ["ROGUE"] = { [1] = "Ase", [2] = "Com", [3] = "Sut" },
+    ["PRIEST"] = { [1] = "Dis", [2] = "Sag", [3] = "Som" },
+    ["DEATHKNIGHT"] = { [1] = "San", [2] = "Esc", [3] = "Pro" },
+    ["SHAMAN"] = { [1] = "Ele", [2] = "Mej", [3] = "Res" },
+    ["MAGE"] = { [1] = "Arc", [2] = "Fue", [3] = "Esc" },
+    ["WARLOCK"] = { [1] = "Afl", [2] = "Dem", [3] = "Des" },
+    ["DRUID"] = { [1] = "Equ", [2] = "Fer", [3] = "Res" }
+}
+
+-- Función para detectar la especialización basada en puntos de talento (3.3.5)
+-- Caché de talentos para evitar llamadas excesivas a GetTalentTabInfo
+local talentCache = {}
+
+local function GetSpecFromTalents(unit)
+    if not unit or not UnitExists(unit) then return nil end
+    
+    local guid = UnitGUID(unit)
+    local now = GetTime()
+    
+    -- Si tenemos datos recientes (menos de 30 segundos), usar la caché
+    if talentCache[guid] and (now - talentCache[guid].time < 30) then
+        local c = talentCache[guid]
+        return c.abbr, c.specIndex, c.class
+    end
+
+    local _, class = UnitClass(unit)
+    local r = {}
+    local isInspect = (unit ~= "player")
+    
+    -- En 3.3.5: name, icon, pointsSpent, background, previewPoints = GetTalentTabInfo(tabIndex, inspect, pet, talentGroup)
+    local hasPoints = false
+    for i = 1, 3 do
+        local name, icon, points = GetTalentTabInfo(i, isInspect)
+        r[i] = { name = name, icon = icon, points = points or 0 }
+        if (points or 0) > 0 then hasPoints = true end
+    end
+
+    if not hasPoints then return nil end
+    
+    local specIndex = 1
+    local maxPoints = r[1].points
+    
+    -- Lógica de desempate para Paladines (Holy vs Prot vs Ret)
+    if class == "PALADIN" then
+        if r[2].points >= r[1].points and r[2].points >= r[3].points then
+            specIndex = 2
+        elseif r[1].points >= r[2].points and r[1].points >= r[3].points then
+            specIndex = 1
+        else
+            specIndex = 3
+        end
+    -- Lógica de desempate para Chamanes (Ele vs Mej vs Res)
+    elseif class == "SHAMAN" then
+        -- En 3.3.5: 1=Ele, 2=Mej, 3=Res
+        -- Si el nombre de la pestaña contiene "Rest" o "Mej"/"Enh", usar eso como desempate si los puntos son cercanos
+        local function checkName(idx, searchList)
+            if not r[idx].name then return false end
+            local nameLower = string.lower(r[idx].name)
+            for _, search in ipairs(searchList) do
+                if string.find(nameLower, string.lower(search)) then return true end
+            end
+            return false
+        end
+
+        -- Determinación inicial por puntos
+        if r[3].points >= r[1].points and r[3].points >= r[2].points then
+            specIndex = 3
+        elseif r[2].points >= r[1].points and r[2].points > r[3].points then
+            specIndex = 2
+        else
+            specIndex = 1
+        end
+        
+        -- Refinamiento bilingüe y por nombre si hay ambigüedad o empate técnico
+        -- Los chamanes suelen tener puntos muy repartidos entre Resto y Mejora/Ele
+        -- Priorizamos el nombre si la diferencia es menor a 15 puntos (un margen amplio para híbridos)
+        local diffResMej = math.abs(r[3].points - r[2].points)
+        local diffResEle = math.abs(r[3].points - r[1].points)
+        
+        if diffResMej <= 15 or diffResEle <= 15 then
+            -- Si el nombre de la pestaña es explícito, confiar en el nombre (Soporte Bilingüe ES/EN)
+            if checkName(3, {"Rest", "Res", "Restaur"}) then specIndex = 3
+            elseif checkName(2, {"Mej", "Enh", "Mejora", "Enhanc"}) then specIndex = 2
+            elseif checkName(1, {"Ele", "Element"}) then specIndex = 1
+            end
+        end
+        
+        -- Caso especial: Si tiene más de 40 puntos en una rama, es casi seguro esa rama
+        for i = 1, 3 do
+            if r[i].points >= 40 then
+                specIndex = i
+                break
+            end
+        end
+    elseif class == "DRUID" then
+        -- 1=Equ, 2=Fer, 3=Res
+        if r[3].points >= r[1].points and r[3].points >= r[2].points then
+            specIndex = 3
+        elseif r[2].points >= r[1].points and r[2].points > r[3].points then
+            specIndex = 2
+        else
+            specIndex = 1
+        end
+    else
+        -- Lógica estándar por mayoría de puntos
+        if r[2].points > maxPoints then
+            maxPoints = r[2].points
+            specIndex = 2
+        end
+        if r[3].points > maxPoints then
+            maxPoints = r[3].points
+            specIndex = 3
+        end
+    end
+    
+    local abbr = SPEC_ABBR[class] and SPEC_ABBR[class][specIndex] or "N/A"
+    
+    -- Guardar en caché
+    talentCache[guid] = {
+        abbr = abbr,
+        specIndex = specIndex,
+        class = class,
+        time = now
+    }
+    
+    return abbr, specIndex, class
+end
+
+-- Función para obtener el rol sugerido basado en clase y especialización
+local function GetRoleFromSpec(class, specIndex)
+    if not class or not specIndex then return nil end
+    
+    if class == "WARRIOR" and specIndex == 3 then return "Tank"
+    elseif class == "PALADIN" and specIndex == 2 then return "Tank"
+    elseif class == "PALADIN" and specIndex == 1 then return "Healer"
+    elseif class == "DRUID" and specIndex == 2 then return "Tank"
+    elseif class == "DRUID" and specIndex == 3 then return "Healer"
+    elseif class == "DEATHKNIGHT" and specIndex == 1 then return "Tank"
+    elseif class == "PRIEST" and (specIndex == 1 or specIndex == 2) then return "Healer"
+    elseif class == "SHAMAN" and specIndex == 3 then return "Healer"
+    else return "DPS" end
+end
+
 -- Función auxiliar para limpiar nombres (eliminar reino y normalizar a minúsculas para comparaciones)
+-- Caché interna para CleanName para evitar procesamiento de strings repetitivo
+local cleanNameCache = {}
+local cleanNameCacheSize = 0
 local function CleanName(name)
     if not name then return "" end
+    if cleanNameCache[name] then return cleanNameCache[name] end
+    
+    -- Eliminar reino y cualquier espacio en blanco accidental
     local clean = string_gsub(name, "%-.*", "")
-    return string_lower(clean)
+    clean = string_gsub(clean, "%s+", "")
+    local result = string_lower(clean)
+    
+    -- Limitar tamaño de caché para evitar fuga de memoria (limpiar si crece demasiado)
+    if cleanNameCacheSize > 1000 then 
+        wipe(cleanNameCache) 
+        cleanNameCacheSize = 0
+    end
+    
+    cleanNameCache[name] = result
+    cleanNameCacheSize = cleanNameCacheSize + 1
+    
+    return result
 end
 
 -- Función auxiliar para capitalizar nombres correctamente (primera letra en mayúscula, resto en minúsculas)
+local capitalizedNamesCache = {}
 local function CapitalizeName(name)
     if not name or name == "" then return "" end
+    if capitalizedNamesCache[name] then return capitalizedNamesCache[name] end
+    
     -- Eliminar reino si existe
     local cleanName = string_gsub(name, "%-.*", "")
     -- Capitalizar la primera letra y hacer el resto minúsculas
-    return string_upper(string_sub(cleanName, 1, 1)) .. string_lower(string_sub(cleanName, 2))
+    local result = string_upper(string_sub(cleanName, 1, 1)) .. string_lower(string_sub(cleanName, 2))
+    
+    capitalizedNamesCache[name] = result
+    return result
 end
 
+-- Inicializar tablas necesarias
+RD.utils = RD.utils or {}
+RD.utils.coreBands = RD.utils.coreBands or {}
+local coreBandsUtils = RD.utils.coreBands
+
 -- Helper para obtener el roster actual en una tabla de búsqueda (caché)
+-- Caché de roster para evitar reconstrucción excesiva
+local cachedRoster = nil
+local lastRosterUpdate = 0
+
 local function BuildRosterCache()
+    local now = GetTime()
+    if cachedRoster and (now - lastRosterUpdate < 1) then
+        return cachedRoster
+    end
+
     local rosterCache = {}
+    
     local numRaid = GetNumRaidMembers()
+    local numParty = GetNumPartyMembers()
+
     if numRaid > 0 then
+        -- Estamos en Banda
         for i = 1, numRaid do
-            local name, _, _, _, _, fileName = GetRaidRosterInfo(i)
-            if name then
+            local unit = "raid"..i
+            local name = UnitName(unit)
+            if name and name ~= "Unknown" then
+                local _, fileName = UnitClass(unit)
                 local clean = CleanName(name)
-                rosterCache[clean] = { class = fileName, unit = "raid"..i }
+                rosterCache[clean] = { name = name, class = fileName, unit = unit }
             end
         end
-    else
+    elseif numParty > 0 then
+        -- Estamos en Grupo (Party)
+        -- Incluir al jugador local
         local myName = UnitName("player")
         if myName then
             local _, fileName = UnitClass("player")
-            rosterCache[CleanName(myName)] = { class = fileName, unit = "player" }
+            local clean = CleanName(myName)
+            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
         end
-        local numParty = GetNumPartyMembers()
-        if numParty > 0 then
-            for i = 1, numParty do
-                local name = UnitName("party"..i)
-                if name then
-                    local _, fileName = UnitClass("party"..i)
-                    rosterCache[CleanName(name)] = { class = fileName, unit = "party"..i }
-                end
+        -- Incluir miembros del grupo
+        for i = 1, numParty do
+            local unit = "party"..i
+            local name = UnitName(unit)
+            if name and name ~= "Unknown" then
+                local _, fileName = UnitClass(unit)
+                local clean = CleanName(name)
+                rosterCache[clean] = { name = name, class = fileName, unit = unit }
             end
         end
+    else
+        -- Solo nosotros
+        local myName = UnitName("player")
+        if myName then
+            local _, fileName = UnitClass("player")
+            local clean = CleanName(myName)
+            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
+        end
     end
+    
+    cachedRoster = rosterCache
+    lastRosterUpdate = now
+    
     return rosterCache
+end
+
+-- Función para obtener una firma única del roster actual (para detectar cambios reales)
+local function GetRosterSignature()
+    local numRaid = GetNumRaidMembers()
+    local numParty = GetNumPartyMembers()
+    local count = numRaid > 0 and numRaid or (numParty > 0 and numParty + 1 or 1)
+    
+    -- Firma basada en count, líder y el primer miembro (para detectar swaps básicos)
+    local leader = "none"
+    local firstMember = "none"
+    if numRaid > 0 then
+        for i = 1, numRaid do
+            local name, rank = GetRaidRosterInfo(i)
+            if rank == 2 then leader = name end
+            if i == 1 then firstMember = name end
+            if leader ~= "none" and firstMember ~= "none" then break end
+        end
+    elseif numParty > 0 then
+        leader = UnitName("party1") or "me"
+        firstMember = UnitName("player") or "me"
+    end
+    
+    return string_format("%d-%s-%s", count, leader, firstMember)
 end
 
 -- Mapa para convertir nombres de clase a inglés (para RAID_CLASS_COLORS)
@@ -143,16 +374,13 @@ local function GetPerms()
     return mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
 end
 
--- Inicializar tablas necesarias
-RD.utils = RD.utils or {}
-RD.utils.coreBands = RD.utils.coreBands or {}
-
 -- Caché para el estado de la hermandad
 local guildOnlineCache = {}
 local guildFullCache = {} -- Nueva caché para datos completos (rango, notas, clase)
 local lastGuildUpdate = 0
 local isUpdatingGuild = false
 local updateCoroutine = nil
+local isInternalGuildUpdate = false
 
 -- Función para actualizar la caché de la hermandad
 local function UpdateGuildOnlineCache(force)
@@ -170,20 +398,21 @@ local function UpdateGuildOnlineCache(force)
     
     local function DoUpdate()
         isUpdatingGuild = true
+        isInternalGuildUpdate = true
         
-        -- Guardar estado actual de mostrar desconectados para evitar interferencia de otros addons (como Carbonite)
+        -- Guardar estado actual de mostrar desconectados
         local wasShowingOffline = GetGuildRosterShowOffline()
         if not wasShowingOffline then
             SetGuildRosterShowOffline(true)
         end
         
-        -- Usar tablas temporales para evitar parpadeo (flickering) en la UI
+        -- Usar tablas temporales para evitar parpadeo
         local tempOnlineCache = {}
         local tempFullCache = {}
         
         local numMembers = GetNumGuildMembers()
         local chunkCount = 0
-        local chunkSize = 40 -- Procesar 40 miembros por frame
+        local chunkSize = 100 -- Procesar 100 miembros por frame (más rápido que 40)
         
         for i = 1, numMembers do
             local name, rank, rankIndex, level, class, zone, note, officerNote, online, status, classFileName = GetGuildRosterInfo(i)
@@ -198,6 +427,7 @@ local function UpdateGuildOnlineCache(force)
                     level = level,
                     class = class,
                     classFileName = classFileName,
+                    zone = zone,
                     note = note,
                     officerNote = officerNote,
                     online = online
@@ -213,19 +443,20 @@ local function UpdateGuildOnlineCache(force)
             end
         end
         
-        -- Restaurar el estado original de mostrar desconectados
+        -- Restaurar el estado original
         if not wasShowingOffline then
             SetGuildRosterShowOffline(false)
         end
         
-        -- Swap de caches: Actualización atómica para evitar estados inconsistentes
+        -- Swap de caches
         guildOnlineCache = tempOnlineCache
         guildFullCache = tempFullCache
         
         lastGuildUpdate = GetTime()
         isUpdatingGuild = false
+        isInternalGuildUpdate = false
 
-        -- Refrescar la UI si es necesario al finalizar la actualización
+        -- Refrescar la UI si es necesario
         local f3 = _G["RaidDominionCoreListFrame"]
         if f3 and f3:IsVisible() and f3.UpdateStats then
             f3.UpdateStats()
@@ -236,7 +467,7 @@ local function UpdateGuildOnlineCache(force)
         end
         local playerEditFrame = _G["RaidDominionPlayerEditFrame"]
         if playerEditFrame and playerEditFrame:IsVisible() and playerEditFrame.RefreshGuildData then
-            playerEditFrame.RefreshGuildData(false) -- Actualizar sin forzar nuevo ciclo
+            playerEditFrame.RefreshGuildData(false)
         end
     end
     
@@ -316,42 +547,20 @@ end
 -- Función auxiliar para verificar si un jugador está en línea
 local function isPlayerOnline(playerName, rosterCache)
     if not playerName then return false end
-    
     local cleanName = CleanName(playerName)
     
-    -- 1. Verificar en caché de hermandad (O(1))
-    UpdateGuildOnlineCache()
+    -- 1. Si está en el grupo/raid, está online por definición (O(1))
+    if rosterCache and rosterCache[cleanName] then
+        return true
+    end
+    
+    -- 2. Si está en la caché de hermandad, usar ese estado (O(1))
     if guildOnlineCache[cleanName] ~= nil then
         return guildOnlineCache[cleanName]
     end
     
-    -- 2. Verificar si es una unidad válida (cerca o en grupo) (O(1))
-    if UnitExists(playerName) then return true end
-    
-    -- 3. Búsqueda rápida en grupo/banda por nombre
-    -- Si hay caché, usarla (O(1))
-    if rosterCache then
-        return rosterCache[cleanName] ~= nil
-    end
-
-    -- 4. Búsqueda manual si no hay caché (O(N))
-    local numRaid = GetNumRaidMembers()
-    if numRaid > 0 then
-        for i = 1, numRaid do
-            local name = UnitName("raid" .. i)
-            if name and CleanName(name) == cleanName then return true end
-        end
-    else
-        local numParty = GetNumPartyMembers()
-        if numParty > 0 then
-            for i = 1, numParty do
-                local name = UnitName("party" .. i)
-                if name and CleanName(name) == cleanName then return true end
-            end
-        end
-    end
-    
-    return false
+    -- 3. Fallback: UnitExists (Llamada al API)
+    return UnitExists(playerName)
 end
 
 -- Asegurar inicialización inmediata
@@ -444,36 +653,24 @@ end
 
 -- Función para crear un botón con el estilo del marco principal
 local function CreateStyledButton(name, parent, width, height, text, iconTexture, tooltipText)
-    local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
+    local button = CreateFrame("Button", name, parent)
     button:SetSize(width or 30, height or 30)
     
-    -- Aplicar estilo de bordes redondeados (UIPanelButtonTemplate ya lo tiene, 
-    -- pero nos aseguramos de que el icono no sobresalga)
-    button:SetHighlightTexture("Interface/Buttons/UI-Panel-Button-Highlight", "ADD")
+    local icon = button:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
+    icon:SetTexture(iconTexture)
+    button.icon = icon
     
-    -- Contenedor para el icono
-    local iconContainer = CreateFrame("Frame", nil, button)
-    iconContainer:SetAllPoints()
-    iconContainer:SetFrameLevel(button:GetFrameLevel() + 1)
-    button.iconContainer = iconContainer
-    
-    if iconTexture then
-        local icon = iconContainer:CreateTexture(nil, "ARTWORK")
-        -- Ajustar el icono para que respete los bordes redondeados del botón
-        -- Se reduce el margen horizontal a 1px para cubrir los lados, manteniendo 3px vertical para las esquinas
-        icon:SetPoint("TOPLEFT", 1, -3)
-        icon:SetPoint("BOTTOMRIGHT", -1, 3)
-        icon:SetTexture(iconTexture)
-        icon:SetTexCoord(0.1, 0.9, 0.1, 0.9) -- Zoom ligero para mejor apariencia en botones pequeños
-        button.icon = icon
-        
-        -- Añadir una máscara circular/redondeada si fuera posible, 
-        -- pero en 3.3.5 usaremos el truco de los insets
-    end
+    local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetAllPoints()
+    highlight:SetTexture("Interface/Buttons/ButtonHilight-Square")
+    highlight:SetBlendMode("ADD")
     
     -- Ajustar texto si existe
     if text then
-        button:SetText(text)
+        local label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        label:SetPoint("BOTTOM", 0, -12)
+        label:SetText(text)
     end
     
     -- Tooltip
@@ -490,6 +687,7 @@ local function CreateStyledButton(name, parent, width, height, text, iconTexture
     
     return button
 end
+coreBandsUtils.CreateStyledButton = CreateStyledButton
 
 -- Función para crear o obtener el frame de edición de bandas
 local function getOrCreateBandFrame()
@@ -753,6 +951,64 @@ local function getOrCreateInvitePopup(bandIndex)
         invitePopup.nameEdit:SetPoint("TOPLEFT", 20, -70)
         invitePopup.nameEdit:SetMaxLetters(20)
         invitePopup.nameEdit:SetAutoFocus(true)
+
+        -- Autocompletado robusto usando OnChar
+        invitePopup.nameEdit:SetScript("OnChar", function(self, char)
+            local text = self:GetText()
+            local textLen = text:len()
+            local cursor = self:GetCursorPosition()
+            
+            -- Solo autocompletar si el cursor está al final
+            if cursor == textLen then
+                local players = {}
+                local seen = {}
+                
+                -- 1. Hermandad
+                if IsInGuild() then
+                    for i = 1, GetNumGuildMembers() do
+                        local name = GetGuildRosterInfo(i)
+                        if name then
+                            name = name:match("([^%-]+)")
+                            if name and not seen[name:lower()] then
+                                table.insert(players, name)
+                                seen[name:lower()] = true
+                            end
+                        end
+                    end
+                end
+                
+                -- 2. Otros Cores/Posadas
+                local coreData = EnsureCoreData()
+                if coreData then
+                    for _, band in ipairs(coreData) do
+                        if band.members then
+                            for _, member in ipairs(band.members) do
+                                if member.name then
+                                    local name = member.name:match("([^%-]+)")
+                                    if name and not seen[name:lower()] then
+                                        table.insert(players, name)
+                                        seen[name:lower()] = true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- Buscar coincidencia
+                local searchText = text:lower()
+                for _, name in ipairs(players) do
+                    if name:lower():find("^" .. searchText) and name:len() > textLen then
+                        local extension = name:sub(textLen + 1)
+                        self:Insert(extension)
+                        self:HighlightText(textLen, name:len())
+                        self:SetCursorPosition(textLen)
+                        break
+                    end
+                end
+            end
+        end)
+
         invitePopup.nameEdit:SetScript("OnEscapePressed", function(self)
             invitePopup:Hide()
         end)
@@ -807,12 +1063,12 @@ local function getOrCreateInvitePopup(bandIndex)
 end
 
 -- Función para abrir el marco de edición de jugador
-local function getOrCreatePlayerEditFrame(playerData)
+function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
     local playerEditFrame = _G["RaidDominionPlayerEditFrame"]
     if not playerEditFrame then
         playerEditFrame = CreateFrame("Frame", "RaidDominionPlayerEditFrame", UIParent)
         playerEditFrame:SetFrameStrata("DIALOG")
-        playerEditFrame:SetSize(350, 400) -- Aumentado para acomodar nota oficial
+        playerEditFrame:SetSize(350, 420) -- Aumentado para acomodar nota oficial y padding
         playerEditFrame:SetPoint("CENTER")
         playerEditFrame:SetBackdrop({
             bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -917,14 +1173,24 @@ local function getOrCreatePlayerEditFrame(playerData)
             playerEditFrame.rankText:SetText("")
             local isMember = false
             
+            -- Si forzamos, invalidamos la caché de tiempo para obtener datos reales del servidor
+            if force then
+                lastGuildUpdate = 0
+            end
+            
             -- Búsqueda optimizada en el roster usando la caché
             UpdateGuildOnlineCache(force)
             local memberData = guildFullCache[cleanName]
             
             if memberData then
                 playerEditFrame.rankText:SetText(memberData.rank or "-")
-                playerEditFrame.noteEdit:SetText(memberData.note or "")
-                playerEditFrame.officerNoteEdit:SetText(memberData.officerNote or "")
+                -- Solo actualizar las notas si el usuario NO las está editando activamente
+                if not playerEditFrame.noteEdit:HasFocus() then
+                    playerEditFrame.noteEdit:SetText(memberData.note or "")
+                end
+                if not playerEditFrame.officerNoteEdit:HasFocus() then
+                    playerEditFrame.officerNoteEdit:SetText(memberData.officerNote or "")
+                end
                 isMember = true
                 playerEditFrame.guildIndex = memberData.index -- Guardar para acceso rápido
             end
@@ -1122,7 +1388,7 @@ local function getOrCreatePlayerEditFrame(playerData)
         playerEditFrame.acceptBtn = CreateFrame("Button", nil, playerEditFrame, "UIPanelButtonTemplate")
         playerEditFrame.acceptBtn:SetSize(100, 25)
         playerEditFrame.acceptBtn:SetPoint("BOTTOMLEFT", 30, 20)
-        playerEditFrame.acceptBtn:SetText("Aceptar")
+        playerEditFrame.acceptBtn:SetText("Guardar")
         playerEditFrame.acceptBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             -- Obtener los valores de los campos
@@ -1147,21 +1413,94 @@ local function getOrCreatePlayerEditFrame(playerData)
                         local cleanName = CleanName(name)
                         UpdateGuildOnlineCache()
                         local memberData = guildFullCache[cleanName]
-                        if memberData and memberData.index then
-                            GuildRosterSetPublicNote(memberData.index, publicNote)
+                        local guildIdx = playerEditFrame.guildIndex or (memberData and memberData.index)
+                        
+                        -- Verificación de seguridad: El índice debe corresponder al jugador correcto
+                        if guildIdx then
+                            local gName = GetGuildRosterInfo(guildIdx)
+                            if not gName or CleanName(gName) ~= cleanName then
+                                -- Si el índice no coincide, buscarlo de nuevo
+                                guildIdx = nil
+                            end
+                        end
+
+                        -- Si no tenemos índice o el que teníamos no era válido, buscamos en toda la hermandad
+                        if not guildIdx then
+                            local wasShowingOffline = GetGuildRosterShowOffline()
+                            SetGuildRosterShowOffline(true)
+                            
+                            for i = 1, GetNumGuildMembers() do
+                                local nameCheck = GetGuildRosterInfo(i)
+                                if nameCheck and CleanName(nameCheck) == cleanName then
+                                    guildIdx = i
+                                    playerEditFrame.guildIndex = i
+                                    break
+                                end
+                            end
+                            
+                            -- Restaurar estado original si era necesario
+                            if not wasShowingOffline then
+                                SetGuildRosterShowOffline(false)
+                            end
+                        end
+
+                        if guildIdx then
+                            -- DEBUG: Loggear el intento de guardado
+                            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Guardando nota para " .. name .. " (Índice: " .. guildIdx .. ")")
+                            
+                            GuildRosterSetPublicNote(guildIdx, publicNote)
                             -- Solo Oficiales (Nivel 2+) pueden editar notas oficiales
                             if permLevel >= 2 then
-                                GuildRosterSetOfficerNote(memberData.index, officerNote)
+                                GuildRosterSetOfficerNote(guildIdx, officerNote)
                             end
-                            -- Forzar actualización inmediata de la caché local para el refresco visual
-                            memberData.note = publicNote
-                            if permLevel >= 2 then
-                                memberData.officerNote = officerNote
+                            
+                            -- Actualizar la caché local inmediatamente para que el refresco visual sea instantáneo
+                            if memberData then
+                                memberData.note = publicNote
+                                if permLevel >= 2 then
+                                    memberData.officerNote = officerNote
+                                end
                             end
+                            
+                            -- Forzar un ciclo de actualización de la hermandad para sincronizar con el servidor
+                            -- Pero NO llamar a UpdateGuildOnlineCache(true) inmediatamente aquí, 
+                            -- dejar que el evento GUILD_ROSTER_UPDATE lo haga de forma natural.
+                            GuildRoster()
+                            lastGuildUpdate = 0 
+                        else
+                            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No se pudo encontrar al jugador en la hermandad para guardar la nota.")
                         end
                     end
                 else
                     DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas de hermandad.")
+                end
+            end
+
+            -- Si estamos en modo búsqueda/reconocimiento, también queremos poder guardar el estado de sancionado
+            -- Buscamos al jugador en todas las bandas del Core para aplicar el cambio globalmente
+            if playerEditFrame.isSearchMode and permLevel >= 2 then
+                if name and name ~= "" then
+                    local cleanTarget = CleanName(name)
+                    local coreData = EnsureCoreData()
+                    local foundInCore = false
+                    for bIdx, band in ipairs(coreData) do
+                        if band.members then
+                            for mIdx, member in ipairs(band.members) do
+                                if member.name and CleanName(member.name) == cleanTarget then
+                                    member.isSanctioned = isSanctioned
+                                    foundInCore = true
+                                end
+                            end
+                        end
+                    end
+                    if foundInCore then
+                        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Estado de sanción actualizado globalmente para: " .. name)
+                        -- Solo actualizar la ventana del Core si ya estaba abierta y no estamos en modo búsqueda
+                        local coreListFrame = _G["RaidDominionCoreListFrame"]
+                        if coreListFrame and coreListFrame:IsVisible() and not playerEditFrame.isSearchMode then
+                            RD.utils.coreBands.ShowCoreBandsWindow()
+                        end
+                    end
                 end
             end
             
@@ -1205,8 +1544,11 @@ local function getOrCreatePlayerEditFrame(playerData)
                         DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Jugador actualizado: " .. name)
                     end
                     
-                    -- Actualizar la interfaz completa para reflejar cambios de rol, sanción o posición
-                    RD.utils.coreBands.ShowCoreBandsWindow()
+                    -- Actualizar la interfaz solo si ya estaba abierta (evita aperturas no deseadas)
+                    local coreListFrame = _G["RaidDominionCoreListFrame"]
+                    if coreListFrame and coreListFrame:IsVisible() then
+                        RD.utils.coreBands.ShowCoreBandsWindow()
+                    end
                     -- Forzar refresco de las estadísticas y caché de hermandad
                     GuildRoster()
                 end
@@ -1267,6 +1609,7 @@ local function getOrCreatePlayerEditFrame(playerData)
         end
 
         playerEditFrame.nameEdit:SetText(playerData.name or "")
+        playerEditFrame.guildIndex = playerData.index -- Guardar el índice de hermandad si viene de Gearscore
         local currentRole = playerData.role or "Nuevo"
         -- Capitalizar el rol para consistencia (ej: "tank" -> "Tank")
         if currentRole ~= "" then
@@ -1282,6 +1625,70 @@ local function getOrCreatePlayerEditFrame(playerData)
         playerEditFrame.guildSection:Show()
         playerEditFrame.RefreshGuildData(true)
         
+        -- Controlar visibilidad según modo búsqueda o Gearscore
+         if isGearscoreMode then
+             playerEditFrame.roleLabel:Hide()
+             playerEditFrame.roleDropDown:Hide()
+             playerEditFrame.isLeaderCheck:Hide()
+             playerEditFrame.isLeaderLabel:Hide()
+             
+             -- Mostrar sancionado y reposicionarlo
+             playerEditFrame.isSanctionedCheck:Show()
+             playerEditFrame.isSanctionedLabel:Show()
+             playerEditFrame.isSanctionedCheck:SetPoint("TOPLEFT", 100, -80)
+             
+             playerEditFrame.moveLabel:Hide()
+             playerEditFrame.moveDropDown:Hide()
+             playerEditFrame.deleteBtn:Hide()
+             
+             -- Reposicionar sección de hermandad debajo de sancionado
+             playerEditFrame.guildSection:SetPoint("TOPLEFT", 20, -110)
+             playerEditFrame:SetSize(350, 280)
+             playerEditFrame.title:SetText("Jugador: " .. (playerData.name or ""))
+             playerEditFrame.acceptBtn:Show()
+         elseif playerEditFrame.isSearchMode then
+             playerEditFrame.roleLabel:Hide()
+             playerEditFrame.roleDropDown:Hide()
+             playerEditFrame.isLeaderCheck:Hide()
+             playerEditFrame.isLeaderLabel:Hide()
+             
+             -- Mostrar sancionado pero reposicionado en el modo simplificado
+             playerEditFrame.isSanctionedCheck:Show()
+             playerEditFrame.isSanctionedLabel:Show()
+             playerEditFrame.isSanctionedCheck:SetPoint("TOPLEFT", 100, -80)
+             
+             playerEditFrame.moveLabel:Hide()
+             playerEditFrame.moveDropDown:Hide()
+             playerEditFrame.deleteBtn:Hide()
+             
+             -- Reposicionar sección de hermandad más abajo para dar espacio a sancionado
+             playerEditFrame.guildSection:SetPoint("TOPLEFT", 20, -110)
+             playerEditFrame:SetSize(350, 280)
+             playerEditFrame.title:SetText("Jugador: " .. (playerData.name or ""))
+             
+             -- El botón de guardar debe estar visible para permitir guardar las notas de hermandad
+             playerEditFrame.acceptBtn:Show()
+         else
+             playerEditFrame.roleLabel:Show()
+             playerEditFrame.roleDropDown:Show()
+             playerEditFrame.isLeaderCheck:Show()
+             playerEditFrame.isLeaderLabel:Show()
+             
+             -- Restaurar posición original de sancionado
+             playerEditFrame.isSanctionedCheck:Show()
+             playerEditFrame.isSanctionedLabel:Show()
+             playerEditFrame.isSanctionedCheck:SetPoint("TOPLEFT", 100, -140)
+             
+             playerEditFrame.moveLabel:Show()
+             playerEditFrame.moveDropDown:Show()
+             playerEditFrame.deleteBtn:Show()
+             playerEditFrame.acceptBtn:Show()
+             
+             playerEditFrame.guildSection:SetPoint("TOPLEFT", 20, -200)
+             playerEditFrame:SetSize(350, 420)
+             playerEditFrame.title:SetText("Editar Jugador")
+         end
+
         -- Resetear traslado
         playerEditFrame.targetBandIndex = nil
         UIDropDownMenu_SetText(playerEditFrame.moveDropDown, "Trasladar a...")
@@ -1306,7 +1713,6 @@ end
 local function getGuildNoteByName(playerName)
     if not playerName then return "" end
     local cleanName = CleanName(playerName)
-    UpdateGuildOnlineCache()
     
     if guildFullCache[cleanName] then
         return guildFullCache[cleanName].note or ""
@@ -1317,6 +1723,69 @@ end
 -- Tabla global para almacenar las memberCards activas por nombre de jugador
 local activeMemberCards = {}
 
+-- Función pública para abrir el editor de jugador desde otros módulos
+function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode)
+    if not playerName then return end
+    
+    local cleanName = CleanName(playerName)
+    local bandIndex, memberIndex
+    local playerDataForSearch = nil
+    
+    -- Si es modo búsqueda, intentamos encontrar al jugador para cargar su estado de sanción actual
+    if isSearchMode then
+        local coreData = EnsureCoreData()
+        for _, band in ipairs(coreData) do
+            if band.members then
+                for _, member in ipairs(band.members) do
+                    if member.name and CleanName(member.name) == cleanName then
+                        -- Solo nos interesa el estado de sanción para el modo búsqueda
+                        playerDataForSearch = {
+                            name = member.name,
+                            isSanctioned = member.isSanctioned,
+                            class = member.class
+                        }
+                        break
+                    end
+                end
+            end
+            if playerDataForSearch then break end
+        end
+    else
+        -- Buscar al jugador en todas las bandas del Core para edición normal
+        local coreData = EnsureCoreData()
+        for bIdx, band in ipairs(coreData) do
+            if band.members then
+                for mIdx, member in ipairs(band.members) do
+                    if member.name and CleanName(member.name) == cleanName then
+                        bandIndex = bIdx
+                        memberIndex = mIdx
+                        break
+                    end
+                end
+            end
+            if bandIndex then break end
+        end
+    end
+    
+    local editFrame = coreBandsUtils.GetOrCreatePlayerEditFrame(playerDataForSearch or {name = playerName})
+    if editFrame then
+        -- Establecer el modo búsqueda
+        editFrame.isSearchMode = isSearchMode
+        
+        -- Si se encontró en el Core (y no estamos en modo búsqueda), actualizar el contexto
+        if bandIndex and memberIndex then
+            editFrame.context = { bandIndex = bandIndex, memberIndex = memberIndex }
+        else
+            editFrame.context = nil
+        end
+        
+        -- Volver a cargar los datos con el contexto y modo ya establecidos
+        -- Esto asegura que isSanctionedCheck y otros controles se actualicen correctamente
+        coreBandsUtils.GetOrCreatePlayerEditFrame(playerDataForSearch or {name = playerName}) 
+        editFrame:Show()
+    end
+end
+
 -- Función para actualizar todas las tarjetas visibles (Throttleada por OnUpdate)
 local refreshPending = false
 RD.utils.coreBands.RefreshAllVisibleCards = function()
@@ -1326,30 +1795,71 @@ end
 -- Frame centralizado para eventos y actualizaciones
 local RD_CoreBands_UpdateFrame = CreateFrame("Frame")
 RD_CoreBands_UpdateFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
-RD_CoreBands_UpdateFrame:SetScript("OnEvent", function(self, event)
+RD_CoreBands_UpdateFrame:RegisterEvent("INSPECT_READY")
+RD_CoreBands_UpdateFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "GUILD_ROSTER_UPDATE" then
+        if isInternalGuildUpdate then return end -- Evitar recursividad
+        
         local f3 = _G["RaidDominionCoreListFrame"]
         local playerEditFrame = _G["RaidDominionPlayerEditFrame"]
         local isVisible = (f3 and f3:IsVisible()) or (playerEditFrame and playerEditFrame:IsVisible())
         
-        -- Solo actualizar si la UI está abierta (Comportamiento por defecto para optimizar rendimiento)
         if isVisible then
             UpdateGuildOnlineCache(true)
-            -- Nota: UpdateGuildOnlineCache lanzará RefreshAllVisibleCards y UpdateStats al terminar su coroutine.
         end
+    elseif event == "INSPECT_READY" then
+        -- arg1 es el GUID en 3.3.5. Buscamos qué tarjeta corresponde a este GUID o simplemente refrescamos todo.
+        RD.utils.coreBands.RefreshAllVisibleCards()
     end
 end)
 
 local elapsedSinceLastUpdate = 0
+-- Sistema de inspección centralizado para optimizar rendimiento
+local inspectQueue = {}
+local lastInspectRequest = 0
+local function ProcessInspectQueue()
+    local now = GetTime()
+    if now - lastInspectRequest < 2 then return end -- Throttling global de 2s
+    
+    for i = #inspectQueue, 1, -1 do
+        local unit = inspectQueue[i]
+        if unit and UnitExists(unit) and CanInspect(unit) then
+            if not (InspectFrame and InspectFrame:IsShown()) then
+                NotifyInspect(unit)
+                lastInspectRequest = now
+                table.remove(inspectQueue, i)
+                return
+            end
+        else
+            table.remove(inspectQueue, i)
+        end
+    end
+end
+
+-- Añadir a la cola de inspección
+local function QueueInspect(unit)
+    if not unit then return end
+    -- Evitar duplicados
+    for _, u in ipairs(inspectQueue) do
+        if u == unit then return end
+    end
+    table.insert(inspectQueue, unit)
+end
+
 RD_CoreBands_UpdateFrame:SetScript("OnUpdate", function(self, elapsed)
     elapsedSinceLastUpdate = elapsedSinceLastUpdate + elapsed
-    if elapsedSinceLastUpdate > 0.1 then -- Throttle de 100ms para actualizaciones visuales
+    
+    -- Procesar cola de inspección cada 0.5s
+    if elapsedSinceLastUpdate > 0.5 then
+        ProcessInspectQueue()
+        
         if refreshPending then
             local rosterCache = BuildRosterCache()
+            local coreData = EnsureCoreData()
             for _, cards in pairs(activeMemberCards) do
                 for _, card in ipairs(cards) do
                     if card:IsVisible() then
-                        card:Refresh(rosterCache)
+                        card:Refresh(rosterCache, coreData)
                     end
                 end
             end
@@ -1365,21 +1875,39 @@ if not RD.utils.coreBands.updateFrame then
     updateFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     updateFrame:RegisterEvent("RAID_ROSTER_UPDATE")
     updateFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
-    updateFrame:SetScript("OnEvent", function()
-        if RD.utils.coreBands.RefreshAllVisibleCards then
-            RD.utils.coreBands.RefreshAllVisibleCards()
+    
+    local lastFullRebuild = 0
+    local lastRosterSignature = ""
+    updateFrame:SetScript("OnEvent", function(self, event)
+        local f3 = _G["RaidDominionCoreListFrame"]
+        if f3 and f3:IsVisible() then
+            if event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
+                -- Solo reconstruir si la firma del roster ha cambiado REALMENTE
+                local currentSignature = GetRosterSignature()
+                if currentSignature ~= lastRosterSignature then
+                    -- Throttle de 1s para reconstrucción total
+                    local now = GetTime()
+                    if now - lastFullRebuild > 1 then
+                        RD.utils.coreBands.ShowCoreBandsWindow()
+                        lastFullRebuild = now
+                        lastRosterSignature = currentSignature
+                    end
+                end
+            else
+                -- Para otros eventos (TARGET), solo refrescar tarjetas existentes
+                if RD.utils.coreBands.RefreshAllVisibleCards then
+                    RD.utils.coreBands.RefreshAllVisibleCards()
+                end
+            end
         end
     end)
     RD.utils.coreBands.updateFrame = updateFrame
 end
 
 -- Función para renderizar los miembros de una banda en 4 columnas
-local function renderBandMembers(band, parentFrame, bandIndex)
-    -- Limpiar activeMemberCards para esta banda específica
-    wipe(activeMemberCards)
-    
-    -- Construir caché del roster actual para optimizar búsquedas O(1)
-    local rosterCache = BuildRosterCache()
+local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
+    -- Usar el rosterCache pasado por parámetro o construirlo si no existe
+    rosterCache = rosterCache or BuildRosterCache()
 
     -- Obtener miembros de la banda
     local bandMembers = band.members or {}
@@ -1394,11 +1922,14 @@ local function renderBandMembers(band, parentFrame, bandIndex)
 
     -- Auto-detectar jugadores del grupo/banda y añadirlos si no están en la lista
     local addedAny = false
+    local coreData = EnsureCoreData()
+    local currentBand = coreData[bandIndex]
+    
     for clean, data in pairs(rosterCache) do
         if not membersInBand[clean] then
-            if not band.members then band.members = {} end
-            tinsert(band.members, { 
-                name = clean, 
+            if not currentBand.members then currentBand.members = {} end
+            tinsert(currentBand.members, { 
+                name = CapitalizeName(data.name or clean), 
                 role = "nuevo",
                 class = data.class
             })
@@ -1408,7 +1939,7 @@ local function renderBandMembers(band, parentFrame, bandIndex)
     end
     
     if addedAny then
-        bandMembers = band.members
+        bandMembers = currentBand.members
     end
 
     -- Agrupar miembros por rol
@@ -1418,7 +1949,6 @@ local function renderBandMembers(band, parentFrame, bandIndex)
     }
     
     -- Clasificar miembros por rol, preservando el índice original
-    UpdateGuildOnlineCache()
     local localPlayerName = CleanName(UnitName("player"))
     for originalIndex, member in ipairs(bandMembers) do
         member.originalIndex = originalIndex
@@ -1426,7 +1956,9 @@ local function renderBandMembers(band, parentFrame, bandIndex)
         local guildData = guildFullCache[cleanName]
         local rosterData = rosterCache[cleanName]
         local isInGroup = rosterData ~= nil
-        
+        local isOnline = isPlayerOnline(member.name, rosterCache)
+        local isGuildMember = guildData ~= nil
+        local isSanctioned = member.isSanctioned == true or member.isSanctioned == 1
         local role = (member.role or "nuevo"):lower()
         
         -- Enriquecer datos del miembro si faltan (clase)
@@ -1438,42 +1970,38 @@ local function renderBandMembers(band, parentFrame, bandIndex)
             end
         end
 
-        local isOnline = isPlayerOnline(member.name, rosterCache)
-        local isGuildMember = guildData ~= nil
-        local isSanctioned = member.isSanctioned == true or member.isSanctioned == 1
+        -- Pre-calcular índice de clase para ordenación rápida
+        if member.class then
+            member.classOrderIndex = CLASS_ORDER[member.class:upper()] or 999
+        else
+            member.classOrderIndex = 999
+        end
 
         -- 1. Sancionados (S): Prioridad absoluta
         if isSanctioned then
             tinsert(membersByRole.sancionados, member)
         -- 2. En grupo: Jugadores actualmente en el grupo/raid
         elseif isInGroup then
-            -- Auto-asignar roles por talentos si es "nuevo" o "otro"
-            if role == "nuevo" or role == "otro" then
-                local unit = rosterData.unit
-                if unit then
-                    -- Intentar obtener rol por especialización (Aproximación para 3.3.5)
-                    local _, class = UnitClass(unit)
-                    local t1, _, _, _, r1 = GetTalentTabInfo(1, false, false, unit)
-                    local t2, _, _, _, r2 = GetTalentTabInfo(2, false, false, unit)
-                    local t3, _, _, _, r3 = GetTalentTabInfo(3, false, false, unit)
+            -- Intentar detectar talentos/especialización siempre que estén en grupo
+            local unit = rosterData.unit
+            if unit then
+                local specAbbr, specIndex, class = GetSpecFromTalents(unit)
+                if specAbbr then
+                    member.specAbbr = specAbbr
                     
-                    local roleToAssign = nil
-                    if class == "WARRIOR" and r3 > r1 and r3 > r2 then roleToAssign = "Tank"
-                    elseif class == "PALADIN" and r2 > r1 and r2 > r3 then roleToAssign = "Tank"
-                    elseif class == "PALADIN" and r3 > r1 and r3 > r2 then roleToAssign = "Healer"
-                    elseif class == "DRUID" and r2 > r1 and r2 > r3 then roleToAssign = "Tank"
-                    elseif class == "DRUID" and r3 > r1 and r3 > r2 then roleToAssign = "Healer"
-                    elseif class == "DEATHKNIGHT" and r1 > r2 and r1 > r3 then roleToAssign = "Tank"
-                    elseif class == "PRIEST" and (r1 > r3 or r2 > r3) then roleToAssign = "Healer"
-                    elseif class == "SHAMAN" and r3 > r1 and r3 > r2 then roleToAssign = "Healer"
-                    end
+                    -- Auto-asignar roles por talentos si es "nuevo" o "otro"
+                    if role == "nuevo" or role == "otro" then
+                        local roleToAssign = GetRoleFromSpec(class, specIndex)
 
-                    -- Restricción: Tanque/Healer de Guild o Posada, DPS solo de Guild
-                    if roleToAssign == "Tank" or roleToAssign == "Healer" then
-                        member.role = roleToAssign
-                    elseif isGuildMember then
-                        member.role = "DPS"
+                        if roleToAssign == "Tank" or roleToAssign == "Healer" then
+                            member.role = roleToAssign
+                        elseif roleToAssign == "DPS" and isGuildMember then
+                            member.role = roleToAssign
+                        end
                     end
+                else
+                    -- Si no hay talentos, encolar para inspección al vuelo
+                    QueueInspect(unit)
                 end
             end
             tinsert(membersByRole.en_grupo, member)
@@ -1492,12 +2020,12 @@ local function renderBandMembers(band, parentFrame, bandIndex)
         end
     end
     
-    -- Función para ordenar miembros por clase (Optimizado con CLASS_ORDER)
+    -- Función para ordenar miembros por clase (Optimizado con classOrderIndex pre-calculado)
     local function sortMembers(members)
         tsort(members, function(a, b)
-            local classIndexA = a.class and CLASS_ORDER[a.class:upper()] or 999
-            local classIndexB = b.class and CLASS_ORDER[b.class:upper()] or 999
-            if classIndexA ~= classIndexB then return classIndexA < classIndexB end
+            if a.classOrderIndex ~= b.classOrderIndex then 
+                return a.classOrderIndex < b.classOrderIndex 
+            end
             return a.name < b.name
         end)
     end
@@ -1527,11 +2055,55 @@ local function renderBandMembers(band, parentFrame, bandIndex)
         if header.autoBtn then header.autoBtn:Hide() end
         if header.cleanBtn then header.cleanBtn:Hide() end
         if header.inviteBtn then header.inviteBtn:Hide() end
+        if header.rescanBtn then header.rescanBtn:Hide() end
 
         local permLevel = GetPerms()
 
+        -- Botón Re-escanear para "En grupo"
+        if roleName == "en_grupo" and #membersByRole[roleName] > 0 then
+            if not header.rescanBtn then
+                header.rescanBtn = CreateFrame("Button", nil, header, "UIPanelButtonTemplate")
+                header.rescanBtn:SetSize(90, 16)
+                header.rescanBtn:SetPoint("RIGHT", -10, 0)
+                header.rescanBtn:SetText("Re-escanear")
+                header.rescanBtn:SetNormalFontObject("GameFontNormalSmall")
+                header.rescanBtn:SetHighlightFontObject("GameFontHighlightSmall")
+            end
+            header.rescanBtn:Show()
+            
+            header.rescanBtn:SetScript("OnClick", function()
+                 local currentRoster = BuildRosterCache()
+                 local count = 0
+                 
+                 for _, member in ipairs(membersByRole.en_grupo) do
+                     local cleanName = CleanName(member.name)
+                     local rData = currentRoster[cleanName]
+                     if rData and rData.unit then
+                         local specAbbr, specIndex, class = GetSpecFromTalents(rData.unit)
+                         if specAbbr then
+                             member.specAbbr = specAbbr
+                             local roleToAssign = GetRoleFromSpec(class, specIndex)
+                             if roleToAssign then
+                                 -- En el re-escaneo manual, siempre actualizamos si se detecta algo claro
+                                 member.role = roleToAssign
+                                 count = count + 1
+                             end
+                         else
+                             -- Si no detectamos talentos al darle clic manual, forzamos inspección
+                             QueueInspect(rData.unit)
+                         end
+                     end
+                 end
+                 
+                 if count > 0 then
+                     DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r Re-escaneados %d jugadores en grupo.", count))
+                     RD.utils.coreBands.ShowCoreBandsWindow()
+                 else
+                     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r No se detectaron talentos inmediatos. Se ha solicitado inspección de los miembros en grupo.")
+                 end
+             end)
         -- Botón Invitar para Exploradores, Hermandad y Posada
-        if (roleName == "exploradores" or roleName == "hermandad" or roleName == "posada") and #membersByRole[roleName] > 0 then
+        elseif (roleName == "exploradores" or roleName == "hermandad" or roleName == "posada") and #membersByRole[roleName] > 0 then
             if not header.inviteBtn then
                 header.inviteBtn = CreateFrame("Button", nil, header, "UIPanelButtonTemplate")
                 header.inviteBtn:SetSize(80, 16)
@@ -1618,8 +2190,10 @@ local function renderBandMembers(band, parentFrame, bandIndex)
         memberCard.playerName = member.name
 
         -- Registrar la tarjeta para actualizaciones en vivo
-        local cleanName = CleanName(member.name):lower()
-        activeMemberCards[cleanName] = activeMemberCards[cleanName] or {}
+        local cleanName = CleanName(member.name)
+        if not activeMemberCards[cleanName] then
+            activeMemberCards[cleanName] = {}
+        end
         table.insert(activeMemberCards[cleanName], memberCard)
 
         memberCard:SetBackdrop({
@@ -1633,14 +2207,14 @@ local function renderBandMembers(band, parentFrame, bandIndex)
 
         -- Función de refresco interno de la tarjeta
         if not memberCard.Refresh then
-            memberCard.Refresh = function(self, rosterCache)
+            memberCard.Refresh = function(self, rosterCache, coreData)
                 local name = self.playerName
                 if not name then return end
 
                 local cleanName = CleanName(name)
                 local guildData = guildFullCache[cleanName]
-                -- Buscar el miembro en la estructura de datos
-                local coreData = EnsureCoreData()
+                -- Usar el coreData pasado por parámetro o asegurar si no existe
+                coreData = coreData or EnsureCoreData()
                 local band = coreData[self.bandIndex]
                 local memberData = band and band.members and band.members[self.memberIndex]
                 
@@ -1665,7 +2239,68 @@ local function renderBandMembers(band, parentFrame, bandIndex)
                 end
                 if self.memberText then 
                     local capitalizedName = CapitalizeName(name)
-                    self.memberText:SetText(capitalizedName)
+                    local displayName = capitalizedName
+                    
+                    -- Priorizar la spec detectada en memberData
+                    local spec = memberData and memberData.specAbbr
+                    
+                    -- Si no hay spec en memberData pero está en grupo, intentar detectarla al vuelo
+                    if rosterCache and rosterCache[cleanName] then
+                        local unit = rosterCache[cleanName].unit
+                        if unit then
+                            local newSpec, specIndex, class = GetSpecFromTalents(unit)
+                            if newSpec then
+                                    -- Si la spec ha cambiado o no existía, actualizar
+                                    if not spec or spec ~= newSpec then
+                                        spec = newSpec
+                                        if memberData then memberData.specAbbr = spec end
+                                        
+                                        -- Auto-asignar roles por talentos
+                                         local roleToAssign = GetRoleFromSpec(class, specIndex)
+
+                                        -- Aplicar el cambio de rol si es diferente al actual
+                                        local roleChanged = false
+                                        if roleToAssign then
+                                            -- Reglas de asignación: Tank/Healer siempre, DPS solo si es Guild
+                                            if roleToAssign == "Tank" or roleToAssign == "Healer" then
+                                                if memberData and memberData.role ~= roleToAssign then
+                                                    memberData.role = roleToAssign
+                                                    roleChanged = true
+                                                end
+                                            elseif roleToAssign == "DPS" and isGuildMember then
+                                                if memberData and memberData.role ~= roleToAssign then
+                                                    memberData.role = roleToAssign
+                                                    roleChanged = true
+                                                end
+                                            end
+                                        end
+
+                                        -- Actualizar en el coreData persistente
+                                        local coreData = EnsureCoreData()
+                                        local b = coreData[self.bandIndex]
+                                        local m = b and b.members and b.members[self.memberIndex]
+                                        if m then 
+                                            m.specAbbr = spec 
+                                            if roleChanged then m.role = memberData.role end
+                                        end
+                                        
+                                        -- Si el rol ha cambiado, forzar un refresco total de la ventana
+                                        if roleChanged then
+                                            RD.utils.coreBands.ShowCoreBandsWindow()
+                                            return
+                                        end
+                                    end
+                            else
+                                -- En 3.3.5, si no tenemos talentos, añadir a la cola de inspección
+                                QueueInspect(unit)
+                            end
+                        end
+                    end
+
+                    if spec then
+                        displayName = string.format("%s (|cff00ff00%s|r)", capitalizedName, spec) -- Color VERDE para que sea evidente
+                    end
+                    self.memberText:SetText(displayName)
                     self.memberText:SetTextColor(nameColor.r, nameColor.g, nameColor.b) 
                 end
 
@@ -1742,12 +2377,25 @@ local function renderBandMembers(band, parentFrame, bandIndex)
             self:SetBackdropColor(0.25, 0.25, 0.35, 1)
             self:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
             
-            -- Mostrar tooltip con la nota pública
-            local guildNote = getGuildNoteByName(member.name)
-            if guildNote and guildNote ~= "" then
+            -- Mostrar tooltip con información de hermandad
+            local cleanName = CleanName(member.name)
+            local guildData = guildFullCache[cleanName]
+            
+            if guildData then
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:AddLine("Nota Pública:")
-                GameTooltip:AddLine(guildNote, 1, 1, 1, true)
+                GameTooltip:SetText(CapitalizeName(member.name), 1, 1, 1)
+                
+                -- Ubicación (Solo si está online)
+                if guildData.online and guildData.zone and guildData.zone ~= "" then
+                    GameTooltip:AddLine("Ubicación: |cffffffff" .. guildData.zone .. "|r")
+                end
+                
+                -- Nota Pública
+                if guildData.note and guildData.note ~= "" then
+                    GameTooltip:AddLine("Nota Pública:")
+                    GameTooltip:AddLine(guildData.note, 1, 1, 1, true)
+                end
+                
                 GameTooltip:Show()
             end
         end)
@@ -1791,12 +2439,13 @@ local function renderBandMembers(band, parentFrame, bandIndex)
                 SendChatMessage(string.format("[RaidDominion] Invitado a %s.", band.name or "Core"), "WHISPER", nil, self.playerName)
             else
                 -- Limpiar el contexto antes de abrir para asegurar carga fresca
-                local editFrame = getOrCreatePlayerEditFrame()
+                local editFrame = coreBandsUtils.GetOrCreatePlayerEditFrame()
+                editFrame.isSearchMode = false -- Resetear modo búsqueda
                 editFrame.context = nil
                 editFrame.context = { bandIndex = self.bandIndex, memberIndex = self.memberIndex }
                 
-                -- Volver a llamar a getOrCreatePlayerEditFrame con los datos del jugador
-                getOrCreatePlayerEditFrame({name = self.playerName})
+                -- Volver a llamar a coreBandsUtils.GetOrCreatePlayerEditFrame con los datos del jugador
+                coreBandsUtils.GetOrCreatePlayerEditFrame({name = self.playerName})
                 editFrame:Show()
             end
         end)
@@ -1837,7 +2486,7 @@ local function renderBandMembers(band, parentFrame, bandIndex)
 end
 
 -- Obtener el módulo de bandas Core
-local coreBandsUtils = RD.utils.coreBands
+-- coreBandsUtils ya definido al inicio del archivo
 
 -- Variables persistentes para trackear la banda seleccionada
 local selectedBandIndex = nil
@@ -1857,63 +2506,46 @@ local function CapitalizeAllMemberNames()
 end
 
 -- Función auxiliar para obtener miembros visibles (incluyendo jugadores en grupo si se expande la lógica)
-local function GetVisibleBandMembersCount(band)
+local function GetVisibleBandMembersCount(band, rosterCache)
     local members = band.members or {}
-    local localPlayerName = CleanName(UnitName("player")):lower()
+    local localPlayerName = CleanName(UnitName("player"))
     local totalVisible = 0
     local onlineVisible = 0
     
-    UpdateGuildOnlineCache()
-    local isInGroup = IsPlayerInGroup(UnitName("player"))
+    -- Usar el rosterCache pasado por parámetro para evitar reconstrucciones redundantes
+    if not rosterCache then rosterCache = BuildRosterCache() end
     
     -- Crear un set de nombres ya en la banda para evitar duplicados al contar grupo
     local namesInBand = {}
     
     for _, member in ipairs(members) do
-        local cleanName = CleanName(member.name):lower()
+        local cleanName = CleanName(member.name)
         namesInBand[cleanName] = true
         local role = (member.role or "nuevo"):lower()
         
         local isVisible = true
         if cleanName == localPlayerName then
             -- Siempre visible si está en grupo (ahora que lo mostramos en "En grupo")
-            if (role == "nuevo" or role == "otro") and isInGroup then
-                isVisible = true -- Cambiado de false a true para consistencia con renderBandMembers
+            if (role == "nuevo" or role == "otro") and rosterCache[cleanName] then
+                isVisible = true 
             end
         end
         
         if isVisible then
             totalVisible = totalVisible + 1
-            if guildOnlineCache[cleanName] or isPlayerOnline(member.name) then
+            -- Búsqueda O(1) en caches
+            if guildOnlineCache[cleanName] or (rosterCache[cleanName] ~= nil) then
                 onlineVisible = onlineVisible + 1
             end
         end
     end
 
     -- Si estamos en grupo, contar también a los que se añadirían dinámicamente
-    if isInGroup then
-        local groupMembers = {}
-        if GetNumRaidMembers() > 0 then
-            for i = 1, GetNumRaidMembers() do
-                local name = GetRaidRosterInfo(i)
-                if name then table.insert(groupMembers, name) end
-            end
-        else
-            local myName = UnitName("player")
-            if myName then table.insert(groupMembers, myName) end
-            for i = 1, GetNumPartyMembers() do
-                local name = UnitName("party"..i)
-                if name then table.insert(groupMembers, name) end
-            end
-        end
-
-        for _, name in ipairs(groupMembers) do
-            local clean = CleanName(name):lower()
-            if not namesInBand[clean] then
-                totalVisible = totalVisible + 1
-                onlineVisible = onlineVisible + 1 -- Miembros del grupo siempre están online para nosotros
-                namesInBand[clean] = true
-            end
+    for clean, data in pairs(rosterCache) do
+        if not namesInBand[clean] then
+            totalVisible = totalVisible + 1
+            onlineVisible = onlineVisible + 1 -- Miembros del grupo siempre están online
+            namesInBand[clean] = true
         end
     end
     
@@ -1922,10 +2554,24 @@ end
 
 -- Función para mostrar la ventana de bandas Core
 function coreBandsUtils.ShowCoreBandsWindow()
-    -- Actualizar caché de hermandad al abrir
-    UpdateGuildOnlineCache(true)
+    -- Throttle de seguridad para evitar llamadas espasmódicas (ej: al abrir/cerrar rápido)
+    local now = GetTime()
+    if coreBandsUtils.lastShowTime and (now - coreBandsUtils.lastShowTime < 0.1) then
+        return
+    end
+    coreBandsUtils.lastShowTime = now
+
+    -- Construir caché de roster una sola vez para toda la ventana
+    local rosterCache = BuildRosterCache()
     
-    -- Capitalizar todos los nombres de jugadores en las bandas
+    -- Limpiar activeMemberCards al inicio para permitir múltiples bandas abiertas
+    wipe(activeMemberCards)
+    
+    -- Actualizar caché de hermandad al abrir (Usar throttle interno)
+    UpdateGuildOnlineCache()
+    
+    -- Capitalizar nombres solo si es necesario (Evitar bucles pesados cada vez que se abre)
+    -- Lo hacemos cada vez que se abre pero es O(N) y está cacheado, así aseguramos consistencia
     CapitalizeAllMemberNames()
     
     -- Obtener los datos de bandas Core
@@ -1955,7 +2601,8 @@ function coreBandsUtils.ShowCoreBandsWindow()
         tinsert(UISpecialFrames, "RaidDominionCoreListFrame")
         
         -- Título
-        f3.title = UI.CreateLabel(f3, "Raid Dominion - Administrador de Core", "GameFontNormal")
+        local guildName = GetGuildInfo("player") or ""
+        f3.title = UI.CreateLabel(f3, "RaidDominion - Core " .. guildName, "GameFontNormal")
         f3.title:SetPoint("TOP", 0, -15)
         
         -- Botón Cerrar
@@ -2350,6 +2997,15 @@ function coreBandsUtils.ShowCoreBandsWindow()
         -- Botón Anunciar
         f3.announceBtn = CreateStyledButton("RaidDominionCoreAnnounceBtn", f3.headerButtonsFrame, 30, 30, nil, "Interface/Icons/Ability_Warrior_BattleShout", "Anunciar")
         f3.announceBtn:SetPoint("TOPLEFT", 85, -2)
+        f3.announceBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        f3.announceBtn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText("Anunciar Banda")
+            GameTooltip:AddLine("Click Izquierdo: Anuncio por canal por defecto", 1, 1, 1)
+            GameTooltip:AddLine("Click Derecho: Anuncio por Hermandad", 1, 1, 1)
+            GameTooltip:Show()
+        end)
+        f3.announceBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
         -- Botón Reiniciar (Nuevo)
         f3.resetBtn = CreateStyledButton("RaidDominionCoreResetBtn", f3.headerButtonsFrame, 30, 30, nil, "Interface/Icons/Spell_Holy_RighteousnessAura", "Reiniciar")
@@ -2481,7 +3137,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
     if f3.UpdateStats then f3.UpdateStats() end
     
     -- Actualizar los scripts de los botones para usar la banda seleccionada actual
-    f3.announceBtn:SetScript("OnClick", function(self)
+    f3.announceBtn:SetScript("OnClick", function(self, button)
         local permLevel = GetPerms()
         if permLevel < 2 then
             DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para anunciar bandas.")
@@ -2489,22 +3145,35 @@ function coreBandsUtils.ShowCoreBandsWindow()
         end
         if selectedBandIndex and coreData[selectedBandIndex] then
             local bandData = coreData[selectedBandIndex]
-            -- Verificar si messageManager está disponible
-            if RaidDominion.messageManager and RaidDominion.messageManager.GetDefaultChannel then
-                local _, defaultChannel = RaidDominion.messageManager:GetDefaultChannel()
+            
+            local targetChannel
+            if button == "RightButton" then
+                targetChannel = "GUILD"
+            else
+                -- Obtener canal por defecto del messageManager
+                if RaidDominion.messageManager and RaidDominion.messageManager.GetDefaultChannel then
+                    local _, defaultChannel = RaidDominion.messageManager:GetDefaultChannel()
+                    targetChannel = defaultChannel
+                end
+            end
+
+            if targetChannel then
                 local messages = {
                     string.format("Anuncio de banda: %s", bandData.name),
                     string.format("GS Mínimo: %d", bandData.minGS),
                     string.format("Horario: %s", bandData.schedule)
                 }
-                -- Verificar si SendDelayedMessages está disponible
+                
                 if _G.SendDelayedMessages then
-                    SendDelayedMessages(messages, defaultChannel)
+                    SendDelayedMessages(messages, targetChannel)
+                    if button == "RightButton" then
+                        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Anunciando en Hermandad...")
+                    end
                 else
                     DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: SendDelayedMessages no está disponible")
                 end
             else
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: RaidDominion.messageManager no está disponible")
+                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No se pudo determinar el canal de anuncio.")
             end
         else
             DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
@@ -2745,7 +3414,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         end
         
         -- Nombre de la banda con número de miembros
-        local totalVisible, onlineVisible = GetVisibleBandMembersCount(band)
+        local totalVisible, onlineVisible = GetVisibleBandMembersCount(band, rosterCache)
         
         if not line.nameBtn then
             line.nameBtn = CreateFrame("Button", nil, line)
@@ -2829,7 +3498,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
             line.membersFrame:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, 0)
             line.membersFrame:Show()
             
-            local membersHeight = renderBandMembers(band, line.membersFrame, i)
+            local membersHeight = renderBandMembers(band, line.membersFrame, i, rosterCache)
             yOffset = yOffset + membersHeight
         elseif line.membersFrame then
             -- Liberar hijos del pool

@@ -27,6 +27,7 @@ local MENU_TYPES = {
     AURAS = "auras",
     ADDON = "addonOptions",
     GUILD = "guildOptions",
+    RECOGNITION = "recognition",
     MECHANICS = "mechanics",
     RULES = "raidrules",
     GUILD_MESSAGES = "guildmessages"
@@ -78,6 +79,7 @@ local function GetMenuConfig(menuType)
         [MENU_TYPES.AURAS] = { configKey = "auras", data = RD.constants.SPELL_DATA and RD.constants.SPELL_DATA.auras or {}, title = "Auras" },
         [MENU_TYPES.ADDON] = { configKey = "addonOptions", data = RD.constants.MENU_DEFINITIONS and RD.constants.MENU_DEFINITIONS.addonOptions or {}, title = "Raid Dominion" },
         [MENU_TYPES.GUILD] = { configKey = "guildOptions", data = RD.constants.MENU_DEFINITIONS and RD.constants.MENU_DEFINITIONS.guildOptions or {}, title = "Hermandad" },
+        [MENU_TYPES.RECOGNITION] = { configKey = "recognition", data = RD.constants.MENU_DEFINITIONS and RD.constants.MENU_DEFINITIONS.recognition or {}, title = "Reconocimiento" },
         [MENU_TYPES.MECHANICS] = { configKey = "mechanics", data = BuildMechanicsItems(), title = "Mecánicas" },
         [MENU_TYPES.RULES] = { configKey = "raidrules", data = BuildRulesItems(), title = "Reglas" },
         [MENU_TYPES.GUILD_MESSAGES] = { configKey = "guildmessages", data = BuildGuildMessagesItems(), title = "Mensajes de Hermandad" }

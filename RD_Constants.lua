@@ -84,7 +84,13 @@ RaidDominion.constants = {
             { name = "Lista", action = "GuildRoster", tooltip = "Guardar lista de miembros" },
             { name = "Composicion", action = "GuildComposition", tooltip = "Ver composición" },
             { name = "Gearscore", action = "ShowGuildGearscore", tooltip = "Lista de jugadores con Gearscore y notas" },
-            { name = "Core", action = "ShowCoreBands", tooltip = "Bandas Core" }
+            { name = "Core", action = "ShowCoreBands", tooltip = "Bandas Core" },
+            { name = "Reconocimiento", action = "ShowRecognition", tooltip = "Reconocimiento de hermandad" },
+            { name = "Jugador", action = "SearchGuildPlayer", tooltip = "Buscar y editar jugador" }
+        },
+        recognition = {
+            { name = "Crear Nuevo", action = "RecognitionCreate", icon = "Interface/Icons/Spell_ChargePositive" },
+            { name = "Compartir", action = "RecognitionShare", icon = "Interface/Icons/Spell_Arcane_StudentOfMagic" },
         }
     },
 

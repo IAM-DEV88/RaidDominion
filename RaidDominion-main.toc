@@ -1,5 +1,5 @@
 ## Interface: 30300
-## Title: RaidDominion2
+## Title: RaidDominion
 ## Notes: Facilita la gestión de la raid, la asignación de responsabilidades en la banda.
 ## Author: Andres Muñoz - https://colmillo.netlify.app/
 ## Version: 2.0.0
@@ -38,6 +38,8 @@ RD_UI_MinimapButton.lua
 # Utility Files - MenuActions debe cargarse después de DynamicMenus
 RD_Utils_Group.lua
 RD_Utils_CoreBands.lua
+RD_Utils_Recognition.lua
+RD_Utils_Gearscore.lua
 
 # Menu Actions - Cargar después de que todos los módulos de UI y utilidades estén listos
 RD_MenuActions.lua

@@ -422,220 +422,7 @@ local function GuildLottery()
     OpenGuildBankAndGetItems()
 end
 
--- Función para mostrar/ocultar las ventanas de Gearscore
-    local function ToggleGearscoreWindows(forceShow)
-        -- Verificar si las ventanas ya existen y están visibles
-        local f = _G["RaidDominionUpdateListFrame"]
-        local f2 = _G["RaidDominionNoNoteListFrame"]
-        
-        -- Si alguna ventana está visible y no es un refresco forzado, ocultarlas todas
-        if not forceShow and ((f and f:IsVisible()) or (f2 and f2:IsVisible())) then
-            if f then f:Hide() end
-            if f2 then f2:Hide() end
-            return
-        end
-        
-        -- Si es un refresco forzado pero ninguna ventana está visible, no hacer nada
-        if forceShow and (not f or not f:IsVisible()) and (not f2 or not f2:IsVisible()) then
-            return
-        end
-        
-        -- Obtener la lista de miembros de la hermandad
-        if not RD.utils or not RD.utils.group then return end
-        local guildMembers = RD.utils.group.GetGuildMemberList()
-        
-        if #guildMembers > 0 then
-            -- Filtrar jugadores que tienen GearScore y Nota Pública
-            local playersWithData = {}
-            -- Filtrar jugadores que tienen GearScore pero NO tienen Nota Pública
-            local playersNoNote = {}
-            
-            for _, member in ipairs(guildMembers) do
-                if member.gearScore and member.gearScore > 0 then
-                    if member.publicNote and member.publicNote ~= "" then
-                        table.insert(playersWithData, member)
-                    else
-                        table.insert(playersNoNote, member)
-                    end
-                end
-            end
-            
-            -- Ordenar ambos por GearScore descendente para mejor usabilidad
-            local sortFunc = function(a, b) return (a.gearScore or 0) > (b.gearScore or 0) end
-            table.sort(playersWithData, sortFunc)
-            table.sort(playersNoNote, sortFunc)
 
-            -- Mostrar ventana de jugadores con datos
-            if #playersWithData > 0 then
-                local f = _G["RaidDominionUpdateListFrame"]
-                if not f then
-                    f = CreateFrame("Frame", "RaidDominionUpdateListFrame", UIParent)
-                    f:SetSize(450, 400)
-                    f:SetPoint("CENTER", -230, 0)
-                    f:SetBackdrop({
-                        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-                        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-                        tile = true, tileSize = 16, edgeSize = 12,
-                        insets = { left = 3, right = 3, top = 3, bottom = 3 }
-                    })
-                    f:SetBackdropColor(0, 0, 0, 0.9)
-                    f:SetBackdropBorderColor(1, 1, 1, 0.5)
-                    f:EnableMouse(true)
-                    f:SetMovable(true)
-                    f:RegisterForDrag("LeftButton")
-                    f:SetScript("OnDragStart", f.StartMoving)
-                    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-                    
-                    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    f.title:SetPoint("TOP", 0, -15)
-                    
-                    f.closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-                    f.closeBtn:SetPoint("TOPRIGHT", -5, -5)
-                    
-                    f.scroll = CreateFrame("ScrollFrame", "RaidDominionUpdateListScroll", f, "UIPanelScrollFrameTemplate")
-                    f.scroll:SetPoint("TOPLEFT", 20, -40)
-                    f.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
-                    
-                    f.content = CreateFrame("Frame", nil, f.scroll)
-                    f.content:SetSize(390, 10)
-                    f.scroll:SetScrollChild(f.content)
-                end
-                
-                f.title:SetText(string.format("Jugadores con GS y Nota (%d)", #playersWithData))
-                local children = {f.content:GetChildren()}
-                for _, child in ipairs(children) do child:Hide() child:SetParent(nil) end
-                
-                local yOffset = 0
-                for i, member in ipairs(playersWithData) do
-                    local line = CreateFrame("Frame", nil, f.content)
-                    line:SetSize(390, 20)
-                    line:SetPoint("TOPLEFT", 0, -yOffset)
-                    
-                    local nameBtn = CreateFrame("Button", nil, line)
-                    nameBtn:SetSize(120, 20)
-                    nameBtn:SetPoint("LEFT", 0, 0)
-                    local nameText = nameBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                    nameText:SetPoint("LEFT")
-                    nameBtn:SetFontString(nameText)
-                    
-                    local color = RAID_CLASS_COLORS[member.classFileName] or {r=1, g=1, b=1}
-                    nameBtn:SetText(member.name)
-                    nameText:SetTextColor(color.r, color.g, color.b)
-                    
-                    nameBtn:SetScript("OnClick", function()
-                        -- Verificar permisos para editar notas (Nivel 1: Miembro autorizado de Colmillo de Acero)
-                        local mm = RD.modules and RD.modules.messageManager
-                        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
-                        
-                        if permLevel >= 1 then
-                            StaticPopup_Show("RAID_DOMINION_EDIT_GUILD_NOTE", member.name, nil, { index = member.index, currentNote = member.publicNote, name = member.name })
-                        else
-                            SendSystemMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas de hermandad.")
-                        end
-                    end)
-                    nameBtn:SetScript("OnEnter", function(self)
-                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                        GameTooltip:SetText("Clic para editar nota", 1, 1, 1)
-                        GameTooltip:Show()
-                    end)
-                    nameBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-                    local gsColor = "|cffaaaaaa"
-                    local noteGS = string.match(member.publicNote, "(%d+%.%d+)")
-                    if noteGS then
-                        local baseGS = math.floor(tonumber(noteGS) * 1000)
-                        local nextBaseGS = baseGS + 100
-                        if member.gearScore >= nextBaseGS then gsColor = "|cffff9900"
-                        elseif member.gearScore >= baseGS then gsColor = "|cff00ff00"
-                        else gsColor = "|cffff0000" end
-                    end
-
-                    local infoText = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    infoText:SetPoint("LEFT", nameBtn, "RIGHT", 5, 0)
-                    infoText:SetText(string.format("%s |cff888888[%s]|r %s(GS: %d)|r", member.publicNote, member.rank, gsColor, member.gearScore))
-                    yOffset = yOffset + 20
-                end
-                f.content:SetHeight(yOffset)
-                f:Show()
-            end
-
-            -- Mostrar ventana de jugadores sin nota
-            if #playersNoNote > 0 then
-                local f2 = _G["RaidDominionNoNoteListFrame"]
-                if not f2 then
-                    f2 = CreateFrame("Frame", "RaidDominionNoNoteListFrame", UIParent)
-                    f2:SetSize(300, 400)
-                    f2:SetPoint("CENTER", 230, 0)
-                    f2:SetBackdrop({
-                        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-                        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-                        tile = true, tileSize = 16, edgeSize = 12,
-                        insets = { left = 3, right = 3, top = 3, bottom = 3 }
-                    })
-                    f2:SetBackdropColor(0, 0, 0, 0.9)
-                    f2:SetBackdropBorderColor(1, 1, 1, 0.5)
-                    f2:EnableMouse(true)
-                    f2:SetMovable(true)
-                    f2:RegisterForDrag("LeftButton")
-                    f2:SetScript("OnDragStart", f2.StartMoving)
-                    f2:SetScript("OnDragStop", f2.StopMovingOrSizing)
-                    
-                    f2.title = f2:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                    f2.title:SetPoint("TOP", 0, -15)
-                    
-                    f2.closeBtn = CreateFrame("Button", nil, f2, "UIPanelCloseButton")
-                    f2.closeBtn:SetPoint("TOPRIGHT", -5, -5)
-                    
-                    f2.scroll = CreateFrame("ScrollFrame", "RaidDominionNoNoteListScroll", f2, "UIPanelScrollFrameTemplate")
-                    f2.scroll:SetPoint("TOPLEFT", 20, -40)
-                    f2.scroll:SetPoint("BOTTOMRIGHT", -40, 20)
-                    
-                    f2.content = CreateFrame("Frame", nil, f2.scroll)
-                    f2.content:SetSize(240, 10)
-                    f2.scroll:SetScrollChild(f2.content)
-                end
-                
-                f2.title:SetText(string.format("Jugadores con GS sin Nota (%d)", #playersNoNote))
-                local children = {f2.content:GetChildren()}
-                for _, child in ipairs(children) do child:Hide() child:SetParent(nil) end
-                
-                local yOffset = 0
-                for i, member in ipairs(playersNoNote) do
-                    local line = CreateFrame("Frame", nil, f2.content)
-                    line:SetSize(240, 20)
-                    line:SetPoint("TOPLEFT", 0, -yOffset)
-                    
-                    local nameBtn = CreateFrame("Button", nil, line)
-                    nameBtn:SetSize(100, 20)
-                    nameBtn:SetPoint("LEFT", 0, 0)
-                    local nameText = nameBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-                    nameText:SetPoint("LEFT")
-                    nameBtn:SetFontString(nameText)
-                    
-                    local color = RAID_CLASS_COLORS[member.classFileName] or {r=1, g=1, b=1}
-                    nameBtn:SetText(member.name)
-                    nameText:SetTextColor(color.r, color.g, color.b)
-                    
-                    nameBtn:SetScript("OnClick", function()
-                        StaticPopup_Show("RAID_DOMINION_EDIT_GUILD_NOTE", member.name, nil, { index = member.index, currentNote = member.publicNote, name = member.name })
-                    end)
-                    nameBtn:SetScript("OnEnter", function(self)
-                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                        GameTooltip:SetText("Clic para editar nota", 1, 1, 1)
-                        GameTooltip:Show()
-                    end)
-                    nameBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-                    local infoText = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    infoText:SetPoint("LEFT", nameBtn, "RIGHT", 5, 0)
-                    infoText:SetText(string.format("|cff888888[%s]|r |cffaaaaaa(GS: %d)|r", member.rank, member.gearScore))
-                    yOffset = yOffset + 20
-                end
-                f2.content:SetHeight(yOffset)
-                f2:Show()
-            end
-        end
-    end
 
     function MenuActions.RegisterDefaultActions()
         -- Registrar diálogos de StaticPopup
@@ -955,13 +742,17 @@ end
     gsUpdateFrame:SetScript("OnEvent", function(self, event)
         if event == "GUILD_ROSTER_UPDATE" then
             -- Refrescar las ventanas de Gearscore si están abiertas
-            ToggleGearscoreWindows(true)
+            if RD.utils and RD.utils.gearscore and RD.utils.gearscore.ToggleGearscoreWindows then
+                RD.utils.gearscore.ToggleGearscoreWindows(true)
+            end
         end
     end)
     
     -- Nuevas acciones para Gearscore y Core Bands
     MenuActions.Register("ShowGuildGearscore", function() 
-        ToggleGearscoreWindows()
+        if RD.utils and RD.utils.gearscore and RD.utils.gearscore.ToggleGearscoreWindows then
+            RD.utils.gearscore.ToggleGearscoreWindows()
+        end
     end)
     
     MenuActions.Register("ShowCoreBands", function() 
@@ -973,6 +764,63 @@ end
         if RD.utils and RD.utils.coreBands then
             RD.utils.coreBands.ShowCoreBandsWindow()
         end
+    end)
+
+    MenuActions.Register("ShowRecognition", function()
+        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        if permLevel < 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para ver reconocimientos.")
+            return
+        end
+
+        local f = _G["RaidDominionRecognitionFrame"]
+        if f and f:IsShown() then
+            f:Hide()
+        elseif RD.utils and RD.utils.recognition then
+            RD.utils.recognition.ShowRecognitionWindow()
+        end
+    end)
+
+    MenuActions.Register("SearchGuildPlayer", function()
+        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        if permLevel < 1 then
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar jugadores.")
+            return
+        end
+
+        local p = _G["RaidDominionPlayerSearchPopup"]
+        if p and p:IsShown() then
+            p:Hide()
+        elseif RD.utils and RD.utils.recognition and RD.utils.recognition.ShowPlayerSearchPopup then
+            RD.utils.recognition.ShowPlayerSearchPopup()
+        end
+    end)
+
+    MenuActions.Register("RecognitionCreate", function()
+        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        if permLevel < 2 then
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
+            return
+        end
+        if RD.utils and RD.utils.recognition and RD.utils.recognition.getOrCreateRecognitionFrame then
+            local createFrame = RD.utils.recognition.getOrCreateRecognitionFrame()
+            createFrame.isEditing = false
+            createFrame.editIndex = nil
+            createFrame.title:SetText("Nuevo Reconocimiento")
+            createFrame.nameEdit:SetText("")
+            createFrame.descEdit:SetText("")
+            createFrame:Show()
+        end
+    end)
+
+    MenuActions.Register("RecognitionShare", function()
+        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        if permLevel < 2 then
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
+            return
+        end
+        -- Lógica de compartir (pendiente)
+        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Lógica de compartir no implementada aún.")
     end)
 end
 
