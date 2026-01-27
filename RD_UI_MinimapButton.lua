@@ -19,7 +19,6 @@ _G["RaidDominion"] = RD
 -- Local references
 local config = RD.config
 local mainFrame = RD.ui and RD.ui.mainFrame
-local configManager = RD.ui and RD.ui.configManager
 
 -- Constants
 local MINIMAP_ICON = "Interface\\Icons\\inv_misc_summerfest_brazierorange"
@@ -33,8 +32,11 @@ local isInitialized = false
     Toggle the main window visibility
 ]]
 local function ToggleWindow()
-    if configManager and configManager.Toggle then
-        configManager:Toggle()
+    -- Resolver el gestor de configuración en el momento de uso para soportar
+    -- tanto la versión antigua (RD.ui.configManager) como la nueva (RD.configManager)
+    local cm = (RD.ui and RD.ui.configManager) or RD.configManager
+    if cm and cm.Toggle then
+        cm:Toggle()
     end
 end
 

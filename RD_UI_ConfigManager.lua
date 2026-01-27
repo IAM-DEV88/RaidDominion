@@ -1082,6 +1082,8 @@ function ConfigManager:CreateWindow()
     frame:SetToplevel(true)
     frame:SetSize(510, 360)  -- Reducido de 450 a 360 píxeles de altura
     frame:SetClampedToScreen(true)  -- Evita que la ventana se salga de la pantalla
+    frame:ClearAllPoints()
+    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")

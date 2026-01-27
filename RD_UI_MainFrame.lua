@@ -365,75 +365,70 @@ function mainFrame:CreateActionBar()
     local padding = ACTION_BAR.BUTTON_PADDING
     local totalWidth = #ACTION_BAR.ITEMS * (buttonSize + padding) - padding
     
-    -- Initialize textures table if it doesn't exist
+    -- Inicializar tabla de texturas si no existe (se mantiene para compatibilidad)
     if not RaidDominion.textures then
         RaidDominion.textures = {}
     end
     
-    -- Función para crear un botón con el estilo deseado
-    local function CreateStyledButton(name, parent, width, height)
-        -- Create the main button
+    -- Usar el mismo método/estilo de botón que la barra superior derecha de CoreBands
+    local coreBandsUtils = RaidDominion.utils and RaidDominion.utils.coreBands
+    local function CreateStyledButton(name, parent, width, height, iconTexture, tooltipText)
+        -- Si existe el helper global de CoreBands, úsalo para mantener estilo consistente
+        if coreBandsUtils and coreBandsUtils.CreateStyledButton then
+            local btn = coreBandsUtils.CreateStyledButton(name, parent, width, height, nil, iconTexture, tooltipText)
+            btn:RegisterForClicks("AnyUp")
+            RaidDominion.textures[name] = btn
+            return btn
+        end
+        
+        -- Fallback al estilo anterior en caso de que CoreBands no esté disponible
         local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
         button:SetSize(width or 60, height or 25)
         button:RegisterForClicks("AnyUp")
         
-        -- Create a container frame for the icon
-        local iconContainer = CreateFrame("Frame", nil, button)
-        iconContainer:SetAllPoints()
-        iconContainer:SetFrameLevel(button:GetFrameLevel() + 1)
-        button.iconContainer = iconContainer
+        local icon = button:CreateTexture(nil, "ARTWORK")
+        icon:SetAllPoints()
+        if iconTexture then
+            icon:SetTexture(iconTexture)
+        end
+        button.icon = icon
         
-        -- Texturas
         button:SetHighlightTexture("Interface/Buttons/UI-Panel-Button-Highlight", "ADD")
         button:SetPushedTexture("")
         
-        -- Store reference in the RaidDominion table
-        RaidDominion.textures[name] = button
+        if tooltipText then
+            button:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:SetText(tooltipText, 1, 1, 1, 1, true)
+                GameTooltip:Show()
+            end)
+            button:SetScript("OnLeave", function()
+                GameTooltip:Hide()
+            end)
+        end
         
+        RaidDominion.textures[name] = button
         return button
     end
     
     for i, item in ipairs(ACTION_BAR.ITEMS) do
-        local button = CreateStyledButton("RaidDominionActionButton"..i, actionBar, buttonSize, buttonSize)
+        local texture = item.icon or "Interface/Icons/INV_Misc_QuestionMark"
+        local tooltipText = item.name
         
-        -- Posicionar el botón
+        -- Crear botón con el mismo estilo visual que la barra superior derecha de CoreBands,
+        -- reduciendo el tamaño 3px pero manteniendo el layout (posición relativa)
+        local button = CreateStyledButton(
+            "RaidDominionActionButton"..i,
+            actionBar,
+            buttonSize - 3,
+            buttonSize - 3,
+            texture,
+            tooltipText
+        )
+        
+        -- Posicionar el botón (sin cambios en layout)
         button:SetPoint("LEFT", actionBar, "LEFT", (i-1) * (buttonSize + padding), -1)
         
-        -- Configurar icono
-        local icon = button.iconContainer:CreateTexture("$parentIcon", "ARTWORK")
-        icon:SetPoint("TOPLEFT", 2, -2)
-        icon:SetPoint("BOTTOMRIGHT", -2, 2)
-        
-        -- Set texture with fallback
-        local texture = item.icon or "Interface/Icons/INV_Misc_QuestionMark"
-        icon:SetTexture(texture)
-        
-        -- Store references
-        button.icon = icon
-        button.texturePath = texture
-        
-        -- Force texture to stay in memory
-        icon:SetAlpha(1)
-        icon:Show()
-        
-        -- Configurar tooltip
-        button:SetScript("OnEnter", function(self)
-            -- Make sure the icon is visible
-            if self.icon then
-                self.icon:SetAlpha(1)
-                self.icon:Show()
-            end
-            
-            GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:SetText(item.name, 1, 1, 1, 1, true)
-            GameTooltip:Show()
-        end)
-        
-        button:SetScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-        
-        -- Configurar acción del botón
         -- Configurar acción del botón
         button:SetScript("OnClick", function(self, buttonName)
             local mm = RaidDominion.modules and RaidDominion.modules.messageManager
@@ -503,38 +498,43 @@ function mainFrame:CreateActionBar()
                     return
                 end
                 if item.name == "Configuración" then
-                    local cm = RaidDominion.ui and RaidDominion.ui.configManager
-                    if cm then
-                        if cm.frame and cm.frame:IsShown() then
-                            -- Si la ventana de configuración ya está abierta, la ocultamos
-                            cm:Hide()
-                        else
-                            -- Si está cerrada, la mostramos y seleccionamos la pestaña adecuada
-                            if cm.Show and cm.SelectTab then
-                                cm:Show()
-                                local currentMenu = RaidDominion.UI and RaidDominion.UI.DynamicMenus and RaidDominion.UI.DynamicMenus.currentMenu
-                                local targetId = "general"  -- Valor por defecto
-                                
-                                -- Determinar qué pestaña mostrar basado en el menú actual
-                                if currentMenu == "roles" then
-                                    targetId = "roles"
-                                elseif currentMenu == "buffs" then
-                                    targetId = "buffs"
-                                elseif currentMenu == "abilities" then
-                                    targetId = "abilities"
-                                elseif currentMenu == "auras" then
-                                    targetId = "auras"
-                                end
-                                
-                                -- Seleccionar la pestaña correspondiente
-                                if cm.SelectTabById then
-                                    cm:SelectTabById(targetId)
-                                else
-                                    cm:SelectTab(1)  -- Pestaña General por defecto
-                                end
-                            end
-                        end
+                    -- Intentar obtener el gestor de configuración desde el espacio ui o raíz
+                    local cm = (RaidDominion.ui and RaidDominion.ui.configManager) or RaidDominion.configManager
+                    if not cm then return end
+                    
+                    -- Si la ventana ya está visible, simplemente alternar (ocultar)
+                    if cm.frame and cm.frame:IsShown() and cm.Hide then
+                        cm:Hide()
+                        return
                     end
+                    
+                    -- Si está cerrada, mostrarla y seleccionar la pestaña adecuada
+                    if cm.Show then
+                        cm:Show()
+                    elseif cm.Toggle then
+                        cm:Toggle()
+                    end
+                    
+                    -- Seleccionar pestaña según el menú actual si la API lo permite
+                    local currentMenu = RaidDominion.UI and RaidDominion.UI.DynamicMenus and RaidDominion.UI.DynamicMenus.currentMenu
+                    local targetId = "general"  -- Valor por defecto
+                    
+                    if currentMenu == "roles" then
+                        targetId = "roles"
+                    elseif currentMenu == "buffs" then
+                        targetId = "buffs"
+                    elseif currentMenu == "abilities" then
+                        targetId = "abilities"
+                    elseif currentMenu == "auras" then
+                        targetId = "auras"
+                    end
+                    
+                    if cm.SelectTabById then
+                        cm:SelectTabById(targetId)
+                    elseif cm.SelectTab then
+                        cm:SelectTab(1)  -- Pestaña General por defecto
+                    end
+                    
                     return
                 end
                 if RaidDominion.MenuActions and RaidDominion.MenuActions.Execute and item.action then
