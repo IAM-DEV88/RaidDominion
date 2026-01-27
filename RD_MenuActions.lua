@@ -478,6 +478,35 @@ end
             }
         end
 
+        -- Registrar diálogo para el sorteo de hermandad
+        if not StaticPopupDialogs["CONFIRM_GUILD_BANK_ITEM"] then
+            local CONST = RD.constants.GUILD_LOTTERY
+            StaticPopupDialogs["CONFIRM_GUILD_BANK_ITEM"] = {
+                text = CONST.DIALOG.TITLE,
+                button1 = CONST.DIALOG.BUTTONS.YES,
+                button2 = CONST.DIALOG.BUTTONS.NO,
+                button3 = CONST.DIALOG.BUTTONS.CHOOSE_ANOTHER,
+                OnAccept = function(self)
+                    if self.data and self.data.OnAccept then
+                        self.data.OnAccept()
+                    end
+                end,
+                OnCancel = function(self)
+                    if self.data and self.data.OnCancel then
+                        self.data.OnCancel()
+                    end
+                end,
+                OnAlt = function(self)
+                    if self.data and self.data.OnAlt then
+                        self.data.OnAlt()
+                    end
+                end,
+                timeout = CONST.DIALOG.TIMEOUT,
+                whileDead = 1,
+                hideOnEscape = 1,
+                preferredIndex = CONST.DIALOG.PREFERRED_INDEX,
+            }
+        end
     
     -- Función generadora para abrir menús
     local function OpenMenuAction(menuType)

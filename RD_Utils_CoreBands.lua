@@ -150,21 +150,6 @@ local function GetSpecFromTalents(unit)
     return abbr, specIndex, class
 end
 
--- Función para obtener el rol sugerido basado en clase y especialización
-local function GetRoleFromSpec(class, specIndex)
-    if not class or not specIndex then return nil end
-    
-    if class == "WARRIOR" and specIndex == 3 then return "Tank"
-    elseif class == "PALADIN" and specIndex == 2 then return "Tank"
-    elseif class == "PALADIN" and specIndex == 1 then return "Healer"
-    elseif class == "DRUID" and specIndex == 2 then return "Tank"
-    elseif class == "DRUID" and specIndex == 3 then return "Healer"
-    elseif class == "DEATHKNIGHT" and specIndex == 1 then return "Tank"
-    elseif class == "PRIEST" and (specIndex == 1 or specIndex == 2) then return "Healer"
-    elseif class == "SHAMAN" and specIndex == 3 then return "Healer"
-    else return "DPS" end
-end
-
 -- Función auxiliar para limpiar nombres (eliminar reino y normalizar a minúsculas para comparaciones)
 -- Caché interna para CleanName para evitar procesamiento de strings repetitivo
 local cleanNameCache = {}
@@ -400,17 +385,11 @@ local function UpdateGuildOnlineCache(force)
         isUpdatingGuild = true
         isInternalGuildUpdate = true
         
-        -- Guardar estado actual de mostrar desconectados
-        local wasShowingOffline = GetGuildRosterShowOffline()
-        if not wasShowingOffline then
-            SetGuildRosterShowOffline(true)
-        end
-        
         -- Usar tablas temporales para evitar parpadeo
         local tempOnlineCache = {}
         local tempFullCache = {}
         
-        local numMembers = GetNumGuildMembers()
+        local numMembers = GetNumGuildMembers(true)
         local chunkCount = 0
         local chunkSize = 100 -- Procesar 100 miembros por frame (más rápido que 40)
         
@@ -441,11 +420,6 @@ local function UpdateGuildOnlineCache(force)
                     coroutine.yield()
                 end
             end
-        end
-        
-        -- Restaurar el estado original
-        if not wasShowingOffline then
-            SetGuildRosterShowOffline(false)
         end
         
         -- Swap de caches
@@ -965,7 +939,7 @@ local function getOrCreateInvitePopup(bandIndex)
                 
                 -- 1. Hermandad
                 if IsInGuild() then
-                    for i = 1, GetNumGuildMembers() do
+                    for i = 1, GetNumGuildMembers(true) do
                         local name = GetGuildRosterInfo(i)
                         if name then
                             name = name:match("([^%-]+)")
@@ -1426,21 +1400,13 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
 
                         -- Si no tenemos índice o el que teníamos no era válido, buscamos en toda la hermandad
                         if not guildIdx then
-                            local wasShowingOffline = GetGuildRosterShowOffline()
-                            SetGuildRosterShowOffline(true)
-                            
-                            for i = 1, GetNumGuildMembers() do
+                            for i = 1, GetNumGuildMembers(true) do
                                 local nameCheck = GetGuildRosterInfo(i)
                                 if nameCheck and CleanName(nameCheck) == cleanName then
                                     guildIdx = i
                                     playerEditFrame.guildIndex = i
                                     break
                                 end
-                            end
-                            
-                            -- Restaurar estado original si era necesario
-                            if not wasShowingOffline then
-                                SetGuildRosterShowOffline(false)
                             end
                         end
 
@@ -1988,17 +1954,6 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                 local specAbbr, specIndex, class = GetSpecFromTalents(unit)
                 if specAbbr then
                     member.specAbbr = specAbbr
-                    
-                    -- Auto-asignar roles por talentos si es "nuevo" o "otro"
-                    if role == "nuevo" or role == "otro" then
-                        local roleToAssign = GetRoleFromSpec(class, specIndex)
-
-                        if roleToAssign == "Tank" or roleToAssign == "Healer" then
-                            member.role = roleToAssign
-                        elseif roleToAssign == "DPS" and isGuildMember then
-                            member.role = roleToAssign
-                        end
-                    end
                 else
                     -- Si no hay talentos, encolar para inspección al vuelo
                     QueueInspect(unit)
@@ -2082,12 +2037,7 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                          local specAbbr, specIndex, class = GetSpecFromTalents(rData.unit)
                          if specAbbr then
                              member.specAbbr = specAbbr
-                             local roleToAssign = GetRoleFromSpec(class, specIndex)
-                             if roleToAssign then
-                                 -- En el re-escaneo manual, siempre actualizamos si se detecta algo claro
-                                 member.role = roleToAssign
-                                 count = count + 1
-                             end
+                             count = count + 1
                          else
                              -- Si no detectamos talentos al darle clic manual, forzamos inspección
                              QueueInspect(rData.unit)
@@ -2255,40 +2205,17 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                                         spec = newSpec
                                         if memberData then memberData.specAbbr = spec end
                                         
-                                        -- Auto-asignar roles por talentos
-                                         local roleToAssign = GetRoleFromSpec(class, specIndex)
-
-                                        -- Aplicar el cambio de rol si es diferente al actual
-                                        local roleChanged = false
-                                        if roleToAssign then
-                                            -- Reglas de asignación: Tank/Healer siempre, DPS solo si es Guild
-                                            if roleToAssign == "Tank" or roleToAssign == "Healer" then
-                                                if memberData and memberData.role ~= roleToAssign then
-                                                    memberData.role = roleToAssign
-                                                    roleChanged = true
-                                                end
-                                            elseif roleToAssign == "DPS" and isGuildMember then
-                                                if memberData and memberData.role ~= roleToAssign then
-                                                    memberData.role = roleToAssign
-                                                    roleChanged = true
-                                                end
-                                            end
-                                        end
-
                                         -- Actualizar en el coreData persistente
                                         local coreData = EnsureCoreData()
                                         local b = coreData[self.bandIndex]
                                         local m = b and b.members and b.members[self.memberIndex]
                                         if m then 
                                             m.specAbbr = spec 
-                                            if roleChanged then m.role = memberData.role end
                                         end
                                         
-                                        -- Si el rol ha cambiado, forzar un refresco total de la ventana
-                                        if roleChanged then
-                                            RD.utils.coreBands.ShowCoreBandsWindow()
-                                            return
-                                        end
+                                        -- Forzar refresco de la UI para mostrar la nueva spec
+                                        RD.utils.coreBands.ShowCoreBandsWindow()
+                                        return
                                     end
                             else
                                 -- En 3.3.5, si no tenemos talentos, añadir a la cola de inspección
@@ -2666,12 +2593,11 @@ function coreBandsUtils.ShowCoreBandsWindow()
 
             -- Función de ejecución de actualización
             local function executeUpdate()
-                SetGuildRosterShowOffline(false) -- Solo online como base
                 UpdateGuildOnlineCache(true)
                 
                 local totalAdded = 0
                 local totalCleaned = 0
-                local numGuildMembers = GetNumGuildMembers()
+                local numGuildMembers = GetNumGuildMembers(true)
                 
                 -- Primero: Limpiar desconectados sin rol asignado de todas las bandas
                 for bIdx, band in ipairs(coreData) do

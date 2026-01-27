@@ -84,7 +84,7 @@ local function GetPlayerClassData(playerName)
 
     -- 2. Intentar obtener del roster de hermandad
     if IsInGuild() then
-        for i = 1, GetNumGuildMembers() do
+        for i = 1, GetNumGuildMembers(true) do
             local name, _, _, _, _, _, _, _, _, _, classFileName = GetGuildRosterInfo(i)
             if name and CleanName(name) == cleanName then
                 return classFileName
@@ -207,7 +207,7 @@ local function getOrCreateInvitePopup()
                 
                 -- 1. Hermandad
                 if IsInGuild() then
-                    for i = 1, GetNumGuildMembers() do
+                    for i = 1, GetNumGuildMembers(true) do
                         local name = GetGuildRosterInfo(i)
                         if name then
                             name = name:match("([^%-]+)")
@@ -322,7 +322,7 @@ function recognitionUtils.ShowPlayerSearchPopup()
                 local seen = {}
                 
                 if IsInGuild() then
-                    for i = 1, GetNumGuildMembers() do
+                    for i = 1, GetNumGuildMembers(true) do
                         local name = GetGuildRosterInfo(i)
                         if name then
                             name = name:match("([^%-]+)")
