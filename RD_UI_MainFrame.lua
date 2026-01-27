@@ -113,6 +113,7 @@ function mainFrame:Create()
     
     -- Crear el marco
     self.frame = CreateFrame("Frame", "RaidDominionMainFrame", UIParent)
+    self.frame:SetToplevel(true)
     
     -- Configurar el marco
     self.frame:SetSize(100, 50)  -- Tamaño inicial, se ajustará más adelante

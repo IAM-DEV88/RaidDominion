@@ -1078,9 +1078,9 @@ function ConfigManager:CreateWindow()
     
     -- Create the main frame
     local frame = CreateFrame("Frame", "RaidDominionConfig", UIParent)
-    frame:SetSize(510, 360)  -- Reducido de 450 a 360 píxeles de altura
-    frame:SetPoint("CENTER")
     frame:SetFrameStrata("MEDIUM")
+    frame:SetToplevel(true)
+    frame:SetSize(510, 360)  -- Reducido de 450 a 360 píxeles de altura
     frame:SetClampedToScreen(true)  -- Evita que la ventana se salga de la pantalla
     frame:SetMovable(true)
     frame:EnableMouse(true)

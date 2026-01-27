@@ -162,6 +162,7 @@ local function getOrCreateInvitePopup()
     if not invitePopup then
         invitePopup = CreateFrame("Frame", "RaidDominionRecognitionInvitePopup", UIParent)
         invitePopup:SetFrameStrata("DIALOG")
+        invitePopup:SetToplevel(true)
         invitePopup:SetSize(270, 150)
         invitePopup:SetPoint("CENTER")
         invitePopup:SetBackdrop({
@@ -279,6 +280,7 @@ function recognitionUtils.ShowPlayerSearchPopup()
     if not p then
         p = CreateFrame("Frame", "RaidDominionPlayerSearchPopup", UIParent)
         p:SetFrameStrata("DIALOG")
+        p:SetToplevel(true)
         p:SetSize(270, 150)
         p:SetPoint("CENTER")
         p:SetBackdrop({
@@ -827,6 +829,7 @@ function recognitionUtils.getOrCreateRecognitionFrame()
         f:SetSize(300, 250)
         f:SetPoint("CENTER")
         f:SetFrameStrata("DIALOG")
+        f:SetToplevel(true)
         f:SetBackdrop({
             bgFile = "Interface/Tooltips/UI-Tooltip-Background",
             edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
@@ -941,6 +944,8 @@ function recognitionUtils.ShowRecognitionWindow()
     local f = _G["RaidDominionRecognitionFrame"]
     if not f then
         f = CreateFrame("Frame", "RaidDominionRecognitionFrame", UIParent)
+        f:SetFrameStrata("MEDIUM")
+        f:SetToplevel(true)
         f:SetSize(790, 440)
         f:SetPoint("CENTER", 0, 0)
         f:SetBackdrop({

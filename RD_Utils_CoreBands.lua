@@ -669,6 +669,7 @@ local function getOrCreateBandFrame()
     if not createFrame then
         createFrame = CreateFrame("Frame", "RaidDominionCreateBandFrame", UIParent)
         createFrame:SetFrameStrata("DIALOG") -- Asegurar que esté encima
+        createFrame:SetToplevel(true)
         createFrame:SetSize(380, 250)
         createFrame:SetPoint("CENTER")
         createFrame:SetBackdrop({
@@ -887,6 +888,7 @@ local function getOrCreateInvitePopup(bandIndex)
     if not invitePopup then
         invitePopup = CreateFrame("Frame", "RaidDominionInvitePopup", UIParent)
         invitePopup:SetFrameStrata("DIALOG")
+        invitePopup:SetToplevel(true)
         invitePopup:SetSize(270, 150)
         invitePopup:SetPoint("CENTER")
         invitePopup:SetBackdrop({
@@ -1042,6 +1044,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
     if not playerEditFrame then
         playerEditFrame = CreateFrame("Frame", "RaidDominionPlayerEditFrame", UIParent)
         playerEditFrame:SetFrameStrata("DIALOG")
+        playerEditFrame:SetToplevel(true)
         playerEditFrame:SetSize(350, 420) -- Aumentado para acomodar nota oficial y padding
         playerEditFrame:SetPoint("CENTER")
         playerEditFrame:SetBackdrop({
@@ -1535,6 +1538,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
     
     -- Cargar datos del jugador si se proporcionan
     if playerData then
+        -- Reiniciar campos de datos
+        playerEditFrame.selectedRole = ""
+        playerEditFrame.targetBandIndex = nil
+        playerEditFrame.guildIndex = nil
+        playerEditFrame.playerClass = ""
+        
         -- Reinicializar menús para asegurar datos actualizados
         UIDropDownMenu_Initialize(playerEditFrame.roleDropDown, function(self, level)
             local roleOptions = { "Tank", "Healer", "Dps", "Nuevo" }
@@ -1690,21 +1699,21 @@ end
 local activeMemberCards = {}
 
 -- Función pública para abrir el editor de jugador desde otros módulos
-function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode)
+function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode, isGearscoreMode)
     if not playerName then return end
     
     local cleanName = CleanName(playerName)
     local bandIndex, memberIndex
     local playerDataForSearch = nil
     
-    -- Si es modo búsqueda, intentamos encontrar al jugador para cargar su estado de sanción actual
-    if isSearchMode then
+    -- Si es modo búsqueda o gearscore, intentamos encontrar al jugador para cargar su estado de sanción actual
+    if isSearchMode or isGearscoreMode then
         local coreData = EnsureCoreData()
         for _, band in ipairs(coreData) do
             if band.members then
                 for _, member in ipairs(band.members) do
                     if member.name and CleanName(member.name) == cleanName then
-                        -- Solo nos interesa el estado de sanción para el modo búsqueda
+                        -- Solo nos interesa el estado de sanción para el modo búsqueda/gearscore
                         playerDataForSearch = {
                             name = member.name,
                             isSanctioned = member.isSanctioned,
@@ -1733,21 +1742,26 @@ function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode)
         end
     end
     
-    local editFrame = coreBandsUtils.GetOrCreatePlayerEditFrame(playerDataForSearch or {name = playerName})
+    -- Reiniciar el frame antes de configurarlo
+    local editFrame = _G["RaidDominionPlayerEditFrame"]
+    if editFrame then
+        editFrame.context = nil
+        editFrame.isSearchMode = false
+    end
+
+    editFrame = coreBandsUtils.GetOrCreatePlayerEditFrame(playerDataForSearch or {name = playerName}, isGearscoreMode)
     if editFrame then
         -- Establecer el modo búsqueda
         editFrame.isSearchMode = isSearchMode
         
-        -- Si se encontró en el Core (y no estamos en modo búsqueda), actualizar el contexto
-        if bandIndex and memberIndex then
+        -- Si se encontró en el Core (y no estamos en modo búsqueda/gearscore), actualizar el contexto
+        if not (isSearchMode or isGearscoreMode) and bandIndex and memberIndex then
             editFrame.context = { bandIndex = bandIndex, memberIndex = memberIndex }
-        else
-            editFrame.context = nil
         end
         
         -- Volver a cargar los datos con el contexto y modo ya establecidos
         -- Esto asegura que isSanctionedCheck y otros controles se actualicen correctamente
-        coreBandsUtils.GetOrCreatePlayerEditFrame(playerDataForSearch or {name = playerName}) 
+        coreBandsUtils.GetOrCreatePlayerEditFrame(playerDataForSearch or {name = playerName}, isGearscoreMode) 
         editFrame:Show()
     end
 end
@@ -2365,15 +2379,10 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                 InviteUnit(self.playerName)
                 SendChatMessage(string.format("[RaidDominion] Invitado a %s.", band.name or "Core"), "WHISPER", nil, self.playerName)
             else
-                -- Limpiar el contexto antes de abrir para asegurar carga fresca
-                local editFrame = coreBandsUtils.GetOrCreatePlayerEditFrame()
-                editFrame.isSearchMode = false -- Resetear modo búsqueda
-                editFrame.context = nil
-                editFrame.context = { bandIndex = self.bandIndex, memberIndex = self.memberIndex }
-                
-                -- Volver a llamar a coreBandsUtils.GetOrCreatePlayerEditFrame con los datos del jugador
-                coreBandsUtils.GetOrCreatePlayerEditFrame({name = self.playerName})
-                editFrame:Show()
+                -- Usar la función pública centralizada para evitar problemas de contexto
+                if RD.utils.coreBands and RD.utils.coreBands.OpenPlayerEditFrame then
+                    RD.utils.coreBands.OpenPlayerEditFrame(self.playerName)
+                end
             end
         end)
     end
@@ -2508,6 +2517,8 @@ function coreBandsUtils.ShowCoreBandsWindow()
     local f3 = _G["RaidDominionCoreListFrame"]
     if not f3 then
         f3 = CreateFrame("Frame", "RaidDominionCoreListFrame", UIParent)
+        f3:SetFrameStrata("MEDIUM")
+        f3:SetToplevel(true)
         f3:SetSize(790, 440) -- Aumentado de 590 a 790 (200px extra para soportar member cards de +50px en 4 columnas)
         f3:SetPoint("TOP", 0, -100)
         f3:SetBackdrop({

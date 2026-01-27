@@ -147,13 +147,8 @@ local function CreateGSMemberCard(parent, member, xOffset, yOffset, category)
     card:SetScript("OnClick", function(self, button)
         if button == "LeftButton" then
             -- Abrir el editor de jugador de CoreBands en modo Gearscore
-            if coreBandsUtils and coreBandsUtils.GetOrCreatePlayerEditFrame then
-                -- Pasar el índice de hermandad para asegurar que la nota se guarde correctamente
-                local editFrame = coreBandsUtils.GetOrCreatePlayerEditFrame({
-                    name = member.name,
-                    index = member.index
-                }, true)
-                editFrame:Show()
+            if RD.utils.coreBands and RD.utils.coreBands.OpenPlayerEditFrame then
+                RD.utils.coreBands.OpenPlayerEditFrame(member.name, false, true)
             end
         elseif button == "RightButton" then
             -- Menú contextual opcional o invitar
@@ -256,6 +251,8 @@ function gearscoreUtils.ToggleGearscoreWindows(forceShow)
     -- Crear ventana principal si no existe
     if not f then
         f = CreateFrame("Frame", "RaidDominionGearscoreFrame", UIParent)
+        f:SetFrameStrata("MEDIUM")
+        f:SetToplevel(true)
         f:SetSize(790, 440) -- Mismo tamaño que Core
         f:SetPoint("CENTER", 0, 0)
         f:SetBackdrop({
