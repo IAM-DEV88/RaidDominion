@@ -167,9 +167,27 @@ local function DetectLeftPlayers()
     
     -- Procesar jugadores que abandonaron
     for _, nombre in ipairs(jugadoresQueAbandonaron) do
-        groupUtils:ResetPlayerAssignments(nombre)
+        local memberData = previousGroupMembers[nombre]
+        local class = memberData and memberData.class or "Unknown"
+        local roles = ""
+        local resetInfo = nil
+        
+        -- Obtener roles antes de resetear
+        if RD.roleManager and RD.roleManager.GetRole then
+            roles = RD.roleManager:GetRole(nombre) or ""
+        end
+        
+        if groupUtils.ResetPlayerAssignments then
+            _, resetInfo = groupUtils:ResetPlayerAssignments(nombre)
+        end
+        
         if RD.events and RD.events.Publish then
-            RD.events:Publish("PLAYER_LEFT_GROUP", {playerName = nombre})
+            RD.events:Publish("PLAYER_LEFT_GROUP", {
+                playerName = nombre, 
+                class = class, 
+                roles = roles,
+                resetInfo = resetInfo
+            })
         end
     end
     
@@ -178,12 +196,6 @@ local function DetectLeftPlayers()
         if RD.UI and RD.UI.DynamicMenus and RD.UI.DynamicMenus.UpdateAllMenus then
             RD.UI.DynamicMenus:UpdateAllMenus()
         end
-    end
-    
-    -- Actualizar el registro de miembros anteriores
-    previousGroupMembers = {}
-    for nombre, _ in pairs(currentMembers) do
-        previousGroupMembers[nombre] = true
     end
 end
 
@@ -989,8 +1001,8 @@ function groupUtils:UpdateGroupCache(forceUpdate)
             local baseName = GetBasePlayerName(playerName)
             local playerClass = playerClasses[playerName] or "Desconocida" -- Get player's class
             
-            -- Send system message when player leaves
-            SendSystemMessage(string.format("RaidDominion: %s (%s) ha abandonado el grupo.", baseName or playerName, playerClass))
+            -- Send system message when player leaves (Removed to avoid duplication with PLAYER_LEFT_GROUP event)
+            -- SendSystemMessage(string.format("RaidDominion: %s (%s) ha abandonado el grupo.", baseName or playerName, playerClass))
             
             -- Reset all assignments for the player who left
             local rolesReset = self:ResetPlayerRoles(playerName)
@@ -1006,19 +1018,19 @@ function groupUtils:UpdateGroupCache(forceUpdate)
                 aurasReset = self:ResetPlayerAuras(baseName) or aurasReset
             end
             
-            -- Send system message with reset information
+            -- Send system message with reset information (Removed to avoid duplication)
             if rolesReset or buffsReset or abilitiesReset or aurasReset then
                 anyChanges = true
-                local resetMessages = {}
-                if rolesReset then table.insert(resetMessages, "roles") end
-                if buffsReset then table.insert(resetMessages, "buffs") end
-                if abilitiesReset then table.insert(resetMessages, "habilidades") end
-                if aurasReset then table.insert(resetMessages, "auras") end
+                -- local resetMessages = {}
+                -- if rolesReset then table.insert(resetMessages, "roles") end
+                -- if buffsReset then table.insert(resetMessages, "buffs") end
+                -- if abilitiesReset then table.insert(resetMessages, "habilidades") end
+                -- if aurasReset then table.insert(resetMessages, "auras") end
                 
-                if #resetMessages > 0 then
-                    SendSystemMessage(string.format("RaidDominion: Asignaciones reiniciadas para %s: %s", 
-                        baseName or playerName, table.concat(resetMessages, ", ")))
-                end
+                -- if #resetMessages > 0 then
+                --     SendSystemMessage(string.format("RaidDominion: Asignaciones reiniciadas para %s: %s", 
+                --         baseName or playerName, table.concat(resetMessages, ", ")))
+                -- end
             end
             
             -- Force UI update
@@ -1104,11 +1116,12 @@ function groupUtils:ResetPlayerAssignments(playerName)
     -- Function to clean assignments from a category
     local function cleanAssignments(category)
         if not RaidDominionDB.assignments[category] then 
-            return 0 
+            return 0, {} 
         end
         
         local count = 0
         local toRemove = {}
+        local names = {}
         
         -- Find all assignments for this player
         for key, value in pairs(RaidDominionDB.assignments[category]) do
@@ -1121,6 +1134,7 @@ function groupUtils:ResetPlayerAssignments(playerName)
             local cleanName = tostring(assignedTo):gsub("%-", "")
             if cleanName == playerName then
                 table.insert(toRemove, key)
+                table.insert(names, key) -- key is usually the spell name or role name
                 count = count + 1
             end
         end
@@ -1128,29 +1142,52 @@ function groupUtils:ResetPlayerAssignments(playerName)
         -- Remove found assignments
         for _, key in ipairs(toRemove) do
             RaidDominionDB.assignments[category][key] = nil
-            -- Assignment removed
         end
         
-        return count
+        return count, names
     end
     
     -- Clean assignments from all categories
-    local totalRemoved = 0
+    local results = {
+        roles = 0,
+        buffs = 0,
+        auras = 0,
+        abilities = 0,
+        totalRemoved = 0,
+        names = {
+            roles = {},
+            buffs = {},
+            auras = {},
+            abilities = {}
+        }
+    }
+    
     -- Cleaning role assignments
-    totalRemoved = totalRemoved + cleanAssignments("roles")
+    results.roles, results.names.roles = cleanAssignments("roles")
     -- Cleaning buff assignments
-    totalRemoved = totalRemoved + cleanAssignments("buffs")
+    results.buffs, results.names.buffs = cleanAssignments("buffs")
     -- Cleaning aura assignments
-    totalRemoved = totalRemoved + cleanAssignments("auras")
+    results.auras, results.names.auras = cleanAssignments("auras")
     -- Cleaning ability assignments
-    totalRemoved = totalRemoved + cleanAssignments("abilities")
+    results.abilities, results.names.abilities = cleanAssignments("abilities")
+    
+    results.totalRemoved = results.roles + results.buffs + results.auras + results.abilities
+    
+    -- Reset selection cache as well
+    local selectionsReset = false
+    if self.ResetPlayerRoles then selectionsReset = self:ResetPlayerRoles(playerName) or selectionsReset end
+    if self.ResetPlayerBuffs then selectionsReset = self:ResetPlayerBuffs(playerName) or selectionsReset end
+    if self.ResetPlayerAbilities then selectionsReset = self:ResetPlayerAbilities(playerName) or selectionsReset end
+    if self.ResetPlayerAuras then selectionsReset = self:ResetPlayerAuras(playerName) or selectionsReset end
     
     -- Assignments cleanup complete
     
     -- Notify the UI to update
     if RD.events and RD.events.Publish then
         -- Publishing assignments update
-        RD.events:Publish("ASSIGNMENTS_UPDATED")
+        if results.totalRemoved > 0 or selectionsReset then
+            RD.events:Publish("ASSIGNMENTS_UPDATED")
+        end
         
         -- Also trigger a full UI update
         if RD.UI and RD.UI.DynamicMenus and RD.UI.DynamicMenus.UpdateAllMenus then
@@ -1158,7 +1195,7 @@ function groupUtils:ResetPlayerAssignments(playerName)
         end
     end
     
-    return totalRemoved > 0
+    return results.totalRemoved > 0, results
 end
 
 --[[

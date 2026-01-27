@@ -2256,6 +2256,24 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                     if spec then
                         displayName = string.format("%s (|cff00ff00%s|r)", capitalizedName, spec) -- Color VERDE para que sea evidente
                     end
+                    
+                    -- Mostrar ubicación entre paréntesis solo para el grupo 'hermandad'
+                    if self.roleGroup == "hermandad" and guildData and guildData.online and guildData.zone and guildData.zone ~= "" then
+                        -- Truncar ubicación a 12 caracteres con ellipsis
+                        local zone = guildData.zone
+                        if #zone > 9 then
+                            zone = string.sub(zone, 1, 9) .. "..."
+                        end
+                        
+                        if spec then
+                            -- Si ya hay spec, agregar ubicación después con paréntesis grises
+                            displayName = string.format("%s |cffaaaaaa(%s)|r", displayName, zone)
+                        else
+                            -- Si no hay spec, mostrar solo ubicación con paréntesis grises
+                            displayName = string.format("%s |cffaaaaaa(%s)|r", capitalizedName, zone)
+                        end
+                    end
+                    
                     self.memberText:SetText(displayName)
                     self.memberText:SetTextColor(nameColor.r, nameColor.g, nameColor.b) 
                 end

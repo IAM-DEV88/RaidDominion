@@ -904,9 +904,65 @@ function messageManager:Initialize()
     -- Inicializar tablas necesarias
     self.pendingWelcomes = {}
     self.welcomeTimers = {}
+    self.lastLeftMessages = {} -- Caché para evitar mensajes duplicados de salida
     
     -- Inicializar el sistema de eventos
     self:InitializeEventHandlers()
+    
+    -- Suscribirse a eventos de grupo
+    if events and events.Subscribe then
+        events:Subscribe("PLAYER_LEFT_GROUP", function(data)
+            if data and data.playerName then
+                -- De-duplicación: no mostrar el mismo mensaje para el mismo jugador en 2 segundos
+                local now = GetTime()
+                if self.lastLeftMessages[data.playerName] and (now - self.lastLeftMessages[data.playerName]) < 2 then
+                    return
+                end
+                self.lastLeftMessages[data.playerName] = now
+
+                local className = data.class or "Desconocida"
+                local roles = data.roles or ""
+                local resetInfo = data.resetInfo
+                
+                -- Obtener color de clase si es posible
+                local classColor = "|cffffffff" -- Blanco por defecto
+                if data.class then
+                    local englishClass = RaidDominion.constants.CLASS_ENGLISH_MAP and RaidDominion.constants.CLASS_ENGLISH_MAP[data.class:upper()] or data.class:upper()
+                    if _G.RAID_CLASS_COLORS and _G.RAID_CLASS_COLORS[englishClass] then
+                        local color = _G.RAID_CLASS_COLORS[englishClass]
+                        classColor = string.format("|cff%02x%02x%02x", color.r*255, color.g*255, color.b*255)
+                    end
+                end
+                
+                local msg = string.format("|cffff0000[RaidDominion]|r El jugador %s%s|r (|cffaaaaaa%s|r) ha abandonado el grupo.", classColor, data.playerName, className)
+                
+                local details = {}
+                if roles ~= "" then
+                    table.insert(details, string.format("roles: |cffffff00%s|r", roles))
+                end
+                
+                if resetInfo and resetInfo.names then
+                    if resetInfo.names.buffs and #resetInfo.names.buffs > 0 then
+                        table.insert(details, string.format("buffs: |cffffff00%s|r", table.concat(resetInfo.names.buffs, ", ")))
+                    end
+                    if resetInfo.names.auras and #resetInfo.names.auras > 0 then
+                        table.insert(details, string.format("auras: |cffffff00%s|r", table.concat(resetInfo.names.auras, ", ")))
+                    end
+                    if resetInfo.names.abilities and #resetInfo.names.abilities > 0 then
+                        table.insert(details, string.format("habilidades: |cffffff00%s|r", table.concat(resetInfo.names.abilities, ", ")))
+                    end
+                end
+                
+                if #details > 0 then
+                    msg = msg .. " Se han liberado: " .. table.concat(details, ", ")
+                end
+                
+                if DEFAULT_CHAT_FRAME then
+                    DEFAULT_CHAT_FRAME:AddMessage(msg)
+                end
+            end
+        end)
+    end
     
     return true
 end

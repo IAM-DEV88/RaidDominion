@@ -730,6 +730,22 @@ cfg_data = {
         RAID = 2,
         BATTLEGROUND = 3
     },
+
+    -- Mapa de clases localizadas a inglés
+    CLASS_ENGLISH_MAP = {
+        ["GUERRERO"] = "WARRIOR", ["WARRIOR"] = "WARRIOR",
+        ["PALADÍN"] = "PALADIN", ["PALADIN"] = "PALADIN",
+        ["CAZADOR"] = "HUNTER", ["HUNTER"] = "HUNTER",
+        ["PÍCARO"] = "ROGUE", ["PICARO"] = "ROGUE", ["ROGUE"] = "ROGUE",
+        ["SACERDOTE"] = "PRIEST", ["PRIEST"] = "PRIEST",
+        ["CHAMÁN"] = "SHAMAN", ["CHAMAN"] = "SHAMAN", ["SHAMAN"] = "SHAMAN",
+        ["MAGO"] = "MAGE", ["MAGE"] = "MAGE",
+        ["BRUJO"] = "WARLOCK", ["WARLOCK"] = "WARLOCK",
+        ["MONJE"] = "MONK", ["MONK"] = "MONK",
+        ["DRUIDA"] = "DRUID", ["DRUID"] = "DRUID",
+        ["CABALLERO_DE_LA_MUERTE"] = "DEATHKNIGHT", ["DEATHKNIGHT"] = "DEATHKNIGHT",
+        ["CAZADOR_DE_DEMONIOS"] = "DEMONHUNTER", ["DEMONHUNTER"] = "DEMONHUNTER"
+    },
     
 }
 
