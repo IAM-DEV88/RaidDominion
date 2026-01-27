@@ -1699,13 +1699,28 @@ end
 local activeMemberCards = {}
 
 -- Función pública para abrir el editor de jugador desde otros módulos
-function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode, isGearscoreMode)
+function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode, isGearscoreMode, specificBandIndex)
     if not playerName then return end
     
     local cleanName = CleanName(playerName)
     local bandIndex, memberIndex
     local playerDataForSearch = nil
     
+    -- Si se proporciona una banda específica, buscar al jugador en esa banda primero
+    if specificBandIndex then
+        local coreData = EnsureCoreData()
+        local band = coreData[specificBandIndex]
+        if band and band.members then
+            for mIdx, member in ipairs(band.members) do
+                if member.name and CleanName(member.name) == cleanName then
+                    bandIndex = specificBandIndex
+                    memberIndex = mIdx
+                    break
+                end
+            end
+        end
+    end
+
     -- Si es modo búsqueda o gearscore, intentamos encontrar al jugador para cargar su estado de sanción actual
     if isSearchMode or isGearscoreMode then
         local coreData = EnsureCoreData()
@@ -1725,8 +1740,8 @@ function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode, isGear
             end
             if playerDataForSearch then break end
         end
-    else
-        -- Buscar al jugador en todas las bandas del Core para edición normal
+    elseif not bandIndex then
+        -- Buscar al jugador en todas las bandas del Core para edición normal si no se encontró en la específica
         local coreData = EnsureCoreData()
         for bIdx, band in ipairs(coreData) do
             if band.members then
@@ -2380,8 +2395,9 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                 SendChatMessage(string.format("[RaidDominion] Invitado a %s.", band.name or "Core"), "WHISPER", nil, self.playerName)
             else
                 -- Usar la función pública centralizada para evitar problemas de contexto
+                -- Pasamos el bandIndex para que sepa exactamente en qué banda buscar el rol
                 if RD.utils.coreBands and RD.utils.coreBands.OpenPlayerEditFrame then
-                    RD.utils.coreBands.OpenPlayerEditFrame(self.playerName)
+                    RD.utils.coreBands.OpenPlayerEditFrame(self.playerName, false, false, self.bandIndex)
                 end
             end
         end)
