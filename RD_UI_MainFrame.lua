@@ -779,6 +779,13 @@ function mainFrame:CreatePanels()
             menu:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, 0)
             menu:SetFrameStrata("MEDIUM")
             menu:SetFrameLevel(100)
+            
+            -- Ocultar el menú principal justo antes de mostrar el submenú
+            local parent = btn:GetParent()
+            if parent and parent.Hide then
+                parent:Hide()
+            end
+            
             menu:Show()
             if RaidDominion.MenuActions and RaidDominion.MenuActions.Execute then
                 pcall(function()
@@ -790,10 +797,6 @@ function mainFrame:CreatePanels()
                     })
                 end)
             end
-        end
-        local parent = btn:GetParent()
-        if parent and parent.Hide then
-            parent:Hide()
         end
         if not menu then
             local delayFrame = CreateFrame("Frame")
