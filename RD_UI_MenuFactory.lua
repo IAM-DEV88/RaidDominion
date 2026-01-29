@@ -133,11 +133,22 @@ function MenuFactory:CreateMenu(parent, items, yOffset, onClick, assignable, rol
         
         button:SetText(item.name or item)
         
-        -- Estilo de texto simple (sin texturas de botón)
-        button:SetNormalTexture("")
-        button:SetPushedTexture("")
-        button:SetDisabledTexture("")
+        -- Estilo de texto simple (usar texturas vacías o transparentes)
+        local emptyTexture = "Interface\\Buttons\\UI-Slot-Background"
+        button:SetNormalTexture(nil)
+        button:SetPushedTexture(nil)
+        button:SetDisabledTexture(nil)
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+        
+        -- Si estamos en combate, forzar la eliminación de texturas de plantilla
+        if InCombatLockdown() then
+            local n = button:GetNormalTexture()
+            if n then n:SetAlpha(0) end
+            local p = button:GetPushedTexture()
+            if p then p:SetAlpha(0) end
+            local d = button:GetDisabledTexture()
+            if d then d:SetAlpha(0) end
+        end
         if button:GetFontString() then
             button:GetFontString():SetTextColor(1, 1, 1, 1)
         end

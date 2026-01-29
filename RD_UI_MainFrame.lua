@@ -72,7 +72,8 @@ end
 -- Módulo del marco principal
 local mainFrame = {
     isShown = false,
-    panelsCreated = false
+    panelsCreated = false,
+    pendingCombatAction = nil
 }
 
 -- Inicialización de la tabla de instancia
@@ -207,25 +208,28 @@ function mainFrame:Create()
     
     -- Función para mostrar el menú principal
     local function ShowMainMenu()
-
+        -- Ya no bloqueamos por combate, solo manejamos los cambios de UI con cuidado
         
         -- Asegurarse de que el marco principal exista
         if not self.frame then
-
             return false
         end
         
         -- Guardar la posición actual del marco
         local point, relativeTo, relativePoint, xOfs, yOfs = self.frame:GetPoint(1)
-        local relativeToName = relativeTo and (relativeTo.GetName and relativeTo:GetName() or tostring(relativeTo))
         
         -- Limpiar paneles existentes
         if self.panelsCreated then
             for i = self.frame:GetNumChildren(), 1, -1 do
                 local child = select(i, self.frame:GetChildren())
                 if child ~= self.tabFrame and child ~= self.actionBar then
-                    child:Hide()
-                    child:SetParent(nil)
+                    -- Intentar ocultar solo si no causa bloqueo (los frames creados por nosotros no suelen ser protegidos)
+                    pcall(function()
+                        child:Hide()
+                        if not InCombatLockdown() then
+                            child:SetParent(nil)
+                        end
+                    end)
                 end
             end
             self.panelsCreated = false
@@ -254,12 +258,13 @@ function mainFrame:Create()
         end
         
         -- Asegurarse de que el marco esté visible
+    pcall(function() 
         self.frame:Show()
         self.frame:Raise()
-        
-
-        return true
-    end
+    end)
+    
+    return true
+end
     
     -- Almacenar la función para usarla desde fuera
     self.ShowMainMenu = ShowMainMenu
@@ -749,6 +754,8 @@ function mainFrame:CreatePanels()
             return
         end
         local function ShowMenu()
+            -- Ya no bloqueamos aquí para permitir la navegación fluida
+            
             if not menu then
                 if not RaidDominion.UI or not RaidDominion.UI.DynamicMenus then 
                     return 
@@ -782,11 +789,11 @@ function mainFrame:CreatePanels()
             
             -- Ocultar el menú principal justo antes de mostrar el submenú
             local parent = btn:GetParent()
-            if parent and parent.Hide then
-                parent:Hide()
+            if parent then
+                pcall(function() parent:Hide() end)
             end
             
-            menu:Show()
+            pcall(function() menu:Show() end)
             if RaidDominion.MenuActions and RaidDominion.MenuActions.Execute then
                 pcall(function()
                     return RaidDominion.MenuActions:Execute(actionName, { 
@@ -1024,9 +1031,11 @@ function mainFrame:Show(skipPosition)
     -- Asegurarse de que el marco esté visible en pantalla
     ensureOnScreen(self.frame)
     
-    -- Mostrar el marco
-    self.frame:Show()
-    self.isShown = true
+    -- Asegurarse de que el marco principal esté visible
+    pcall(function()
+        self.frame:Show()
+        self.isShown = true
+    end)
     
     -- Lanzar evento de interfaz mostrada
     RaidDominion.events:Publish("UI_SHOW")
@@ -1042,9 +1051,9 @@ function mainFrame:Show(skipPosition)
     end
     
     if self.container then
-        self.container:Show()
+        pcall(function() self.container:Show() end)
         -- Forzar una actualización del layout
-        self.container:GetParent():Show()
+        pcall(function() self.container:GetParent():Show() end)
     end
     
     -- Lanzar evento de actualización (usando Publish si está disponible)
@@ -1060,12 +1069,20 @@ function mainFrame:Show(skipPosition)
     end
     
     -- Asegurarse de que el marco esté en primer plano
-    self.frame:Raise()
+    pcall(function() self.frame:Raise() end)
     
-    -- Forzar actualización del frame
-    if self.frame:IsShown() then
-        self.frame:Hide()
-        self.frame:Show()
+    -- Re-aplicar backdrop si estamos en combate para evitar pérdida de formato
+    if InCombatLockdown() then
+        pcall(function()
+            self.frame:SetBackdrop({
+                bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+                edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                tile = true, tileSize = 16, edgeSize = 12,
+                insets = { left = 3, right = 3, top = 3, bottom = 3 }
+            })
+            self.frame:SetBackdropColor(0, 0, 0, 0.9)
+            self.frame:SetBackdropBorderColor(1, 1, 1, 0.5)
+        end)
     end
     
     -- Main frame shown
@@ -1123,6 +1140,15 @@ function mainFrame:OnInitialize()
     -- Registrar eventos
     events:Subscribe("GROUP_ROSTER_UPDATE", function(...) 
         self:OnEvent("GROUP_ROSTER_UPDATE", ...) 
+    end)
+    
+    -- Manejar salida de combate para acciones pendientes
+    events:Subscribe("PLAYER_REGEN_ENABLED", function()
+        if self.pendingCombatAction then
+            local action = self.pendingCombatAction
+            self.pendingCombatAction = nil
+            action()
+        end
     end)
     
     -- Crear el frame cuando la interfaz esté lista

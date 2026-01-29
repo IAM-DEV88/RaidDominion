@@ -685,7 +685,7 @@ end
 
         -- Procesar rangos
         if #rankNames >= 2 then
-            -- Combinar los dos primeros rangos (líder y oficiales)
+            -- Combinar los dos primeros rangos (líder y nivel admin)
             local rank1 = rankNames[1] or ""
             local rank2 = rankNames[2] or ""
             local count1 = rankCounts[rank1] or 0
@@ -696,7 +696,7 @@ end
                     table.insert(messages, string.format(
                         MSG.RANK_ENTRY, 
                         rank1, count1,
-                        "Organizadores de Hermandad"
+                        "Administrador de Hermandad"
                     ))
                 else
                     table.insert(messages, string.format(

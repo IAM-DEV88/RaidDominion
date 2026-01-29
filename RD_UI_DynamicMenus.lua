@@ -145,6 +145,9 @@ end
 
 -- Renderiza el menú dentro del MainFrame
 function DynamicMenus:Render(menuType)
+    -- Ya no bloqueamos por combate para permitir la navegación,
+    -- pero usamos pcall y verificaciones para evitar errores de protección.
+
     if not RD.ui or not RD.ui.mainFrame or not RD.ui.mainFrame.frame then
         return
     end
@@ -154,7 +157,7 @@ function DynamicMenus:Render(menuType)
     -- Ocultar el contenedor del menú principal si existe
     local mainContainer = _G["RaidDominionMainContainer"]
     if mainContainer then
-        mainContainer:Hide()
+        pcall(function() mainContainer:Hide() end)
     end
 
     -- Crear o recuperar el contenedor de menús dinámicos
@@ -162,6 +165,14 @@ function DynamicMenus:Render(menuType)
     if not container then
         container = CreateFrame("Frame", "RaidDominionDynamicMenuContainer", mainFrame)
     end
+    
+    -- Asegurar el parentesco incluso en combate
+    pcall(function() 
+        if container:GetParent() ~= mainFrame then
+            container:SetParent(mainFrame) 
+        end
+    end)
+    
     container:EnableMouse(true)
     container:RegisterForDrag("LeftButton")
     container:SetScript("OnDragStart", function()
@@ -187,21 +198,27 @@ function DynamicMenus:Render(menuType)
         DynamicMenus.currentMenu = nil
     end)
     
-    -- Asegurar que está adjunto al mainFrame (por si ShowMainMenu lo desvinculó)
-    container:SetParent(mainFrame)
     container:ClearAllPoints()
-    container:SetPoint("TOP", 0, -10)
-    container:Show()
+    container:SetPoint("TOP", mainFrame, "TOP", 0, -10)
+    container:SetPoint("LEFT", mainFrame, "LEFT", 10, 0)
+    container:SetPoint("RIGHT", mainFrame, "RIGHT", -10, 0)
+    pcall(function() container:Show() end)
 
     self.currentMenu = menuType
     local menuConfig = GetMenuConfig(menuType)
     if not menuConfig then return end
 
     -- Ocultar/Limpiar hijos actuales del contenedor dinámico
+    -- En lugar de destruir y recrear, intentaremos reutilizar o al menos ocultar bien
     local children = {container:GetChildren()}
     for _, child in ipairs(children) do
-        child:Hide()
-        child:SetParent(nil)
+        pcall(function()
+            child:Hide()
+            -- No desvinculamos en combate para evitar problemas de protección
+            if not InCombatLockdown() then
+                child:SetParent(nil)
+            end
+        end)
     end
 
     -- Obtener items habilitados
@@ -250,6 +267,10 @@ function DynamicMenus:Render(menuType)
     if #items > 1 and columns < 2 then
         columns = 2
     end
+    
+    -- Usar un contador para reutilizar frames si fuera posible, 
+    -- pero por ahora seguiremos creando nuevos si no podemos desvincular,
+    -- asegurándonos de que el formato se aplique correctamente.
     
     if #items == 0 then
         -- Envolver el mensaje en un Frame
@@ -448,18 +469,34 @@ function DynamicMenus:Render(menuType)
         local totalHeight = (math.min(totalRows, maxItemsPerColumn) * buttonHeight) + ((math.min(totalRows, maxItemsPerColumn) - 1) * buttonSpacing) + (padding * 2)
         local totalWidth = (buttonWidth * columns) + (buttonSpacing * (columns - 1)) + (padding * 2)
         
-        container:SetWidth(totalWidth)
-        container:SetHeight(totalHeight)
-        
-        local actionBarHeight = (RD.ui.mainFrame.actionBar and RD.ui.mainFrame.actionBar:GetHeight()) or 40
-        local framePadding = 12
-        local totalFrameHeight = totalHeight + actionBarHeight + (framePadding * 2)
-        
-        mainFrame:SetSize(totalWidth + (framePadding * 2), totalFrameHeight)
+        pcall(function()
+            container:SetWidth(totalWidth)
+            container:SetHeight(totalHeight)
+            
+            local actionBarHeight = (RD.ui.mainFrame.actionBar and RD.ui.mainFrame.actionBar:GetHeight()) or 40
+            local framePadding = 12
+            local totalFrameHeight = totalHeight + actionBarHeight + (framePadding * 2)
+            
+            mainFrame:SetSize(totalWidth + (framePadding * 2), totalFrameHeight)
+            
+            -- Re-aplicar backdrop del mainFrame para asegurar el formato en combate
+            if InCombatLockdown() then
+                mainFrame:SetBackdrop({
+                    bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+                    edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                    tile = true, tileSize = 16, edgeSize = 12,
+                    insets = { left = 3, right = 3, top = 3, bottom = 3 }
+                })
+                mainFrame:SetBackdropColor(0, 0, 0, 0.9)
+                mainFrame:SetBackdropBorderColor(1, 1, 1, 0.5)
+            end
+        end)
     end
     
-    container:Show()
-    mainFrame:Show()
+    pcall(function()
+        container:Show()
+        mainFrame:Show()
+    end)
 end
 
 -- Interfaz compatible con RD_MenuActions
