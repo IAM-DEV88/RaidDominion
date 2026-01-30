@@ -501,18 +501,7 @@ local function EnsureCoreData()
         _G.RaidDominionDB = {}
     end
     if not _G.RaidDominionDB.Core then
-        _G.RaidDominionDB.Core = {
-            { name = "Banda 1", minGS = 5000, schedule = "Lunes y Miércoles 20:00", members = {
-                { name = "Jugador1", role = "tank", isLeader = true },
-                { name = "Jugador2", role = "healer", isLeader = false }
-            }},
-            { name = "Banda 2", minGS = 4500, schedule = "Martes y Jueves 21:00", members = {
-                { name = "Jugador5", role = "tank", isLeader = false },
-                { name = "Jugador6", role = "healer", isLeader = true }
-            }},
-            { name = "Banda 3", minGS = 4800, schedule = "Viernes 19:00", members = {
-                { name = "Jugador7", role = "dps", isLeader = true }
-            }}}
+        _G.RaidDominionDB.Core = {}
     end
     
     return _G.RaidDominionDB.Core
@@ -1418,7 +1407,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                             DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Guardando nota para " .. name .. " (Índice: " .. guildIdx .. ")")
                             
                             GuildRosterSetPublicNote(guildIdx, publicNote)
-                            -- Solo Oficiales (Nivel 2+) pueden editar notas oficiales
+                            -- Solo Oficiales (Rango Oficial/Admin+) pueden editar notas oficiales
                             if permLevel >= 2 then
                                 GuildRosterSetOfficerNote(guildIdx, officerNote)
                             end
@@ -1473,7 +1462,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                 end
             end
             
-            -- Verificar permisos para editar la banda (Nivel 2+)
+            -- Verificar permisos para editar la banda (Rango Oficial/Admin+)
             if permLevel < 2 then
                 -- Si solo cambió la nota, permitir que se cierre
                 -- Pero no actualizamos los datos de la banda
@@ -2176,13 +2165,13 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
         table.insert(activeMemberCards[cleanName], memberCard)
 
         memberCard:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8X8",
-            edgeFile = "Interface/Buttons/WHITE8X8",
-            tile = true, tileSize = 8, edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+            bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 }
         })
-        memberCard:SetBackdropColor(0.15, 0.15, 0.2, 1)
-        memberCard:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+        memberCard:SetBackdropColor(0.4, 0.4, 0.4, 0.8)
+        memberCard:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
 
         -- Función de refresco interno de la tarjeta
         if not memberCard.Refresh then
@@ -2348,8 +2337,8 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
         end
         
         memberCard:SetScript("OnEnter", function(self)
-            self:SetBackdropColor(0.25, 0.25, 0.35, 1)
-            self:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+            self:SetBackdropColor(0.5, 0.5, 0.6, 0.9)
+            self:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
             
             -- Mostrar tooltip con información de hermandad
             local cleanName = CleanName(member.name)
@@ -2374,8 +2363,8 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
             end
         end)
         memberCard:SetScript("OnLeave", function(self)
-            self:SetBackdropColor(0.15, 0.15, 0.2, 1)
-            self:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+            self:SetBackdropColor(0.4, 0.4, 0.4, 0.8)
+            self:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
             GameTooltip:Hide()
         end)
         
@@ -3187,6 +3176,9 @@ function coreBandsUtils.ShowCoreBandsWindow()
     end)
     
     f3.recruitBtn:SetScript("OnClick", function(self)
+        -- Forzar actualización de caché de hermandad para tener datos frescos
+        UpdateGuildOnlineCache(true)
+        
         local permLevel = GetPerms()
         if permLevel < 2 then
             DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para reclutar bandas.")
@@ -3202,29 +3194,26 @@ function coreBandsUtils.ShowCoreBandsWindow()
             end
 
             -- Obtener lista de jugadores para invitar (indiferente de si son de hermandad o no)
-            -- El único requisito es que tengan un rol asignado diferente a "nuevo"
             local playersToInvite = {}
             local summonedNames = {}
             
             for _, member in ipairs(members) do
-                -- Solo invitar si el rol no es "nuevo"
-                if member.role and member.role:lower() ~= "nuevo" then
-                    local cleanName = CleanName(member.name)
-                    -- Usar el nombre de la hermandad si está disponible (por capitalización), si no, el nombre guardado
-                    local displayName = guildFullCache[cleanName] and guildFullCache[cleanName].name or member.name
-                    table.insert(playersToInvite, displayName)
-                    table.insert(summonedNames, displayName)
-                end
+                -- Ya no filtramos por rol "nuevo" para permitir invitar a todos los de la lista
+                local cleanName = CleanName(member.name)
+                -- Usar el nombre de la hermandad si está disponible (por capitalización), si no, el nombre guardado
+                local displayName = guildFullCache[cleanName] and guildFullCache[cleanName].name or member.name
+                table.insert(playersToInvite, displayName)
+                table.insert(summonedNames, displayName)
             end
 
             if #playersToInvite == 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r No hay miembros con rol asignado (diferente a 'nuevo') para invitar.")
+                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r No hay miembros en la lista para invitar.")
                 return
             end
 
             -- 1. Realizar invitaciones masivas
             local rosterCache = BuildRosterCache()
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Enviando invitaciones a " .. #playersToInvite .. " miembros con rol asignado...")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Enviando invitaciones a " .. #playersToInvite .. " miembros...")
             for _, name in ipairs(playersToInvite) do
                 if not IsPlayerInGroup(name, rosterCache) then
                     InviteUnit(name)
@@ -3234,7 +3223,9 @@ function coreBandsUtils.ShowCoreBandsWindow()
             -- 2. Anunciar en hermandad
             if IsInGuild() then
                 local summonedList = table.concat(summonedNames, ", ")
-                local msgHeader = string.format("RD: Convocando a [%s] (Min GS: %d) - %s", bandData.name, bandData.minGS or 0, bandData.schedule or "")
+                -- Usamos %s para minGS para preservar el formato (ej: "0.0") si el usuario lo introdujo así
+                local displayMinGS = bandData.minGS or "0"
+                local msgHeader = string.format("RD: Convocando a [%s] (Min GS: %s) - %s", bandData.name, displayMinGS, bandData.schedule or "")
                 local msgSummoned = "Convocados: " .. summonedList
                 
                 -- Dividir el mensaje si es muy largo (WoW chat limit is ~255 chars)

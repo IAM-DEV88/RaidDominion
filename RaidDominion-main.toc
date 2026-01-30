@@ -20,6 +20,7 @@ RD_Init.lua
 # Module Files
 RD_Module_RoleManager.lua
 RD_Module_MessageManager.lua
+RD_Module_Minigame.lua
 
 # UI Framework
 RD_UI_Utils.lua

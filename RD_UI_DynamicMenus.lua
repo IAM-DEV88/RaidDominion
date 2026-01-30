@@ -30,7 +30,8 @@ local MENU_TYPES = {
     RECOGNITION = "recognition",
     MECHANICS = "mechanics",
     RULES = "raidrules",
-    GUILD_MESSAGES = "guildmessages"
+    GUILD_MESSAGES = "guildmessages",
+    MINIGAME = "minigameOptions"
 }
 
 local DynamicMenus = {
@@ -82,7 +83,8 @@ local function GetMenuConfig(menuType)
         [MENU_TYPES.RECOGNITION] = { configKey = "recognition", data = RD.constants.MENU_DEFINITIONS and RD.constants.MENU_DEFINITIONS.recognition or {}, title = "Reconocimiento" },
         [MENU_TYPES.MECHANICS] = { configKey = "mechanics", data = BuildMechanicsItems(), title = "Mecánicas" },
         [MENU_TYPES.RULES] = { configKey = "raidrules", data = BuildRulesItems(), title = "Reglas" },
-        [MENU_TYPES.GUILD_MESSAGES] = { configKey = "guildmessages", data = BuildGuildMessagesItems(), title = "Mensajes de Hermandad" }
+        [MENU_TYPES.GUILD_MESSAGES] = { configKey = "guildmessages", data = BuildGuildMessagesItems(), title = "Mensajes de Hermandad" },
+        [MENU_TYPES.MINIGAME] = { configKey = "minigameOptions", data = RD.constants.MENU_DEFINITIONS and RD.constants.MENU_DEFINITIONS.minigameOptions or {}, title = "Minijuegos" }
     }
     return menuType and configs[menuType] or configs
 end

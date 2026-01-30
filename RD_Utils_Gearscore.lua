@@ -77,13 +77,13 @@ local function CreateGSMemberCard(parent, member, xOffset, yOffset, category)
     tinsert(activeMemberCards[cleanName], card)
 
     card:SetBackdrop({
-        bgFile = "Interface/Buttons/WHITE8X8",
-        edgeFile = "Interface/Buttons/WHITE8X8",
-        tile = true, tileSize = 8, edgeSize = 1,
-        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
     })
-    card:SetBackdropColor(0.15, 0.15, 0.2, 1)
-    card:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+    card:SetBackdropColor(0.4, 0.4, 0.4, 0.8)
+    card:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
 
     -- Textos de la tarjeta
     if not card.nameText then
@@ -124,8 +124,8 @@ local function CreateGSMemberCard(parent, member, xOffset, yOffset, category)
 
     -- Scripts
     card:SetScript("OnEnter", function(self)
-        self:SetBackdropColor(0.25, 0.25, 0.35, 1)
-        self:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+        self:SetBackdropColor(0.5, 0.5, 0.6, 0.9)
+        self:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
         
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(CapitalizeName(member.name), color.r, color.g, color.b)
@@ -139,8 +139,8 @@ local function CreateGSMemberCard(parent, member, xOffset, yOffset, category)
     end)
     
     card:SetScript("OnLeave", function(self)
-        self:SetBackdropColor(0.15, 0.15, 0.2, 1)
-        self:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+        self:SetBackdropColor(0.4, 0.4, 0.4, 0.8)
+        self:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
         GameTooltip:Hide()
     end)
 

@@ -404,7 +404,7 @@ local function GuildLottery()
         return
     end
 
-    -- Verificar permisos según el nuevo sistema (Mínimo Nivel 2: Oficial)
+    -- Verificar permisos según el nuevo sistema (Mínimo Rango Oficial/Admin: Oficial)
     local mm = RD.modules and RD.modules.messageManager
     local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
     
@@ -807,6 +807,20 @@ end
             f:Hide()
         elseif RD.utils and RD.utils.recognition then
             RD.utils.recognition.ShowRecognitionWindow()
+        end
+    end)
+
+    MenuActions.Register("ShowMinigame", function()
+        if RD.UI and RD.UI.DynamicMenus and RD.UI.DynamicMenus.Render then
+            RD.UI.DynamicMenus:Render("minigameOptions")
+        elseif RD.minigame and RD.minigame.OpenUI then
+            RD.minigame:OpenUI()
+        end
+    end)
+
+    MenuActions.Register("StartMinigameChest", function()
+        if RD.minigame and RD.minigame.OpenUI then
+            RD.minigame:OpenUI()
         end
     end)
 

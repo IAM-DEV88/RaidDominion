@@ -117,6 +117,135 @@ function groupUtils.GetGuildMemberList()
     return guildMembers, updatesNeeded
 end
 
+-- Referencias locales para optimización
+local GetGuildRosterInfo, GetNumGuildMembers, GuildRoster = GetGuildRosterInfo, GetNumGuildMembers, GuildRoster
+local GetTime = GetTime
+
+-- Caché para el estado de la hermandad
+local guildOnlineCache = {}
+local guildFullCache = {} -- Caché para datos completos (rango, notas, clase)
+local lastGuildUpdate = 0
+local isUpdatingGuild = false
+local updateCoroutine = nil
+local isInternalGuildUpdate = false
+
+-- Función para actualizar la caché de la hermandad (Optimizada con coroutine)
+function groupUtils:UpdateGuildOnlineCache(force)
+    local now = GetTime()
+    local freq = 60 -- Frecuencia (1 minuto)
+    
+    if not force and (now - lastGuildUpdate < freq) then
+        return
+    end
+    
+    -- Si ya hay una actualización en curso, no empezar otra
+    if isUpdatingGuild then return end
+    
+    local function DoUpdate()
+        isUpdatingGuild = true
+        isInternalGuildUpdate = true
+        
+        -- Usar tablas temporales para evitar parpadeo
+        local tempOnlineCache = {}
+        local tempFullCache = {}
+        
+        local numMembers = GetNumGuildMembers(true)
+        local chunkCount = 0
+        local chunkSize = 100 -- Procesar 100 miembros por frame
+        
+        for i = 1, numMembers do
+            local name, rank, rankIndex, level, class, zone, note, officerNote, online, status, classFileName = GetGuildRosterInfo(i)
+            if name then
+                local cleanName = RD.utils:CleanName(name)
+                tempOnlineCache[cleanName] = online
+                tempFullCache[cleanName] = {
+                    index = i,
+                    name = name,
+                    rank = rank,
+                    rankIndex = rankIndex,
+                    level = level,
+                    class = class,
+                    classFileName = classFileName,
+                    zone = zone,
+                    note = note,
+                    officerNote = officerNote,
+                    online = online
+                }
+            end
+            
+            chunkCount = chunkCount + 1
+            if chunkCount >= chunkSize then
+                chunkCount = 0
+                coroutine.yield()
+            end
+        end
+        
+        -- Swap de caches
+        guildOnlineCache = tempOnlineCache
+        guildFullCache = tempFullCache
+        
+        lastGuildUpdate = GetTime()
+        isUpdatingGuild = false
+        isInternalGuildUpdate = false
+
+        -- Refrescar la UI si es necesario
+        local f3 = _G["RaidDominionCoreListFrame"]
+        if f3 and f3:IsVisible() and f3.UpdateStats then
+            f3.UpdateStats()
+        end
+
+        if RD.utils.coreBands and RD.utils.coreBands.RefreshAllVisibleCards then
+            RD.utils.coreBands.RefreshAllVisibleCards()
+        end
+        
+        local playerEditFrame = _G["RaidDominionPlayerEditFrame"]
+        if playerEditFrame and playerEditFrame:IsVisible() and playerEditFrame.RefreshGuildData then
+            playerEditFrame.RefreshGuildData(false)
+        end
+    end
+    
+    updateCoroutine = coroutine.create(DoUpdate)
+    -- Iniciar el procesamiento usando un frame de OnUpdate temporal
+    local tickerFrame = CreateFrame("Frame")
+    tickerFrame:SetScript("OnUpdate", function(self)
+        if updateCoroutine then
+            local co = updateCoroutine
+            local status, err = coroutine.resume(co)
+            if not status or coroutine.status(co) == "dead" then
+                self:SetScript("OnUpdate", nil)
+                isUpdatingGuild = false
+                updateCoroutine = nil
+                if not status then 
+                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion Error]:|r " .. (err or "Unknown error in Guild Cache update"))
+                end
+            end
+        else
+            self:SetScript("OnUpdate", nil)
+            isUpdatingGuild = false
+        end
+    end)
+end
+
+--- Verifica si un jugador de la hermandad está online usando la caché
+-- @param cleanName string El nombre limpio del jugador
+-- @return boolean|nil true si está online, false si offline, nil si no está en la hermandad
+function groupUtils:IsGuildMemberOnline(cleanName)
+    return guildOnlineCache[cleanName]
+end
+
+--- Obtiene los datos completos de un miembro de la hermandad desde la caché
+-- @param cleanName string El nombre limpio del jugador
+-- @return table|nil Datos del miembro o nil si no existe
+function groupUtils:GetGuildMemberData(cleanName)
+    return guildFullCache[cleanName]
+end
+
+--- Obtiene la caché completa de la hermandad (SOLO LECTURA)
+-- @return table La caché completa de la hermandad
+function groupUtils:GetGuildFullCache()
+    return guildFullCache
+end
+
 -- Variables de estado del grupo
 local inRaid = false
 local inParty = false
@@ -138,7 +267,7 @@ UnitIsGroupAssistant = function() return false end
 -- Detectar jugadores que abandonaron el grupo
 local function DetectLeftPlayers()
     local currentMembers = {}
-    local numMembers = GetNumGroupMembers()
+    local numMembers = SafeGetNumGroupMembers()
     
     -- Obtener lista actual de miembros
     if numMembers > 0 then

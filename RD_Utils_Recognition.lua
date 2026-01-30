@@ -444,13 +444,13 @@ local function renderRecognitionMembers(recognition, parentFrame)
         card:SetPoint("TOPLEFT", 2 + xOffset, -yOffset) -- Pequeño margen izquierdo
         
         card:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8X8",
-            edgeFile = "Interface/Buttons/WHITE8X8",
-            tile = true, tileSize = 8, edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+            bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 }
         })
-        card:SetBackdropColor(0.15, 0.15, 0.2, 1)
-        card:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+        card:SetBackdropColor(0.4, 0.4, 0.4, 0.8)
+        card:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
         
         -- Nombre
         if not card.text then
@@ -477,6 +477,9 @@ local function renderRecognitionMembers(recognition, parentFrame)
         
         -- Tooltip con timestamps
         card:SetScript("OnEnter", function(self)
+            self:SetBackdropColor(0.5, 0.5, 0.6, 0.9)
+            self:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+            
             if member.timestamps and #member.timestamps > 0 then
                 GameTooltip:SetOwner(self, "ANCHOR_TOP")
                 GameTooltip:AddLine("Menciones de " .. member.name, 1, 1, 1)
@@ -486,7 +489,11 @@ local function renderRecognitionMembers(recognition, parentFrame)
                 GameTooltip:Show()
             end
         end)
-        card:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        card:SetScript("OnLeave", function(self)
+            self:SetBackdropColor(0.4, 0.4, 0.4, 0.8)
+            self:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.7)
+            GameTooltip:Hide() 
+        end)
 
         -- Clic para abrir edición de jugador (Core) en modo consulta (ocultando controles de banda)
         card:SetScript("OnClick", function()

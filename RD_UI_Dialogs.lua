@@ -233,6 +233,74 @@ function dialogs:OnInitialize()
     -- Registrar eventos
     events:Subscribe("DIALOG_SHOW", function(dialogInfo)
     end)
+
+    -- Registrar diálogos de Bandas Core
+    self:RegisterDialog("RD_RECRUIT_OFFLINE_PROMPT", {
+        text = "¿Deseas incluir a los jugadores desconectados (offline) en el proceso de actualización?",
+        button1 = "Sí",
+        button2 = "No",
+        OnAccept = function(self, data)
+            if data and data.callback then
+                data.callback(true)
+            end
+        end,
+        OnCancel = function(self, data)
+            if data and data.callback then
+                data.callback(false)
+            end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+    })
+
+    self:RegisterDialog("RD_CONFIRM_GUILD_KICK", {
+        text = "¿Estás seguro de que quieres expulsar a %s de la hermandad?",
+        button1 = "Sí",
+        button2 = "No",
+        OnAccept = function(self)
+            local name = self.data.name
+            GuildUninvite(name)
+            GuildRoster()
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Expulsando a " .. name .. " de la hermandad.")
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+    })
+
+    self:RegisterDialog("RAID_DOMINION_RESET_CORE_BAND", {
+        text = "¿Estás seguro de que quieres reiniciar la banda %s? Esto eliminará a todos los miembros.",
+        button1 = YES,
+        button2 = NO,
+        OnAccept = function(self)
+            local bandIndex = self.data.bandIndex
+            local coreData = RaidDominion.utils.coreBands.EnsureCoreData()
+            if coreData[bandIndex] then
+                coreData[bandIndex].members = {}
+                RaidDominion.utils.coreBands.ShowCoreBandsWindow()
+                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Banda " .. coreData[bandIndex].name .. " reiniciada.")
+            end
+        end,
+        timeout = 0,
+        whileDead = 1,
+        hideOnEscape = 1
+    })
+
+    self:RegisterDialog("RAID_DOMINION_DELETE_CORE_BAND", {
+        text = "¿Estás seguro de que quieres eliminar la banda %s?",
+        button1 = YES,
+        button2 = NO,
+        OnAccept = function(self)
+            local bandIndex = self.data.bandIndex
+            local coreData = RaidDominion.utils.coreBands.EnsureCoreData()
+            table.remove(coreData, bandIndex)
+            RaidDominion.utils.coreBands.ShowCoreBandsWindow()
+        end,
+        timeout = 0,
+        whileDead = 1,
+        hideOnEscape = 1
+    })
 end
 
 function dialogs:ShowReadyCheckConfirm(options)

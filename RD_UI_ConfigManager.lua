@@ -19,6 +19,7 @@ local LOCALIZATION = CONSTANTS.LOCALIZATION
 local UI = CONSTANTS.UI
 local config = RD.config
 local UIUtils = RD.UIUtils or {}
+local MenuFactory = RD.UI.MenuFactory or {}
 
 -- Localize frequently used functions
 local pairs, ipairs, type, tostring = pairs, ipairs, type, tostring
@@ -962,10 +963,10 @@ local tabDefinitions = {
                 LOCALIZATION.HELP.TIP_2,
                 LOCALIZATION.HELP.TIP_3
             }, "\n")
-            yOffset = yOffset - UIUtils:CreateHelpSection(content, "Primeros Pasos", helpText, yOffset)
+            yOffset = yOffset - MenuFactory:CreateHelpSection(content, "Primeros Pasos", helpText, yOffset)
             
             -- Commands section
-            yOffset = yOffset - UIUtils:CreateHelpSection(content, "Comandos", [[
+            yOffset = yOffset - MenuFactory:CreateHelpSection(content, "Comandos", [[
 Comandos disponibles:
 /rd - Muestra/oculta la ventana flotante de RaidDominion
 /rdc - Muestra la ventana de configuración de RaidDominion
@@ -975,7 +976,7 @@ Comandos disponibles:
             -- About section
             local aboutText = "RaidDominion v1.0"
             
-            yOffset = yOffset - UIUtils:CreateHelpSection(content, "Actualizaciones", aboutText, yOffset)
+            yOffset = yOffset - MenuFactory:CreateHelpSection(content, "Actualizaciones", aboutText, yOffset)
             
             -- Update URL section
             local updateLabel = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")

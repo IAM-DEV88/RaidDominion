@@ -169,7 +169,9 @@ function roleManager:AssignRaidIcons()
         healers = {},
     }
     
-    local numberOfPlayers = GetNumGroupMembers()
+    local raidMembers = GetNumRaidMembers()
+    local partyMembers = GetNumPartyMembers()
+    local numberOfPlayers = (raidMembers > 0 and raidMembers) or (partyMembers > 0 and partyMembers + 1) or 1
     local availableIcons = { 2, 3, 4, 5, 6, 7, 8 }
     local iconIndex = 1
     local addonCache = {}

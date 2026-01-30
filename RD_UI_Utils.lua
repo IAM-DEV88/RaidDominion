@@ -12,103 +12,203 @@
 local addonName, private = ...
 local UIUtils = {}
 
--- Create a basic frame
-function UIUtils:CreateFrame(name, parent, template, width, height)
-    local frame = CreateFrame("Frame", name, parent, template)
-    frame:SetSize(width or 100, height or 100)
-    return frame
-end
+-- =============================================
+-- UTILIDADES DE STRINGS Y NOMBRES
+-- =============================================
 
--- Create a button
-function UIUtils:CreateButton(name, parent, text, width, height, onClick)
-    local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
-    button:SetSize(width or 100, height or 24)
-    button:SetText(text or "Button")
-    if onClick then
-        button:SetScript("OnClick", onClick)
-    end
-    return button
-end
+local cleanNameCache = {}
+local cleanNameCacheSize = 0
 
--- Create a help section with title and content
-function UIUtils:CreateHelpSection(parent, title, content, yOffset)
-    local section = CreateFrame("Frame", nil, parent)
-    section:SetPoint("TOPLEFT", 10, yOffset)
-    section:SetPoint("RIGHT", -10, 0)
-    section:SetHeight(1)
+--- Limpia un nombre eliminando el reino y normalizando a minúsculas
+-- @param name string El nombre a limpiar
+-- @return string El nombre limpio
+function UIUtils.CleanName(name)
+    if not name then return "" end
+    if cleanNameCache[name] then return cleanNameCache[name] end
     
-    -- Title
-    local titleText = section:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    titleText:SetPoint("TOPLEFT")
-    titleText:SetText(title)
-    titleText:SetTextColor(1, 0.82, 0)  -- Gold color
+    -- Eliminar reino y cualquier espacio en blanco accidental
+    local clean = string.gsub(name, "%-.*", "")
+    clean = string.gsub(clean, "%s+", "")
+    local result = string.lower(clean)
     
-    -- Content frame to contain the text
-    local contentFrame = CreateFrame("Frame", nil, section)
-    contentFrame:SetPoint("TOPLEFT", titleText, "BOTTOMLEFT", 0, -5)
-    contentFrame:SetPoint("RIGHT", section, "RIGHT", -10, 0)
-    
-    -- Content text with proper wrapping
-    local contentText = contentFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    contentText:SetPoint("TOPLEFT")
-    contentText:SetPoint("RIGHT")
-    contentText:SetJustifyH("LEFT")
-    contentText:SetJustifyV("TOP")
-    contentText:SetWordWrap(true)
-    contentText:SetNonSpaceWrap(false)
-    contentText:SetText(content)
-    
-    -- Calculate and set heights
-    local function UpdateSizes()
-        -- Force update of text dimensions
-        contentText:SetHeight(0)
-        local textWidth = contentFrame:GetWidth()
-        contentText:SetWidth(textWidth)
-        
-        local contentHeight = contentText:GetStringHeight()
-        contentFrame:SetHeight(contentHeight)
-        
-        local _, titleHeight = titleText:GetFont()
-        section:SetHeight(titleHeight + contentHeight + 15)
-        
-        return section:GetHeight()
+    -- Limitar tamaño de caché para evitar fuga de memoria
+    if cleanNameCacheSize > 1000 then 
+        wipe(cleanNameCache) 
+        cleanNameCacheSize = 0
     end
     
-    -- Update sizes when frame is shown or resized
-    contentFrame:SetScript("OnSizeChanged", UpdateSizes)
-    UpdateSizes()
+    cleanNameCache[name] = result
+    cleanNameCacheSize = cleanNameCacheSize + 1
     
-    -- Ensure content is fully visible
-    contentText:SetHeight(contentText:GetStringHeight())
-    
-    return section:GetHeight() + 10, section  -- Add some extra spacing between sections
+    return result
 end
 
--- Create a checkbox
-function UIUtils:CreateCheckbox(name, parent, label, onClick)
-    local check = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-    _G[check:GetName().."Text"]:SetText(label or "")
-    if onClick then
-        check:SetScript("OnClick", function(self) onClick(self:GetChecked()) end)
+local capitalizedNamesCache = {}
+
+--- Capitaliza un nombre (Primera letra Mayúscula, resto minúsculas)
+-- @param name string El nombre a capitalizar
+-- @return string El nombre capitalizado
+function UIUtils.CapitalizeName(name)
+    if not name or name == "" then return "" end
+    if capitalizedNamesCache[name] then return capitalizedNamesCache[name] end
+    
+    local cleanName = string.gsub(name, "%-.*", "")
+    local result = string.upper(string.sub(cleanName, 1, 1)) .. string.lower(string.sub(cleanName, 2))
+    
+    capitalizedNamesCache[name] = result
+    return result
+end
+
+-- =============================================
+-- DETECCIÓN DE TALENTOS Y ESPECIALIZACIÓN (3.3.5)
+-- =============================================
+
+local talentCache = {}
+local SPEC_ABBR = {
+    ["WARRIOR"] = { [1] = "Arm", [2] = "Fur", [3] = "Pro" },
+    ["PALADIN"] = { [1] = "Hol", [2] = "Pro", [3] = "Ret" },
+    ["HUNTER"] = { [1] = "BM", [2] = "Pun", [3] = "Sup" },
+    ["ROGUE"] = { [1] = "Ase", [2] = "Com", [3] = "Sut" },
+    ["PRIEST"] = { [1] = "Dis", [2] = "Sag", [3] = "Som" },
+    ["DEATHKNIGHT"] = { [1] = "San", [2] = "Esc", [3] = "Pro" },
+    ["SHAMAN"] = { [1] = "Ele", [2] = "Mej", [3] = "Res" },
+    ["MAGE"] = { [1] = "Arc", [2] = "Fue", [3] = "Esc" },
+    ["WARLOCK"] = { [1] = "Afl", [2] = "Dem", [3] = "Des" },
+    ["DRUID"] = { [1] = "Equ", [2] = "Fer", [3] = "Res" }
+}
+
+--- Obtiene la especialización de una unidad basada en talentos
+-- @param unit string La unidad a inspeccionar
+-- @return string, number, string Abreviatura, índice de especialización, clase
+function UIUtils.GetSpecFromTalents(unit)
+    if not unit or not UnitExists(unit) then return nil end
+    
+    local guid = UnitGUID(unit)
+    local now = GetTime()
+    
+    if talentCache[guid] and (now - talentCache[guid].time < 30) then
+        local c = talentCache[guid]
+        return c.abbr, c.specIndex, c.class
     end
-    return check
+
+    local _, class = UnitClass(unit)
+    local r = {}
+    local isInspect = (unit ~= "player")
+    
+    local hasPoints = false
+    for i = 1, 3 do
+        local name, icon, points = GetTalentTabInfo(i, isInspect)
+        r[i] = { name = name, icon = icon, points = points or 0 }
+        if (points or 0) > 0 then hasPoints = true end
+    end
+
+    if not hasPoints then return nil end
+    
+    local specIndex = 1
+    local maxPoints = r[1].points
+    
+    if class == "PALADIN" then
+        if r[2].points >= r[1].points and r[2].points >= r[3].points then specIndex = 2
+        elseif r[1].points >= r[2].points and r[1].points >= r[3].points then specIndex = 1
+        else specIndex = 3 end
+    elseif class == "SHAMAN" then
+        local function checkName(idx, searchList)
+            if not r[idx].name then return false end
+            local nameLower = string.lower(r[idx].name)
+            for _, search in ipairs(searchList) do
+                if string.find(nameLower, string.lower(search)) then return true end
+            end
+            return false
+        end
+
+        if r[3].points >= r[1].points and r[3].points >= r[2].points then specIndex = 3
+        elseif r[2].points >= r[1].points and r[2].points > r[3].points then specIndex = 2
+        else specIndex = 1 end
+        
+        local diffResMej = math.abs(r[3].points - r[2].points)
+        local diffResEle = math.abs(r[3].points - r[1].points)
+        
+        if diffResMej <= 15 or diffResEle <= 15 then
+            if checkName(3, {"Rest", "Res", "Restaur"}) then specIndex = 3
+            elseif checkName(2, {"Mej", "Enh", "Mejora", "Enhanc"}) then specIndex = 2
+            elseif checkName(1, {"Ele", "Element"}) then specIndex = 1 end
+        end
+        
+        for i = 1, 3 do
+            if r[i].points >= 40 then specIndex = i break end
+        end
+    elseif class == "DRUID" then
+        if r[3].points >= r[1].points and r[3].points >= r[2].points then specIndex = 3
+        elseif r[2].points >= r[1].points and r[2].points > r[3].points then specIndex = 2
+        else specIndex = 1 end
+    else
+        if r[2].points > maxPoints then maxPoints = r[2].points specIndex = 2 end
+        if r[3].points > maxPoints then maxPoints = r[3].points specIndex = 3 end
+    end
+    
+    local abbr = SPEC_ABBR[class] and SPEC_ABBR[class][specIndex] or "N/A"
+    talentCache[guid] = { abbr = abbr, specIndex = specIndex, class = class, time = now }
+    
+    return abbr, specIndex, class
 end
 
--- Create a scroll frame
-function UIUtils:CreateScrollFrame(name, parent, width, height)
-    local scrollFrame = CreateFrame("ScrollFrame", name, parent, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetSize(width or 200, height or 200)
-    
-    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollFrame:SetScrollChild(scrollChild)
-    scrollChild:SetWidth(width or 200)
-    scrollChild:SetHeight(1)  -- Will be adjusted by content
-    
-    -- Add a scroll bar
-    local scrollBar = _G[name.."ScrollBar"]
-    scrollBar:SetValue(0)
-    
-    return scrollFrame, scrollChild
+-- =============================================
+-- GESTIÓN DE ROSTER Y GRUPO
+-- =============================================
+
+local cachedRoster = nil
+local lastRosterUpdate = 0
+
+--- Construye una caché del roster actual
+-- @return table La tabla de caché del roster
+function UIUtils.BuildRosterCache()
+    local now = GetTime()
+    if cachedRoster and (now - lastRosterUpdate < 1) then
+        return cachedRoster
+    end
+
+    local rosterCache = {}
+    local numRaid = GetNumRaidMembers()
+    local numParty = GetNumPartyMembers()
+
+    if numRaid > 0 then
+        for i = 1, numRaid do
+            local unit = "raid"..i
+            local name = UnitName(unit)
+            if name and name ~= "Unknown" then
+                local _, fileName = UnitClass(unit)
+                local clean = UIUtils.CleanName(name)
+                rosterCache[clean] = { name = name, class = fileName, unit = unit }
+            end
+        end
+    elseif numParty > 0 then
+        local myName = UnitName("player")
+        if myName then
+            local _, fileName = UnitClass("player")
+            local clean = UIUtils.CleanName(myName)
+            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
+        end
+        for i = 1, numParty do
+            local unit = "party"..i
+            local name = UnitName(unit)
+            if name and name ~= "Unknown" then
+                local _, fileName = UnitClass(unit)
+                local clean = UIUtils.CleanName(name)
+                rosterCache[clean] = { name = name, class = fileName, unit = unit }
+            end
+        end
+    else
+        local myName = UnitName("player")
+        if myName then
+            local _, fileName = UnitClass("player")
+            local clean = UIUtils.CleanName(myName)
+            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
+        end
+    end
+
+    cachedRoster = rosterCache
+    lastRosterUpdate = now
+    return rosterCache
 end
 
 -- =============================================
@@ -116,7 +216,7 @@ end
 -- =============================================
 
 -- Función para manejar clics en buffs/auras
-function UIUtils:HandleBuffClick(buffName)
+function UIUtils.HandleBuffClick(buffName)
     if RaidDominion and RaidDominion.HandleAssignableRole then
         RaidDominion:HandleAssignableRole(buffName)
     end
@@ -268,7 +368,7 @@ end
 
 local auraSystemInitialized = false
 
-function UIUtils:InitializeAuraSystem()
+function UIUtils.InitializeAuraSystem()
     if auraSystemInitialized then return end
     
     -- Frame para manejar eventos
@@ -317,10 +417,10 @@ RaidDominion.UIUtils = UIUtils
 
 -- Inicializar el sistema de auras cuando el addon esté listo
 if IsLoggedIn() then
-    UIUtils:InitializeAuraSystem()
+    UIUtils.InitializeAuraSystem()
 else
     local f = CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
-    f:SetScript("OnEvent", function() UIUtils:InitializeAuraSystem() end)
+    f:SetScript("OnEvent", function() UIUtils.InitializeAuraSystem() end)
 end
 return UIUtils

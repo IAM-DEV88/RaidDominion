@@ -744,6 +744,8 @@ function mainFrame:CreatePanels()
             menuType = "mechanics"
         elseif actionName == "ShowRaidRules" then
             menuType = "raidrules"
+        elseif actionName == "ShowMinigame" then
+            menuType = "minigameOptions"
         end
         local menu
         if RaidDominion.UI and RaidDominion.UI.DynamicMenus and type(RaidDominion.UI.DynamicMenus.GetMenu) == "function" then

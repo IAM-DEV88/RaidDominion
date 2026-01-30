@@ -21,6 +21,9 @@ local SLASH = CONST.SLASH_COMMANDS or {}
 -- Asegurar tablas principales
 RD.modules = RD.modules or {}
 RD.utils = RD.utils or {}
+RD.utils.coreBands = RD.utils.coreBands or {}
+RD.utils.recognition = RD.utils.recognition or {}
+RD.utils.gearscore = RD.utils.gearscore or {}
 RD.data = RD.data or {}
 RD.ui = RD.ui or {}
 RD.UI = RD.UI or {}
@@ -72,6 +75,13 @@ local function SetupSlashCommands()
         elseif command == "help" or command == "h" or command == "?" then
             -- Mostrar ayuda
             ShowHelp()
+        elseif command == "minijuego" or command == "mj" or command == "game" then
+            -- Comando para el minijuego
+            if RD.minigame and RD.minigame.OpenUI then
+                RD.minigame:OpenUI()
+            else
+                print("|cffff0000[RaidDominion]|r El módulo de minijuego no está cargado.")
+            end
         elseif command == "testcore" then
             -- Comando de prueba para bandas Core
             DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Probando bandas Core...")

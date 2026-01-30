@@ -28,6 +28,146 @@ local BUTTON_MARGIN = MENU_CONSTANTS.BUTTON_MARGIN or 1
 local COLUMN_SPACING = MENU_CONSTANTS.COLUMN_SPACING or 20
 local MAX_COLUMNS = MENU_CONSTANTS.MAX_COLUMNS or 2
 
+-- =============================================
+-- AYUDANTES DE CREACIÓN DE ELEMENTOS UI
+-- =============================================
+
+--- Crea un frame básico
+function MenuFactory:CreateFrame(name, parent, template, width, height)
+    local frame = CreateFrame("Frame", name, parent, template)
+    frame:SetSize(width or 100, height or 100)
+    return frame
+end
+
+--- Crea un botón estándar
+function MenuFactory:CreateButton(name, parent, text, width, height, onClick)
+    local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
+    button:SetSize(width or 100, height or 24)
+    button:SetText(text or "Button")
+    if onClick then
+        button:SetScript("OnClick", onClick)
+    end
+    return button
+end
+
+--- Crea una etiqueta (fontstring)
+function MenuFactory:CreateLabel(parent, text, font)
+    local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
+    label:SetText(text or "")
+    return label
+end
+
+--- Crea un cuadro de edición (EditBox)
+function MenuFactory:CreateEditBox(name, parent, width, height, numeric)
+    local eb = CreateFrame("EditBox", name, parent, "InputBoxTemplate")
+    eb:SetSize(width or 100, height or 25)
+    eb:SetAutoFocus(false)
+    if numeric then eb:SetNumeric(true) end
+    return eb
+end
+
+--- Crea un botón con estilo personalizado e icono
+function MenuFactory:CreateStyledButton(name, parent, width, height, text, icon, tooltip)
+    local btn = CreateFrame("Button", name, parent)
+    btn:SetSize(width or 30, height or 30)
+    
+    if icon then
+        local tex = btn:CreateTexture(nil, "ARTWORK")
+        tex:SetAllPoints()
+        tex:SetTexture(icon)
+        btn.icon = tex
+    end
+
+    local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetAllPoints()
+    highlight:SetTexture("Interface/Buttons/ButtonHilight-Square")
+    highlight:SetBlendMode("ADD")
+    
+    if text then
+        local label = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        label:SetPoint("BOTTOM", 0, -12)
+        label:SetText(text)
+    end
+    
+    if tooltip then
+        btn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText(tooltip, 1, 1, 1, 1, true)
+            GameTooltip:Show()
+        end)
+        btn:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+    end
+    
+    return btn
+end
+
+--- Crea una sección de ayuda con título y contenido
+function MenuFactory:CreateHelpSection(parent, title, content, yOffset)
+    local section = CreateFrame("Frame", nil, parent)
+    section:SetPoint("TOPLEFT", 10, yOffset)
+    section:SetPoint("RIGHT", -10, 0)
+    section:SetHeight(1)
+    
+    local titleText = section:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    titleText:SetPoint("TOPLEFT")
+    titleText:SetText(title)
+    titleText:SetTextColor(1, 0.82, 0)
+    
+    local contentFrame = CreateFrame("Frame", nil, section)
+    contentFrame:SetPoint("TOPLEFT", titleText, "BOTTOMLEFT", 0, -5)
+    contentFrame:SetPoint("RIGHT", section, "RIGHT", -10, 0)
+    
+    local contentText = contentFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    contentText:SetPoint("TOPLEFT")
+    contentText:SetPoint("RIGHT")
+    contentText:SetJustifyH("LEFT")
+    contentText:SetJustifyV("TOP")
+    contentText:SetWordWrap(true)
+    contentText:SetText(content)
+    
+    local function UpdateSizes()
+        contentText:SetHeight(0)
+        local textWidth = contentFrame:GetWidth()
+        contentText:SetWidth(textWidth)
+        local contentHeight = contentText:GetStringHeight()
+        contentFrame:SetHeight(contentHeight)
+        local _, titleHeight = titleText:GetFont()
+        section:SetHeight(titleHeight + contentHeight + 15)
+        return section:GetHeight()
+    end
+    
+    contentFrame:SetScript("OnSizeChanged", UpdateSizes)
+    UpdateSizes()
+    return section:GetHeight() + 10, section
+end
+
+--- Crea un checkbox
+function MenuFactory:CreateCheckbox(name, parent, label, onClick)
+    local check = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
+    if _G[check:GetName().."Text"] then
+        _G[check:GetName().."Text"]:SetText(label or "")
+    end
+    if onClick then
+        check:SetScript("OnClick", function(self) onClick(self:GetChecked()) end)
+    end
+    return check
+end
+
+--- Crea un scroll frame
+function MenuFactory:CreateScrollFrame(name, parent, width, height)
+    local scrollFrame = CreateFrame("ScrollFrame", name, parent, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetSize(width or 200, height or 200)
+    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+    scrollFrame:SetScrollChild(scrollChild)
+    scrollChild:SetWidth(width or 200)
+    scrollChild:SetHeight(1)
+    local scrollBar = _G[name.."ScrollBar"]
+    if scrollBar then scrollBar:SetValue(0) end
+    return scrollFrame, scrollChild
+end
+
 --[[
     Crea un menú con el diseño especificado
     @param parent Marco padre del menú
@@ -199,10 +339,11 @@ function MenuFactory:CreateMenu(parent, items, yOffset, onClick, assignable, rol
             assignButton:SetPoint("LEFT", button, "RIGHT", 2, 0)
             
             if item.icon then
-                local texture = assignButton:CreateTexture()
-                texture:SetAllPoints()
+                local texture = assignButton:CreateTexture(nil, "OVERLAY")
+                texture:SetAllPoints(assignButton)
                 texture:SetTexture(item.icon)
-                assignButton:SetNormalTexture(texture)
+                texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+                assignButton.icon = texture
             end
             
             assignButton:SetScript("OnClick", function()
@@ -230,10 +371,11 @@ function MenuFactory:CreateMenu(parent, items, yOffset, onClick, assignable, rol
             button:SetPoint("LEFT", (i - 1) * (BUTTON_SIZE + BUTTON_MARGIN), 0)
             
             if barItem.icon then
-                local texture = button:CreateTexture()
-                texture:SetAllPoints()
+                local texture = button:CreateTexture(nil, "OVERLAY")
+                texture:SetAllPoints(button)
                 texture:SetTexture(barItem.icon)
-                button:SetNormalTexture(texture)
+                texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+                button.icon = texture
             end
             
             button:SetScript("OnClick", function(self, btn)

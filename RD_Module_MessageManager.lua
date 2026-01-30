@@ -1091,11 +1091,8 @@ function messageManager:GetPermissionLevel()
     if IsInGuild() then
         local guildName, rankName, rankIndex = GetGuildInfo("player")
         if cfg and guildName == cfg.G then
-            if rankName == cfg.R.A then
+            if rankName == cfg.R.A or rankName == cfg.R.O then
                 return 3
-            end
-            if rankName == cfg.R.O then
-                return 2
             end
             return 1
         end

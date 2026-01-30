@@ -86,7 +86,11 @@ RaidDominion.constants = {
             { name = "Gearscore", action = "ShowGuildGearscore", tooltip = "Lista de jugadores con Gearscore y notas" },
             { name = "Core", action = "ShowCoreBands", tooltip = "Bandas Core" },
             { name = "Reconocimiento", action = "ShowRecognition", tooltip = "Reconocimiento de hermandad" },
+            { name = "Minijuego", action = "ShowMinigame", tooltip = "Minijuego de hermandad (Baúles)", submenu = "minigameOptions", icon = "Interface/Icons/INV_Box_01" },
             { name = "Jugador", action = "SearchGuildPlayer", tooltip = "Buscar y editar jugador" }
+        },
+        minigameOptions = {
+            { name = "Baúles", action = "StartMinigameChest", tooltip = "Juego de baúles en parejas (Pares/Nones)", icon = "Interface/Icons/INV_Box_02" },
         },
         recognition = {
             { name = "Crear Nuevo", action = "RecognitionCreate", icon = "Interface/Icons/Spell_ChargePositive" },
