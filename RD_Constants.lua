@@ -86,11 +86,11 @@ RaidDominion.constants = {
             { name = "Gearscore", action = "ShowGuildGearscore", tooltip = "Lista de jugadores con Gearscore y notas" },
             { name = "Core", action = "ShowCoreBands", tooltip = "Bandas Core" },
             { name = "Reconocimiento", action = "ShowRecognition", tooltip = "Reconocimiento de hermandad" },
-            { name = "Minijuego", action = "ShowMinigame", tooltip = "Minijuego de hermandad (Baúles)", submenu = "minigameOptions", icon = "Interface/Icons/INV_Box_01" },
+            { name = "Minijuego", action = "ShowMinigame", tooltip = "Minijuego de hermandad (Baúles)", submenu = "minigameOptions" },
             { name = "Jugador", action = "SearchGuildPlayer", tooltip = "Buscar y editar jugador" }
         },
         minigameOptions = {
-            { name = "Baúles", action = "StartMinigameChest", tooltip = "Juego de baúles en parejas (Pares/Nones)", icon = "Interface/Icons/INV_Box_02" },
+            { name = "Baúles", action = "StartMinigameChest", tooltip = "Juego de baúles en parejas (Pares/Nones)" },
         },
         recognition = {
             { name = "Crear Nuevo", action = "RecognitionCreate", icon = "Interface/Icons/Spell_ChargePositive" },
@@ -415,8 +415,9 @@ RaidDominion.constants = {
             "» WISP función y GS al Administrador/Oficial en linea para subir de rango.",
         },
         ["PESTAÑA DE EQUIPAMIENTO DEL BANCO"] = {
-            "» Acceso a los elementos del baul de equipamiento. A consideración del Administradoristrador.",
+            "» Acceso a los elementos del baul de equipamiento. A consideración del Administrador.",
             "→ Solicita equipamiento en el servidor de Discord kMK2ZRRCza.",
+            "→ WHATSAPP: https://chat.whatsapp.com/BahYOaTMZfHIwYQGey3G91 ",
         },
     },
    

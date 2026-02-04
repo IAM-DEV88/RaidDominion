@@ -404,7 +404,7 @@ local function GuildLottery()
         return
     end
 
-    -- Verificar permisos según el nuevo sistema (Mínimo Rango Oficial/Admin: Oficial)
+    -- Verificar permisos según el nuevo sistema (Mínimo Nivel 2: Oficial)
     local mm = RD.modules and RD.modules.messageManager
     local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
     

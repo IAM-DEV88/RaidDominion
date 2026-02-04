@@ -17,139 +17,6 @@ local math_min, math_max, math_ceil = math.min, math.max, math.ceil
 local tinsert, tremove, tsort = table.insert, table.remove, table.sort
 local string_gsub, string_upper, string_lower, string_sub, string_find, string_format, string_match = string.gsub, string.upper, string.lower, string.sub, string.find, string.format, string.match
 
--- Tabla de abreviaturas de especialización por clase (Tres letras)
-local SPEC_ABBR = {
-    ["WARRIOR"] = { [1] = "Arm", [2] = "Fur", [3] = "Pro" },
-    ["PALADIN"] = { [1] = "Hol", [2] = "Pro", [3] = "Ret" },
-    ["HUNTER"] = { [1] = "BM", [2] = "Pun", [3] = "Sup" },
-    ["ROGUE"] = { [1] = "Ase", [2] = "Com", [3] = "Sut" },
-    ["PRIEST"] = { [1] = "Dis", [2] = "Sag", [3] = "Som" },
-    ["DEATHKNIGHT"] = { [1] = "San", [2] = "Esc", [3] = "Pro" },
-    ["SHAMAN"] = { [1] = "Ele", [2] = "Mej", [3] = "Res" },
-    ["MAGE"] = { [1] = "Arc", [2] = "Fue", [3] = "Esc" },
-    ["WARLOCK"] = { [1] = "Afl", [2] = "Dem", [3] = "Des" },
-    ["DRUID"] = { [1] = "Equ", [2] = "Fer", [3] = "Res" }
-}
-
--- Función para detectar la especialización basada en puntos de talento (3.3.5)
--- Caché de talentos para evitar llamadas excesivas a GetTalentTabInfo
-local talentCache = {}
-
-local function GetSpecFromTalents(unit)
-    if not unit or not UnitExists(unit) then return nil end
-    
-    local guid = UnitGUID(unit)
-    local now = GetTime()
-    
-    -- Si tenemos datos recientes (menos de 30 segundos), usar la caché
-    if talentCache[guid] and (now - talentCache[guid].time < 30) then
-        local c = talentCache[guid]
-        return c.abbr, c.specIndex, c.class
-    end
-
-    local _, class = UnitClass(unit)
-    local r = {}
-    local isInspect = (unit ~= "player")
-    
-    -- En 3.3.5: name, icon, pointsSpent, background, previewPoints = GetTalentTabInfo(tabIndex, inspect, pet, talentGroup)
-    local hasPoints = false
-    for i = 1, 3 do
-        local name, icon, points = GetTalentTabInfo(i, isInspect)
-        r[i] = { name = name, icon = icon, points = points or 0 }
-        if (points or 0) > 0 then hasPoints = true end
-    end
-
-    if not hasPoints then return nil end
-    
-    local specIndex = 1
-    local maxPoints = r[1].points
-    
-    -- Lógica de desempate para Paladines (Holy vs Prot vs Ret)
-    if class == "PALADIN" then
-        if r[2].points >= r[1].points and r[2].points >= r[3].points then
-            specIndex = 2
-        elseif r[1].points >= r[2].points and r[1].points >= r[3].points then
-            specIndex = 1
-        else
-            specIndex = 3
-        end
-    -- Lógica de desempate para Chamanes (Ele vs Mej vs Res)
-    elseif class == "SHAMAN" then
-        -- En 3.3.5: 1=Ele, 2=Mej, 3=Res
-        -- Si el nombre de la pestaña contiene "Rest" o "Mej"/"Enh", usar eso como desempate si los puntos son cercanos
-        local function checkName(idx, searchList)
-            if not r[idx].name then return false end
-            local nameLower = string.lower(r[idx].name)
-            for _, search in ipairs(searchList) do
-                if string.find(nameLower, string.lower(search)) then return true end
-            end
-            return false
-        end
-
-        -- Determinación inicial por puntos
-        if r[3].points >= r[1].points and r[3].points >= r[2].points then
-            specIndex = 3
-        elseif r[2].points >= r[1].points and r[2].points > r[3].points then
-            specIndex = 2
-        else
-            specIndex = 1
-        end
-        
-        -- Refinamiento bilingüe y por nombre si hay ambigüedad o empate técnico
-        -- Los chamanes suelen tener puntos muy repartidos entre Resto y Mejora/Ele
-        -- Priorizamos el nombre si la diferencia es menor a 15 puntos (un margen amplio para híbridos)
-        local diffResMej = math.abs(r[3].points - r[2].points)
-        local diffResEle = math.abs(r[3].points - r[1].points)
-        
-        if diffResMej <= 15 or diffResEle <= 15 then
-            -- Si el nombre de la pestaña es explícito, confiar en el nombre (Soporte Bilingüe ES/EN)
-            if checkName(3, {"Rest", "Res", "Restaur"}) then specIndex = 3
-            elseif checkName(2, {"Mej", "Enh", "Mejora", "Enhanc"}) then specIndex = 2
-            elseif checkName(1, {"Ele", "Element"}) then specIndex = 1
-            end
-        end
-        
-        -- Caso especial: Si tiene más de 40 puntos en una rama, es casi seguro esa rama
-        for i = 1, 3 do
-            if r[i].points >= 40 then
-                specIndex = i
-                break
-            end
-        end
-    elseif class == "DRUID" then
-        -- 1=Equ, 2=Fer, 3=Res
-        if r[3].points >= r[1].points and r[3].points >= r[2].points then
-            specIndex = 3
-        elseif r[2].points >= r[1].points and r[2].points > r[3].points then
-            specIndex = 2
-        else
-            specIndex = 1
-        end
-    else
-        -- Lógica estándar por mayoría de puntos
-        if r[2].points > maxPoints then
-            maxPoints = r[2].points
-            specIndex = 2
-        end
-        if r[3].points > maxPoints then
-            maxPoints = r[3].points
-            specIndex = 3
-        end
-    end
-    
-    local abbr = SPEC_ABBR[class] and SPEC_ABBR[class][specIndex] or "N/A"
-    
-    -- Guardar en caché
-    talentCache[guid] = {
-        abbr = abbr,
-        specIndex = specIndex,
-        class = class,
-        time = now
-    }
-    
-    return abbr, specIndex, class
-end
-
 -- Función auxiliar para limpiar nombres (eliminar reino y normalizar a minúsculas para comparaciones)
 -- Caché interna para CleanName para evitar procesamiento de strings repetitivo
 local cleanNameCache = {}
@@ -1779,7 +1646,6 @@ end
 -- Frame centralizado para eventos y actualizaciones
 local RD_CoreBands_UpdateFrame = CreateFrame("Frame")
 RD_CoreBands_UpdateFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
-RD_CoreBands_UpdateFrame:RegisterEvent("INSPECT_READY")
 RD_CoreBands_UpdateFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "GUILD_ROSTER_UPDATE" then
         if isInternalGuildUpdate then return end -- Evitar recursividad
@@ -1791,52 +1657,15 @@ RD_CoreBands_UpdateFrame:SetScript("OnEvent", function(self, event, arg1)
         if isVisible then
             UpdateGuildOnlineCache(true)
         end
-    elseif event == "INSPECT_READY" then
-        -- arg1 es el GUID en 3.3.5. Buscamos qué tarjeta corresponde a este GUID o simplemente refrescamos todo.
-        RD.utils.coreBands.RefreshAllVisibleCards()
     end
 end)
 
 local elapsedSinceLastUpdate = 0
--- Sistema de inspección centralizado para optimizar rendimiento
-local inspectQueue = {}
-local lastInspectRequest = 0
-local function ProcessInspectQueue()
-    local now = GetTime()
-    if now - lastInspectRequest < 2 then return end -- Throttling global de 2s
-    
-    for i = #inspectQueue, 1, -1 do
-        local unit = inspectQueue[i]
-        if unit and UnitExists(unit) and CanInspect(unit) then
-            if not (InspectFrame and InspectFrame:IsShown()) then
-                NotifyInspect(unit)
-                lastInspectRequest = now
-                table.remove(inspectQueue, i)
-                return
-            end
-        else
-            table.remove(inspectQueue, i)
-        end
-    end
-end
-
--- Añadir a la cola de inspección
-local function QueueInspect(unit)
-    if not unit then return end
-    -- Evitar duplicados
-    for _, u in ipairs(inspectQueue) do
-        if u == unit then return end
-    end
-    table.insert(inspectQueue, unit)
-end
-
 RD_CoreBands_UpdateFrame:SetScript("OnUpdate", function(self, elapsed)
     elapsedSinceLastUpdate = elapsedSinceLastUpdate + elapsed
     
-    -- Procesar cola de inspección cada 0.5s
+    -- Refrescar tarjetas pendientes cada 0.5s
     if elapsedSinceLastUpdate > 0.5 then
-        ProcessInspectQueue()
-        
         if refreshPending then
             local rosterCache = BuildRosterCache()
             local coreData = EnsureCoreData()
@@ -1966,17 +1795,6 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
             tinsert(membersByRole.sancionados, member)
         -- 2. En grupo: Jugadores actualmente en el grupo/raid
         elseif isInGroup then
-            -- Intentar detectar talentos/especialización siempre que estén en grupo
-            local unit = rosterData.unit
-            if unit then
-                local specAbbr, specIndex, class = GetSpecFromTalents(unit)
-                if specAbbr then
-                    member.specAbbr = specAbbr
-                else
-                    -- Si no hay talentos, encolar para inspección al vuelo
-                    QueueInspect(unit)
-                end
-            end
             tinsert(membersByRole.en_grupo, member)
         -- 3. Exploradores (G): Hermandad, no en grupo, con rol asignado
         elseif isGuildMember and isOnline and (role == "tank" or role == "healer" or role == "dps") then
@@ -2028,50 +1846,11 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
         if header.autoBtn then header.autoBtn:Hide() end
         if header.cleanBtn then header.cleanBtn:Hide() end
         if header.inviteBtn then header.inviteBtn:Hide() end
-        if header.rescanBtn then header.rescanBtn:Hide() end
 
         local permLevel = GetPerms()
 
-        -- Botón Re-escanear para "En grupo"
-        if roleName == "en_grupo" and #membersByRole[roleName] > 0 then
-            if not header.rescanBtn then
-                header.rescanBtn = CreateFrame("Button", nil, header, "UIPanelButtonTemplate")
-                header.rescanBtn:SetSize(90, 16)
-                header.rescanBtn:SetPoint("RIGHT", -10, 0)
-                header.rescanBtn:SetText("Re-escanear")
-                header.rescanBtn:SetNormalFontObject("GameFontNormalSmall")
-                header.rescanBtn:SetHighlightFontObject("GameFontHighlightSmall")
-            end
-            header.rescanBtn:Show()
-            
-            header.rescanBtn:SetScript("OnClick", function()
-                 local currentRoster = BuildRosterCache()
-                 local count = 0
-                 
-                 for _, member in ipairs(membersByRole.en_grupo) do
-                     local cleanName = CleanName(member.name)
-                     local rData = currentRoster[cleanName]
-                     if rData and rData.unit then
-                         local specAbbr, specIndex, class = GetSpecFromTalents(rData.unit)
-                         if specAbbr then
-                             member.specAbbr = specAbbr
-                             count = count + 1
-                         else
-                             -- Si no detectamos talentos al darle clic manual, forzamos inspección
-                             QueueInspect(rData.unit)
-                         end
-                     end
-                 end
-                 
-                 if count > 0 then
-                     DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r Re-escaneados %d jugadores en grupo.", count))
-                     RD.utils.coreBands.ShowCoreBandsWindow()
-                 else
-                     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r No se detectaron talentos inmediatos. Se ha solicitado inspección de los miembros en grupo.")
-                 end
-             end)
         -- Botón Invitar para Exploradores, Hermandad y Posada
-        elseif (roleName == "exploradores" or roleName == "hermandad" or roleName == "posada") and #membersByRole[roleName] > 0 then
+        if (roleName == "exploradores" or roleName == "hermandad" or roleName == "posada") and #membersByRole[roleName] > 0 then
             if not header.inviteBtn then
                 header.inviteBtn = CreateFrame("Button", nil, header, "UIPanelButtonTemplate")
                 header.inviteBtn:SetSize(80, 16)
@@ -2209,43 +1988,6 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                     local capitalizedName = CapitalizeName(name)
                     local displayName = capitalizedName
                     
-                    -- Priorizar la spec detectada en memberData
-                    local spec = memberData and memberData.specAbbr
-                    
-                    -- Si no hay spec en memberData pero está en grupo, intentar detectarla al vuelo
-                    if rosterCache and rosterCache[cleanName] then
-                        local unit = rosterCache[cleanName].unit
-                        if unit then
-                            local newSpec, specIndex, class = GetSpecFromTalents(unit)
-                            if newSpec then
-                                    -- Si la spec ha cambiado o no existía, actualizar
-                                    if not spec or spec ~= newSpec then
-                                        spec = newSpec
-                                        if memberData then memberData.specAbbr = spec end
-                                        
-                                        -- Actualizar en el coreData persistente
-                                        local coreData = EnsureCoreData()
-                                        local b = coreData[self.bandIndex]
-                                        local m = b and b.members and b.members[self.memberIndex]
-                                        if m then 
-                                            m.specAbbr = spec 
-                                        end
-                                        
-                                        -- Forzar refresco de la UI para mostrar la nueva spec
-                                        RD.utils.coreBands.ShowCoreBandsWindow()
-                                        return
-                                    end
-                            else
-                                -- En 3.3.5, si no tenemos talentos, añadir a la cola de inspección
-                                QueueInspect(unit)
-                            end
-                        end
-                    end
-
-                    if spec then
-                        displayName = string.format("%s (|cff00ff00%s|r)", capitalizedName, spec) -- Color VERDE para que sea evidente
-                    end
-                    
                     -- Mostrar ubicación entre paréntesis solo para el grupo 'hermandad'
                     if self.roleGroup == "hermandad" and guildData and guildData.online and guildData.zone and guildData.zone ~= "" then
                         -- Truncar ubicación a 12 caracteres con ellipsis
@@ -2254,13 +1996,7 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                             zone = string.sub(zone, 1, 9) .. "..."
                         end
                         
-                        if spec then
-                            -- Si ya hay spec, agregar ubicación después con paréntesis grises
-                            displayName = string.format("%s |cffaaaaaa(%s)|r", displayName, zone)
-                        else
-                            -- Si no hay spec, mostrar solo ubicación con paréntesis grises
-                            displayName = string.format("%s |cffaaaaaa(%s)|r", capitalizedName, zone)
-                        end
+                        displayName = string.format("%s |cffaaaaaa(%s)|r", capitalizedName, zone)
                     end
                     
                     self.memberText:SetText(displayName)
@@ -2726,9 +2462,13 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 
                 if totalAdded > 0 or totalCleaned > 0 then
                     DEFAULT_CHAT_FRAME:AddMessage(summary)
+                    RD.utils.coreBands.RefreshAllVisibleCards()
                     RD.utils.coreBands.ShowCoreBandsWindow()
                 else
                     DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r No se encontraron cambios (limpieza o nuevos jugadores).")
+                    -- Aun así refrescar las tarjetas y encabezados para asegurar consistencia
+                    RD.utils.coreBands.RefreshAllVisibleCards()
+                    RD.utils.coreBands.ShowCoreBandsWindow()
                 end
             end
 
