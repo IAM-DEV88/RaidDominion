@@ -18,6 +18,20 @@ local constants = RaidDominion.constants
 local events = RaidDominion.events
 local config = RaidDominion.config
 
+-- Función centralizada para loguear mensajes
+local function Log(...)
+    local RD = _G.RaidDominion
+    if RD and RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
 -- Módulo de diálogos
 local dialogs = {}
 
@@ -262,7 +276,7 @@ function dialogs:OnInitialize()
             local name = self.data.name
             GuildUninvite(name)
             GuildRoster()
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Expulsando a " .. name .. " de la hermandad.")
+            Log("|cffff0000[RaidDominion]|r Expulsando a " .. name .. " de la hermandad.")
         end,
         timeout = 0,
         whileDead = true,
@@ -279,7 +293,8 @@ function dialogs:OnInitialize()
             if coreData[bandIndex] then
                 coreData[bandIndex].members = {}
                 RaidDominion.utils.coreBands.ShowCoreBandsWindow()
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Banda " .. coreData[bandIndex].name .. " reiniciada.")
+                Log("|cff00ff00[RaidDominion]|r Banda " .. coreData[bandIndex].name .. " reiniciada.")
+                events:Publish("CORE_BANDS_UPDATED")
             end
         end,
         timeout = 0,

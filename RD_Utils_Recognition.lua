@@ -61,6 +61,19 @@ local function EnsureRecognitionData()
     return RaidDominionDB.recognition
 end
 
+-- Helper para logs centralizados
+local function Log(...)
+    if RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
 -- Declarar RefreshRecognitionList antes para que addPlayerToRecognition la vea
 local RefreshRecognitionList
 
@@ -140,7 +153,13 @@ local function addPlayerToRecognition(index, playerData)
         memberEntry.count = (memberEntry.count or 1) + 1
         memberEntry.timestamps = memberEntry.timestamps or {}
         table.insert(memberEntry.timestamps, timestamp)
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Reconocimiento acumulado para " .. memberEntry.name .. " (Total: " .. memberEntry.count .. ")")
+        
+        local msg = "|cff00ff00[RaidDominion]|r Reconocimiento acumulado para " .. memberEntry.name .. " (Total: " .. memberEntry.count .. ")"
+        if RD.messageManager and RD.messageManager.SendSystemMessage then
+            RD.messageManager:SendSystemMessage(msg)
+        else
+            SendSystemMessage(msg)
+        end
     else
         -- Nuevo registro
         table.insert(recognition.members, {
@@ -149,7 +168,13 @@ local function addPlayerToRecognition(index, playerData)
             count = 1,
             timestamps = { timestamp }
         })
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Jugador " .. playerData.name .. " agregado al reconocimiento.")
+        
+        local msg = "|cff00ff00[RaidDominion]|r Jugador " .. playerData.name .. " agregado al reconocimiento."
+        if RD.messageManager and RD.messageManager.SendSystemMessage then
+            RD.messageManager:SendSystemMessage(msg)
+        else
+            SendSystemMessage(msg)
+        end
     end
     
     if RefreshRecognitionList then RefreshRecognitionList() end
@@ -261,7 +286,7 @@ local function getOrCreateInvitePopup()
         invitePopup.acceptBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
                 return
             end
 
@@ -375,7 +400,7 @@ function recognitionUtils.ShowPlayerSearchPopup()
         p.acceptBtn:SetScript("OnClick", function()
                     local permLevel = GetPerms()
                     if permLevel < 1 then
-                        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar y editar jugadores.")
+                        Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar y editar jugadores.")
                         return
                     end
                     
@@ -386,7 +411,7 @@ function recognitionUtils.ShowPlayerSearchPopup()
                             RD.utils.coreBands.OpenPlayerEditFrame(name, true)
                             p:Hide()
                         else
-                            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: El módulo CoreBands no está disponible.")
+                            Log("|cffff0000[RaidDominion]|r Error: El módulo CoreBands no está disponible.")
                         end
                     end
                 end)
@@ -521,7 +546,7 @@ local function renderRecognitionMembers(recognition, parentFrame)
         card.addBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir menciones.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir menciones.")
                 return
             end
 
@@ -555,7 +580,7 @@ local function renderRecognitionMembers(recognition, parentFrame)
         card.remBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para quitar menciones.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para quitar menciones.")
                 return
             end
             
@@ -708,7 +733,7 @@ RefreshRecognitionList = function()
         line.descBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar reconocimientos.")
                 return
             end
             
@@ -877,14 +902,14 @@ function recognitionUtils.getOrCreateRecognitionFrame()
         f.saveBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para guardar reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para guardar reconocimientos.")
                 return
             end
             
             local name = f.nameEdit:GetText()
             local desc = f.descEdit:GetText()
             if name == "" then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: El nombre es obligatorio.")
+                Log("|cffff0000[RaidDominion]|r Error: El nombre es obligatorio.")
                 return
             end
             
@@ -988,7 +1013,7 @@ function recognitionUtils.ShowRecognitionWindow()
         f.createBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
                 return
             end
             local createFrame = recognitionUtils.getOrCreateRecognitionFrame()
@@ -1005,11 +1030,11 @@ function recognitionUtils.ShowRecognitionWindow()
         f.shareBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
                 return
             end
             -- Lógica de compartir (pendiente)
-            DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Lógica de compartir no implementada aún.")
+            Log("|cffffff00[RaidDominion]|r Lógica de compartir no implementada aún.")
         end)
 
         -- Botones Derecha: Añadir, Subir, Bajar, Duplicar, Eliminar (Orden estilo Core)
@@ -1023,12 +1048,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.addPlayerBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
                 return
             end
             
             if not selectedRecognitionIndex then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar un reconocimiento primero.")
+                Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar un reconocimiento primero.")
                 return
             end
 
@@ -1050,7 +1075,7 @@ function recognitionUtils.ShowRecognitionWindow()
         f.upBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
                 return
             end
 
@@ -1071,7 +1096,7 @@ function recognitionUtils.ShowRecognitionWindow()
         f.downBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
                 return
             end
 
@@ -1092,10 +1117,10 @@ function recognitionUtils.ShowRecognitionWindow()
         f.duplicateBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar reconocimientos.")
                 return
             end
-
+            
             local data = EnsureRecognitionData()
             local itemsToDuplicate = {}
             for i, item in ipairs(data) do
@@ -1106,7 +1131,7 @@ function recognitionUtils.ShowRecognitionWindow()
             end
 
             if #itemsToDuplicate == 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Debes seleccionar al menos un elemento para duplicar.")
+                Log("|cffffff00[RaidDominion]|r Debes seleccionar al menos un elemento para duplicar.")
                 return
             end
 
@@ -1136,7 +1161,7 @@ function recognitionUtils.ShowRecognitionWindow()
         f.deleteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar reconocimientos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar reconocimientos.")
                 return
             end
 
@@ -1151,7 +1176,7 @@ function recognitionUtils.ShowRecognitionWindow()
             end
 
             if #selectedIndices == 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Debes seleccionar al menos un elemento para eliminar.")
+                Log("|cffffff00[RaidDominion]|r Debes seleccionar al menos un elemento para eliminar.")
                 return
             end
 

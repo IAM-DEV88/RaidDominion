@@ -48,6 +48,19 @@ local function GetPerms()
     return mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
 end
 
+-- Helper para logs centralizados
+local function Log(...)
+    if RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
 -- Función auxiliar para obtener el número de miembros del grupo (Compatible con 3.3.5)
 local function GetGroupSize()
     local raidMembers = GetNumRaidMembers()
@@ -71,12 +84,12 @@ function minigame:StartNewGame()
     end
 
     if not isLeader then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Solo el líder del grupo puede iniciar el minijuego.")
+        Log("|cffff0000[RaidDominion]|r Solo el líder del grupo puede iniciar el minijuego.")
         return
     end
 
     if GetPerms() < 3 then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Requiere Rango Oficial/Admin de permisos para gestionar el minijuego.")
+        Log("|cffff0000[RaidDominion]|r Error: Requiere Rango Oficial/Admin de permisos para gestionar el minijuego.")
         return
     end
     
@@ -116,7 +129,13 @@ end
 -- Función auxiliar para anunciar con tensión
 function minigame:Announce(msg, isUrgent)
     local color = isUrgent and "|cffff0000" or "|cffffff00"
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r " .. color .. msg .. "|r")
+    local finalMsg = "|cff00ff00[RaidDominion]|r " .. color .. msg .. "|r"
+    
+    if RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(finalMsg)
+    else
+        SendSystemMessage(finalMsg)
+    end
     
     -- RaidNotice para mensaje en medio de la pantalla
     local frame = RaidWarningFrame
@@ -194,8 +213,7 @@ function minigame:SendAction(action, val)
     if channel then
         local msg = "ACTION:"..action..":"..val
         SendAddonMessage(COMM_PREFIX, msg, channel)
-        -- Depuración local
-        -- DEFAULT_CHAT_FRAME:AddMessage("|cff888888[RD_DEBUG] Enviando Acción: "..msg.." a canal "..channel.."|r")
+        -- Enviar a través de messageManager para evitar inundación
     else
         -- Si estamos solos, procesar la acción localmente de inmediato
         self:HandlePlayerAction(UnitName("player"), action, val)
@@ -244,7 +262,7 @@ local function OnCommReceived(prefix, message, channel, sender)
         if frame then
             RaidNotice_AddMessage(frame, "|cff00ff00[RaidDominion]|r " .. msg, { r = 1, g = 1, b = 0 })
         end
-        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r |cffffff00" .. msg .. "|r")
+        Log("|cff00ff00[RaidDominion]|r |cffffff00" .. msg .. "|r")
     elseif cmd == "RESET_GAME" then
         -- Reiniciar el juego en todos los clientes
         minigame:HandleLocalReset()
@@ -261,7 +279,8 @@ local function OnCommReceived(prefix, message, channel, sender)
         local chestId = tonumber(parts[2])
         local content = parts[3]
         if minigame.frame then
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r ¡Has abierto tu baúl! Contiene: |cffffff00%s|r", content))
+            local revealMsg = string.format("|cff00ff00[RaidDominion]|r ¡Has abierto tu baúl! Contiene: |cffffff00%s|r", content)
+            Log(revealMsg)
             if minigame.chests[chestId] then
                 minigame.chests[chestId].content = content
                 minigame.chests[chestId].revealed_local = true
@@ -396,7 +415,8 @@ function minigame:CreateUI()
             minigame:UpdateUI()
             minigame:BroadcastState()
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Selecciona un objetivo para asignar como Jugador 1.")
+            local errorMsg = "|cffff0000[RaidDominion]|r Selecciona un objetivo para asignar como Jugador 1."
+            Log(errorMsg)
         end
     end)
     
@@ -414,7 +434,8 @@ function minigame:CreateUI()
             minigame:UpdateUI()
             minigame:BroadcastState()
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Selecciona un objetivo para asignar como Jugador 2.")
+            local errorMsg = "|cffff0000[RaidDominion]|r Selecciona un objetivo para asignar como Jugador 2."
+            Log(errorMsg)
         end
     end)
     
@@ -450,7 +471,8 @@ function minigame:CreateUI()
         if GetPerms() < 3 then return end
         if minigame.isPaused then return end
         if not minigame.players.p1.name or not minigame.players.p2.name then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Debes asignar a ambos jugadores primero.")
+            local errorMsg = "|cffff0000[RaidDominion]|r Debes asignar a ambos jugadores primero."
+            Log(errorMsg)
             return
         end
         minigame:RollDice()
@@ -463,15 +485,15 @@ function minigame:CreateUI()
         if now - lastClick < 0.5 then return end -- Cooldown local de 0.5s
         lastClick = now
         
-        if minigame.isPaused then 
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r El juego está pausado por el líder.")
-            return 
+        if minigame.isPaused then
+            Log("|cffff0000[RaidDominion]|r El juego está pausado por el líder.")
+            return
         end
         
         -- Si el líder hace clic, puede ver el contenido (siempre que tenga Rango Oficial/Admin)
         if minigame.isLeader and GetPerms() >= 3 then
             local content = minigame.chests[id].content or "???"
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r Baúl %d contiene: |cffffff00%s|r", id, content))
+            Log("|cff00ff00[RaidDominion]|r Baúl %d contiene: |cffffff00%s|r", id, content)
         end
         
         -- Ejecutar acción (esto enviará el mensaje al líder o lo procesará si es solo)
@@ -721,7 +743,8 @@ function minigame:AdvanceState()
         self.state = "FINISHED"
     end
     
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r Etapa: |cffffff00%s|r -> |cffffff00%s|r", oldState, self.state))
+    local stageMsg = string.format("|cff00ff00[RaidDominion]|r Etapa: |cffffff00%s|r -> |cffffff00%s|r", oldState, self.state)
+    Log(stageMsg)
     
     self:BroadcastState()
     self:UpdateUI()
@@ -747,9 +770,9 @@ function minigame:RollDice()
     self.turnOwner = winner.name
     
     -- Mensajes por SYSTEM
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r %s (%s) vs %s (%s)", p1.name, p1.choice, p2.name, p2.choice))
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r Dado: |cffffff00%d|r (%s)", rollResult, result))
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r ¡Ganador: |cffffff00%s|r! Escoge el primer baúl.", winner.name))
+    Log("|cff00ff00[RaidDominion]|r %s (%s) vs %s (%s)", p1.name, p1.choice, p2.name, p2.choice)
+    Log("|cff00ff00[RaidDominion]|r Dado: |cffffff00%d|r (%s)", rollResult, result)
+    Log("|cff00ff00[RaidDominion]|r ¡Ganador: |cffffff00%s|r! Escoge el primer baúl.", winner.name)
     
     -- Saltar directamente a CHOICE
     self.state = "CHOICE"
@@ -773,7 +796,8 @@ function minigame:HandlePlayerAction(sender, action, val)
         if self.state == "CHOICE" then
             -- Solo el ganador del dado puede elegir en CHOICE
             if sender ~= self.turnOwner then 
-                DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff0000[RaidDominion]|r %s intentó elegir, pero es el turno de %s.", sender, self.turnOwner or "nadie"))
+                local errorMsg = string.format("|cffff0000[RaidDominion]|r %s intentó elegir, pero es el turno de %s.", sender, self.turnOwner or "nadie")
+                Log(errorMsg)
                 return 
             end
             
@@ -791,7 +815,8 @@ function minigame:HandlePlayerAction(sender, action, val)
                 self.chests[chestId].revealed_local = true
             end
             
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r %s ha elegido el Baúl %d.", sender, chestId))
+            local choiceMsg = string.format("|cff00ff00[RaidDominion]|r %s ha elegido el Baúl %d.", sender, chestId)
+            Log(choiceMsg)
             self:Announce(sender .. " ha elegido el Baúl " .. chestId)
             self:AdvanceState()
         elseif self.state == "STEAL" then
@@ -876,6 +901,3 @@ end
 function minigame:StartLocalCountdown()
     -- Eliminado a petición del usuario
 end
-
--- Registrar mensaje de carga
-DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Módulo de Minijuegos cargado.")

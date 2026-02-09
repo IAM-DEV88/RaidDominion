@@ -19,7 +19,7 @@ local LOCALIZATION = CONSTANTS.LOCALIZATION
 local UI = CONSTANTS.UI
 local config = RD.config
 local UIUtils = RD.UIUtils or {}
-local MenuFactory = RD.UI.MenuFactory or {}
+local MenuFactory = RD.UI and RD.UI.MenuFactory or {}
 
 -- Localize frequently used functions
 local pairs, ipairs, type, tostring = pairs, ipairs, type, tostring
@@ -955,6 +955,9 @@ local tabDefinitions = {
             -- Help sections
             local yOffset = -10
             
+            -- Use the actual MenuFactory reference from RD.UI
+            local Factory = RD.UI and RD.UI.MenuFactory
+            
             -- Welcome section
             local helpText = table.concat({
                 LOCALIZATION.HELP.WELCOME,
@@ -963,20 +966,22 @@ local tabDefinitions = {
                 LOCALIZATION.HELP.TIP_2,
                 LOCALIZATION.HELP.TIP_3
             }, "\n")
-            yOffset = yOffset - MenuFactory:CreateHelpSection(content, "Primeros Pasos", helpText, yOffset)
             
-            -- Commands section
-            yOffset = yOffset - MenuFactory:CreateHelpSection(content, "Comandos", [[
+            if Factory and Factory.CreateHelpSection then
+                yOffset = yOffset - Factory:CreateHelpSection(content, "Primeros Pasos", helpText, yOffset)
+                
+                -- Commands section
+                yOffset = yOffset - Factory:CreateHelpSection(content, "Comandos", [[
 Comandos disponibles:
 /rd - Muestra/oculta la ventana flotante de RaidDominion
 /rdc - Muestra la ventana de configuración de RaidDominion
 /rdh - Muestra los comandos de ayuda de RaidDominion
-            ]], yOffset)
-            
-            -- About section
-            local aboutText = "RaidDominion v1.0"
-            
-            yOffset = yOffset - MenuFactory:CreateHelpSection(content, "Actualizaciones", aboutText, yOffset)
+                ]], yOffset)
+                
+                -- About section
+                local aboutText = "RaidDominion v1.0"
+                yOffset = yOffset - Factory:CreateHelpSection(content, "Actualizaciones", aboutText, yOffset)
+            end
             
             -- Update URL section
             local updateLabel = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -1484,7 +1489,21 @@ function ConfigManager:SelectTab(index)
         
         -- Initialize tab content if not already done
         if not tab.initialized and tab.create then
-            tab.create(tab.content)
+            -- Use pcall to catch errors during tab creation (like the nil Factory error)
+            local success, err = pcall(tab.create, tab.content)
+            if not success then
+                -- Fallback: show error message in the tab content
+                local errorMsg = tab.content:CreateFontString(nil, "OVERLAY", "GameFontRedLarge")
+                errorMsg:SetPoint("CENTER")
+                errorMsg:SetText("Error al cargar la pestaña: " .. tostring(err))
+                
+                -- Also log to chat for debugging
+                if RaidDominion.messageManager and RaidDominion.messageManager.SendSystemMessage then
+                    RaidDominion.messageManager:SendSystemMessage("|cffff0000[RaidDominion]|r Error en ConfigManager (Pestaña " .. (tab.id or index) .. "): " .. tostring(err))
+                else
+                    SendSystemMessage("|cffff0000[RaidDominion]|r Error en ConfigManager: " .. tostring(err))
+                end
+            end
             tab.initialized = true
         end
         

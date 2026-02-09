@@ -54,6 +54,30 @@ end
 -- Módulo de gestión de mensajes
 local messageManager = {}
 
+-- Función centralizada para loguear mensajes
+local function Log(...)
+    if messageManager and messageManager.SendSystemMessage then
+        messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
+-- Función para enviar mensajes al sistema (chat local)
+function messageManager:SendSystemMessage(msg, ...)
+    if not msg then return end
+    local formatted = msg
+    if select("#", ...) > 0 then
+        formatted = string.format(msg, ...)
+    end
+    -- Asegurar que el mensaje vaya al canal de sistema
+    SendSystemMessage(formatted)
+end
+
 -- Prefijo para comunicación entre addons
 local COMM_PREFIX = "RD_COMM"
 
@@ -311,9 +335,7 @@ function messageManager:SendRDMessage(arg1, arg2, arg3)
 		title = tostring(arg3 or "MENSAJE")
 	end
 	if not arrayToSend then
-		if DEFAULT_CHAT_FRAME then
-			DEFAULT_CHAT_FRAME:AddMessage("|cFFFF0000[RaidDominion]|r Error: No data found for " .. tostring(msgType) .. " key: " .. tostring(key))
-		end
+		self:SendSystemMessage("|cFFFF0000[RaidDominion]|r Error: No data found for " .. tostring(msgType) .. " key: " .. tostring(key))
 		return
 	end
 	local messages = { "=== " .. tostring(title or "") .. " ===" }
@@ -824,9 +846,7 @@ function messageManager:ReportAbsentPlayers()
         
         if hasAbsent then
             SendDelayedMessages(messages, defaultChannel)
-            if DEFAULT_CHAT_FRAME then
-                DEFAULT_CHAT_FRAME:AddMessage(string.format("|cFF33FF99[RaidDominion]|r Reporte de ausentes enviado (%d offline, %d AFK, %d muertos)", #absent.offline, #absent.afk, #absent.dead))
-            end
+            self:SendSystemMessage("|cFF33FF99[RaidDominion]|r Reporte de ausentes enviado (%d offline, %d AFK, %d muertos)", #absent.offline, #absent.afk, #absent.dead)
         else
             SendSystemMessage("Todos los miembros del grupo/banda están presentes y listos.")
         end
@@ -936,30 +956,39 @@ function messageManager:Initialize()
                 
                 local msg = string.format("|cffff0000[RaidDominion]|r El jugador %s%s|r (|cffaaaaaa%s|r) ha abandonado el grupo.", classColor, data.playerName, className)
                 
+
                 local details = {}
+                -- Roles que el jugador tenía asignados antes de irse (obtenidos del roleManager)
                 if roles ~= "" then
-                    table.insert(details, string.format("roles: |cffffff00%s|r", roles))
+                    table.insert(details, string.format("roles previos: |cffffff00%s|r", roles))
                 end
                 
+                -- Asignaciones específicas que se han liberado (obtenidas de resetInfo)
                 if resetInfo and resetInfo.names then
+                    local resetDetails = {}
+                    if resetInfo.names.roles and #resetInfo.names.roles > 0 then
+                        table.insert(resetDetails, string.format("roles: |cffffff00%s|r", table.concat(resetInfo.names.roles, ", ")))
+                    end
                     if resetInfo.names.buffs and #resetInfo.names.buffs > 0 then
-                        table.insert(details, string.format("buffs: |cffffff00%s|r", table.concat(resetInfo.names.buffs, ", ")))
+                        table.insert(resetDetails, string.format("buffs: |cffffff00%s|r", table.concat(resetInfo.names.buffs, ", ")))
                     end
                     if resetInfo.names.auras and #resetInfo.names.auras > 0 then
-                        table.insert(details, string.format("auras: |cffffff00%s|r", table.concat(resetInfo.names.auras, ", ")))
+                        table.insert(resetDetails, string.format("auras: |cffffff00%s|r", table.concat(resetInfo.names.auras, ", ")))
                     end
                     if resetInfo.names.abilities and #resetInfo.names.abilities > 0 then
-                        table.insert(details, string.format("habilidades: |cffffff00%s|r", table.concat(resetInfo.names.abilities, ", ")))
+                        table.insert(resetDetails, string.format("habilidades: |cffffff00%s|r", table.concat(resetInfo.names.abilities, ", ")))
+                    end
+                    
+                    if #resetDetails > 0 then
+                        table.insert(details, "Asignaciones liberadas: " .. table.concat(resetDetails, ", "))
                     end
                 end
                 
                 if #details > 0 then
-                    msg = msg .. " Se han liberado: " .. table.concat(details, ", ")
+                    msg = msg .. " " .. table.concat(details, " | ")
                 end
                 
-                if DEFAULT_CHAT_FRAME then
-                    DEFAULT_CHAT_FRAME:AddMessage(msg)
-                end
+                Log(msg)
             end
         end)
     end

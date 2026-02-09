@@ -34,6 +34,19 @@ RD.MenuData = RD.MenuData or {}
 -- Variables locales
 local isInitialized = false
 
+-- Función centralizada para loguear mensajes
+local function Log(...)
+    if RD and RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
 local function ShowHelp()
     -- Print help messages to chat
     print(" ")
@@ -84,17 +97,17 @@ local function SetupSlashCommands()
             end
         elseif command == "testcore" then
             -- Comando de prueba para bandas Core
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Probando bandas Core...")
+            Log("|cff00ff00[RaidDominion]|r Probando bandas Core...")
             if RD.utils and RD.utils.coreBands and RD.utils.coreBands.ShowCoreBandsWindow then
                 RD.utils.coreBands.ShowCoreBandsWindow()
             else
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: RD.utils.coreBands no está disponible")
+                Log("|cffff0000[RaidDominion]|r Error: RD.utils.coreBands no está disponible")
                 if not RD.utils then
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r RD.utils no está disponible")
+                    Log("|cffff0000[RaidDominion]|r RD.utils no está disponible")
                 elseif not RD.utils.coreBands then
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r RD.utils.coreBands no está disponible")
+                    Log("|cffff0000[RaidDominion]|r RD.utils.coreBands no está disponible")
                 else
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r RD.utils.coreBands.ShowCoreBandsWindow no está disponible")
+                    Log("|cffff0000[RaidDominion]|r RD.utils.coreBands.ShowCoreBandsWindow no está disponible")
                 end
             end
         else

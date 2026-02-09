@@ -12,13 +12,77 @@ RD.utils = RD.utils or {}
 RD.constants = RD.constants or {}
 RD.events = RD.events or {}
 
+-- Referencias locales
+local constants = RD.constants
+local events = RD.events
+
+-- Función centralizada para loguear mensajes
+local function Log(...)
+    if RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
+-- Compatibilidad con versiones antiguas de WoW (3.3.5a)
+local IsInRaid = _G.IsInRaid or function() 
+    return (_G.GetNumRaidMembers and _G.GetNumRaidMembers() > 0) or false 
+end
+local IsInGroup = _G.IsInGroup or function() 
+    return (_G.GetNumPartyMembers and _G.GetNumPartyMembers() > 0) or (_G.GetNumRaidMembers and _G.GetNumRaidMembers() > 0) or false 
+end
+local GetNumGroupMembers = _G.GetNumGroupMembers or function()
+    local raidMembers = _G.GetNumRaidMembers and _G.GetNumRaidMembers() or 0
+    if raidMembers > 0 then return raidMembers end
+    local partyMembers = _G.GetNumPartyMembers and _G.GetNumPartyMembers() or 0
+    if partyMembers > 0 then return partyMembers + 1 end
+    return 1
+end
+
+-- Función de depuración
+local function RD_Debug(msg, ...)
+    if RD.DEBUG_ENABLED then
+        Log("|cff00ff00[RD_Debug]|r " .. msg, ...)
+    end
+end
+
 -- Variables locales
 local playerAssignments = {}
 local previousGroupMembers = {}
-local currentGroupMembers = {}
-local playerClasses = {} -- Table to track player classes
+local currentGroupMembers = {} -- Unificada
+local playerClasses = {} 
 local groupUtils = {}
 RD.utils.group = groupUtils
+
+-- Constantes
+local GROUP_UPDATE_THROTTLE = 0.5 
+local GROUP_TYPES = RD.constants.GROUP_TYPES or {
+    NONE = 0,
+    PARTY = 1,
+    RAID = 2,
+    BATTLEGROUND = 3
+}
+
+--- Obtiene el nombre completo de un jugador (Nombre-Reino)
+-- @param unit string El identificador de la unidad (ej: "player", "raid1", "target")
+-- @return string|nil El nombre completo o nil si no se encuentra
+function groupUtils:GetFullPlayerName(unit)
+    if not unit then return nil end
+    
+    local name, realm = UnitName(unit)
+    if not name then return nil end
+    
+    if not realm or realm == "" then
+        realm = GetRealmName()
+    end
+    
+    return name.."-"..realm
+end
 
 -- Función para obtener la lista de miembros de la hermandad
 function groupUtils.GetGuildMemberList()
@@ -216,7 +280,11 @@ function groupUtils:UpdateGuildOnlineCache(force)
                 isUpdatingGuild = false
                 updateCoroutine = nil
                 if not status then 
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion Error]:|r " .. (err or "Unknown error in Guild Cache update"))
+                    if RD.messageManager and RD.messageManager.SendSystemMessage then
+                        RD.messageManager:SendSystemMessage("|cffff0000[RaidDominion Error]:|r " .. (err or "Unknown error in Guild Cache update"))
+                    else
+                        SendSystemMessage("|cffff0000[RaidDominion Error]:|r " .. (err or "Unknown error in Guild Cache update"))
+                    end
                 end
             end
         else
@@ -246,53 +314,40 @@ function groupUtils:GetGuildFullCache()
     return guildFullCache
 end
 
--- Variables de estado del grupo
+-- Variables de estado del grupo (internas)
 local inRaid = false
 local inParty = false
 local numGroupMembers = 1
 local isGroupLeader = false
 
--- Variables locales
-local constants = RD.constants
-local events = RD.events
-
-
--- Sobrescribir las funciones de grupo con versiones personalizadas
-IsInRaid = function() return inRaid end
-IsInGroup = function() return inParty or inRaid end
-GetNumGroupMembers = function() return numGroupMembers end
-UnitIsGroupLeader = function(unit) return unit == "player" and not inRaid and not inParty end
-UnitIsGroupAssistant = function() return false end
-
 -- Detectar jugadores que abandonaron el grupo
 local function DetectLeftPlayers()
     local currentMembers = {}
-    local numMembers = SafeGetNumGroupMembers()
+    RD_Debug("Iniciando DetectLeftPlayers...")
     
-    -- Obtener lista actual de miembros
-    if numMembers > 0 then
-        for i = 1, numMembers do
-            local unit = (IsInRaid() and "raid" or "party") .. i
-            local name = GetUnitName(unit, true)
-            if name and name ~= "" then
-                currentMembers[name] = true
-            end
+    -- Usar la lógica de groupUtils para obtener miembros actuales
+    local members = groupUtils:GetGroupMembers()
+    RD_Debug("Miembros actuales encontrados: %d", #members)
+    
+    for _, member in ipairs(members) do
+        local fullName = groupUtils:GetFullPlayerName(member.unit)
+        if fullName then
+            currentMembers[fullName] = true
+            -- RD_Debug("Miembro actual: %s", fullName)
         end
-    end
-    
-    -- Añadir al jugador actual
-    local playerName = GetUnitName("player", true)
-    if playerName and playerName ~= "" then
-        currentMembers[playerName] = true
     end
     
     -- Verificar jugadores que ya no están en el grupo
     local jugadoresQueAbandonaron = {}
-    for nombre, _ in pairs(previousGroupMembers) do
+    local countPrevious = 0
+    for nombre, memberData in pairs(previousGroupMembers) do
+        countPrevious = countPrevious + 1
         if not currentMembers[nombre] then
+            RD_Debug("Jugador detectado como salido: %s", nombre)
             table.insert(jugadoresQueAbandonaron, nombre)
         end
     end
+    RD_Debug("Comparando con %d miembros previos. Total salidos detectados: %d", countPrevious, #jugadoresQueAbandonaron)
     
     -- Procesar jugadores que abandonaron
     for _, nombre in ipairs(jugadoresQueAbandonaron) do
@@ -301,16 +356,35 @@ local function DetectLeftPlayers()
         local roles = ""
         local resetInfo = nil
         
+        RD_Debug("Procesando salida de %s (%s)", nombre, class)
+        
         -- Obtener roles antes de resetear
         if RD.roleManager and RD.roleManager.GetRole then
             roles = RD.roleManager:GetRole(nombre) or ""
+            RD_Debug("Roles previos de %s: %s", nombre, roles)
         end
         
         if groupUtils.ResetPlayerAssignments then
-            _, resetInfo = groupUtils:ResetPlayerAssignments(nombre)
+            local success, info = groupUtils:ResetPlayerAssignments(nombre)
+            resetInfo = info
+            RD_Debug("Reseteo de asignaciones para %s: %s (Total eliminados: %d)", 
+                nombre, tostring(success), (resetInfo and resetInfo.totalRemoved or 0))
         end
         
+        -- Si no se resetearon asignaciones específicas de la BD, 
+        -- intentamos al menos limpiar el cache de selecciones
+        if not resetInfo or resetInfo.totalRemoved == 0 then
+            RD_Debug("No se encontraron asignaciones en BD para %s, limpiando cache de selecciones...", nombre)
+            local r1 = groupUtils:ResetPlayerRoles(nombre)
+            local r2 = groupUtils:ResetPlayerBuffs(nombre)
+            local r3 = groupUtils:ResetPlayerAbilities(nombre)
+            local r4 = groupUtils:ResetPlayerAuras(nombre)
+            RD_Debug("Limpieza de cache para %s: Roles=%s, Buffs=%s, Abils=%s, Auras=%s", 
+                nombre, tostring(r1), tostring(r2), tostring(r3), tostring(r4))
+        end
+
         if RD.events and RD.events.Publish then
+            RD_Debug("Publicando PLAYER_LEFT_GROUP para %s", nombre)
             RD.events:Publish("PLAYER_LEFT_GROUP", {
                 playerName = nombre, 
                 class = class, 
@@ -323,49 +397,16 @@ local function DetectLeftPlayers()
     -- Forzar actualización de la interfaz si hay jugadores que abandonaron
     if #jugadoresQueAbandonaron > 0 then
         if RD.UI and RD.UI.DynamicMenus and RD.UI.DynamicMenus.UpdateAllMenus then
+            RD_Debug("Actualizando menús dinámicos tras salidas.")
             RD.UI.DynamicMenus:UpdateAllMenus()
         end
     end
 end
 
--- Función para obtener información del grupo de forma segura
-local function GetGroupInfo()
-    local inRaidStatus = false
-    local inPartyStatus = false
-    local numMembers = 1
-    local isLeader = false
-    
-    -- Usar versiones seguras de las funciones
-    local success, raidResult = pcall(IsInRaid)
-    if success and raidResult ~= nil then
-        inRaidStatus = raidResult == true
-    end
-    
-    local success, groupResult = pcall(IsInGroup)
-    if success and groupResult ~= nil then
-        inPartyStatus = groupResult == true and not inRaidStatus
-    end
-    
-    -- Obtener número de miembros del grupo
-    local success, count = pcall(GetNumGroupMembers)
-    if success and type(count) == "number" then
-        numMembers = count > 0 and count or 1
-    end
-    
-    -- Verificar liderazgo
-    local success, leader = pcall(UnitIsGroupLeader, "player")
-    if success and leader ~= nil then
-        isLeader = leader == true
-    else
-        -- Si no podemos verificar, asumir que es líder si está solo
-        isLeader = numMembers == 1
-    end
-    
-    return inRaidStatus, inPartyStatus, numMembers, isLeader
-end
-
 -- Función para manejar eventos de grupo
 local function onGroupEvent(self, event, ...)
+    RD_Debug("Evento de grupo recibido: %s", tostring(event))
+    
     if event == "GROUP_ROSTER_UPDATE" or 
        event == "PARTY_MEMBERS_CHANGED" or 
        event == "RAID_ROSTER_UPDATE" or
@@ -374,131 +415,77 @@ local function onGroupEvent(self, event, ...)
        event == "GROUP_DISBANDED" or
        event == "PLAYER_ENTERING_WORLD" then
         
-        DetectLeftPlayers()
-        
-        if self.UpdateGroupState then
-            self:UpdateGroupState()
-        end
-        
-        if RD.UI and RD.UI.DynamicMenus and RD.UI.DynamicMenus.UpdateAllMenus then
-            RD.UI.DynamicMenus:UpdateAllMenus()
-        end
-        
+        -- Configurar temporizador para evitar múltiples ejecuciones seguidas
         if self.updateTimer then
             self.updateTimer:Cancel()
             self.updateTimer = nil
         end
         
-        -- Configurar nuevo temporizador
-        self.updateTimer = 0
-        self:SetScript("OnUpdate", function(frame, elapsed)
-            frame.updateTimer = frame.updateTimer + elapsed
-            if frame.updateTimer >= 0.5 then  -- Esperar 0.5 segundos antes de actualizar
-                frame.updateTimer = nil
-                frame:SetScript("OnUpdate", nil)
-                
-                -- Actualizar la caché del grupo
-                if groupUtils and groupUtils.UpdateGroupCache then
-                    groupUtils:UpdateGroupCache(true)
-                end
-                
-                -- Notificar a otros módulos
-                if RD.events and RD.events.Publish then
-                    RD.events:Publish("GROUP_UPDATED", {
-                        inRaid = inRaid,
-                        inParty = inParty,
-                        numMembers = numGroupMembers,
-                        isLeader = isGroupLeader,
-                        event = event
-                    })
-                end
-                
-                -- Listar miembros actuales del grupo desde previousGroupMembers
-                local hasMembers = false
-                
-                -- Primero verificar si previousGroupMembers es una tabla válida
-                if type(previousGroupMembers) ~= "table" then
-                    return
-                end
-                
-                -- Verificar si es una tabla de miembros o una tabla de banderas
-                local isFlagTable = true
-                for _, v in pairs(previousGroupMembers) do
-                    if type(v) == "table" then
-                        isFlagTable = false
-                        break
-                    end
-                end
-                
-                if isFlagTable then
-                    -- Es una tabla de banderas (antiguo formato)
-                    for name, _ in pairs(previousGroupMembers) do
-                        hasMembers = true
-                    end
-                else
-                    -- Es una tabla de miembros (nuevo formato)
-                    for _, member in pairs(previousGroupMembers) do
-                        if type(member) == "table" and member.name then
-                            -- Obtener roles asignados usando roleManager
-                            local roleText = "sin rol"
-                            if RD.roleManager then
-                                local role = RD.roleManager:GetRole(member.unit or member.name)
-                                if role then
-                                    roleText = role
-                                end
-                            end
-                            
-                            hasMembers = true
-                        end
-                    end
-                end
-                
+        -- Usar C_Timer si está disponible, o OnUpdate si no
+        local throttleTime = 0.5
+        
+        local function ProcessUpdate()
+            RD_Debug("Procesando actualización diferida para evento: %s", event)
+            -- IMPORTANTE: Detectar quién se fue ANTES de actualizar el estado interno
+            -- para poder comparar con la lista anterior (previousGroupMembers)
+            DetectLeftPlayers()
+            
+            -- Ahora actualizar el estado interno para la próxima comparación
+            if groupUtils and groupUtils.UpdateGroupState then
+                groupUtils:UpdateGroupState()
             end
-        end)
-    end
-end
+            
+            if RD.UI and RD.UI.DynamicMenus and RD.UI.DynamicMenus.UpdateAllMenus then
+                RD.UI.DynamicMenus:UpdateAllMenus()
+            end
 
--- Función para obtener información del grupo de forma segura
-local function GetGroupInfo()
-    local inRaidStatus = false
-    local inPartyStatus = false
-    local numMembers = 1
-    local isLeader = false
-    
-    -- Usar versiones seguras de las funciones
-    local success, raidResult = pcall(IsInRaid)
-    if success and raidResult ~= nil then
-        inRaidStatus = raidResult == true
+            -- Notificar a otros módulos
+            if RD.events and RD.events.Publish then
+                RD.events:Publish("GROUP_UPDATED", {
+                    inRaid = inRaid,
+                    inParty = inParty,
+                    numMembers = numGroupMembers,
+                    isLeader = isGroupLeader,
+                    event = event
+                })
+            end
+        end
+
+        if _G.C_Timer and _G.C_Timer.After then
+            self.updateTimer = {
+                Cancel = function(s) s.cancelled = true end,
+                cancelled = false
+            }
+            _G.C_Timer.After(throttleTime, function()
+                if not self.updateTimer.cancelled then
+                    ProcessUpdate()
+                end
+            end)
+        else
+            self.updateTimerCount = 0
+            self:SetScript("OnUpdate", function(frame, elapsed)
+                frame.updateTimerCount = frame.updateTimerCount + elapsed
+                if frame.updateTimerCount >= throttleTime then
+                    frame:SetScript("OnUpdate", nil)
+                    ProcessUpdate()
+                end
+            end)
+            -- Mock Cancel para compatibilidad
+            self.updateTimer = { Cancel = function() self:SetScript("OnUpdate", nil) end }
+        end
     end
-    
-    local success, groupResult = pcall(IsInGroup)
-    if success and groupResult ~= nil then
-        inPartyStatus = groupResult == true and not inRaidStatus
-    end
-    
-    -- Obtener número de miembros del grupo
-    local success, count = pcall(GetNumGroupMembers)
-    if success and type(count) == "number" then
-        numMembers = count > 0 and count or 1
-    end
-    
-    -- Verificar liderazgo
-    local success, leader = pcall(UnitIsGroupLeader, "player")
-    if success and leader ~= nil then
-        isLeader = leader == true
-    else
-        -- Si no podemos verificar, asumir que es líder si está solo
-        isLeader = numMembers == 1
-    end
-    
-    return inRaidStatus, inPartyStatus, numMembers, isLeader
 end
 
 -- Función para actualizar el estado del grupo
-local function UpdateGroupState(self)
+function groupUtils:UpdateGroupState()
+    if not self.GetFullPlayerName then
+        RD_Debug("|cffff0000Error:|r GetFullPlayerName no está disponible en UpdateGroupState")
+        return
+    end
+
     -- Obtener número de miembros en grupo y banda
-    local numParty = GetNumPartyMembers()
-    local numRaid = GetNumRaidMembers()
+    local numParty = GetNumPartyMembers() or 0
+    local numRaid = GetNumRaidMembers() or 0
     
     -- Determinar el estado actual
     inRaid = numRaid > 0
@@ -508,128 +495,39 @@ local function UpdateGroupState(self)
     if inRaid then
         numGroupMembers = numRaid
     elseif inParty then
-        numGroupMembers = numParty + 1  -- +1 para incluir al jugador
+        numGroupMembers = numParty + 1 -- Incluir al jugador
     else
-        numGroupMembers = 1  -- Solo el jugador
+        numGroupMembers = 1
+    end
+    
+    -- Guardar el estado anterior antes de actualizar
+    local oldMembers = {}
+    if previousGroupMembers then
+        for k, v in pairs(previousGroupMembers) do
+            oldMembers[k] = v
+        end
+    end
+
+    -- Actualizar previousGroupMembers para la próxima comparación
+    previousGroupMembers = {}
+    
+    local members = self:GetGroupMembers()
+    for _, member in ipairs(members) do
+        local fullName = self:GetFullPlayerName(member.unit)
+        if fullName then
+            local _, class = UnitClass(member.unit)
+            previousGroupMembers[fullName] = {
+                unit = member.unit,
+                name = member.name,
+                class = class or "Unknown"
+            }
+        end
     end
     
     -- Verificar si somos el líder
     isGroupLeader = IsRaidLeader() or IsPartyLeader() or (numGroupMembers == 1)
     
-    -- Crear una nueva tabla para los miembros del grupo
-    local newGroupMembers = {}
-    
-    -- Obtener información del jugador
-    local playerName = GetUnitName("player", true)
-    local _, playerClass = UnitClass("player")
-    
-    -- Incluir al jugador con su clase
-    if playerName and playerName ~= "" then
-        newGroupMembers[playerName] = {
-            name = playerName,
-            class = playerClass,
-            isSelf = true,
-            role = "NONE",  -- Se actualizará más adelante
-            unit = "player"
-        }
-    end
-    
-    -- Si estamos en grupo/banda, agregar a los demás miembros
-    if numGroupMembers > 1 then
-        local unitPrefix = inRaid and "raid" or "party"
-        local maxMembers = inRaid and numRaid or numParty
-        
-        for i = 1, maxMembers do
-            local unit = unitPrefix .. i
-            if UnitExists(unit) then
-                local name = GetUnitName(unit, true)
-                local _, class = UnitClass(unit)
-                if name and name ~= "" and name ~= playerName then
-                    newGroupMembers[name] = {
-                        name = name,
-                        class = class,
-                        isSelf = false,
-                        role = "NONE",  -- Se actualizará más adelante
-                        unit = unit
-                    }
-                    -- Group member information
-                end
-            end
-        end
-    end
-    
-    -- Actualizar la tabla de miembros del grupo
-    previousGroupMembers = newGroupMembers
-    
-    -- Listar miembros con sus clases y roles
-    for name, data in pairs(previousGroupMembers) do
-        local roleText = data.role ~= "NONE" and (" (%s)"):format(data.role) or " (sin rol)"
-    end
-    
-    -- Notificar a otros módulos sobre la actualización del grupo
-    if RD.events and RD.events.Trigger then
-        RD.events:Trigger("GROUP_ROSTER_UPDATE", {
-            inRaid = inRaid,
-            inParty = inParty,
-            numMembers = numGroupMembers,
-            isLeader = isGroupLeader,
-            members = previousGroupMembers
-        })
-    end
-end
-
--- Función para inicializar el módulo de grupo
-local function InitializeGroupModule()
-    -- Initialize group module
-    
-    -- Crear frame para eventos del grupo
-    local eventFrame = CreateFrame("Frame")
-    
-    -- Añadir método UpdateGroupState al frame
-    eventFrame.UpdateGroupState = UpdateGroupState
-    
-    -- Configurar el manejador de eventos
-    eventFrame:SetScript("OnEvent", function(self, event, ...)
-        -- Manejar errores para evitar que fallen otros addons
-        local success, err = pcall(onGroupEvent, self, event, ...)
-        if not success then
-        end
-    end)
-    
-    -- Lista de eventos que queremos registrar
-    local eventsToRegister = {
-        "GROUP_ROSTER_UPDATE",
-        "PARTY_LEADER_CHANGED",
-        "RAID_ROSTER_UPDATE",
-        "PLAYER_ENTERING_WORLD",
-        "PARTY_MEMBERS_CHANGED",
-        "GROUP_LEFT",
-        "GROUP_DISBANDED"
-    }
-    
-    -- Registrar eventos
-    for _, event in ipairs(eventsToRegister) do
-        local success, err = pcall(function() 
-            eventFrame:RegisterEvent(event)
-        end)
-        
-        if not success then
-        end
-    end
-    
-    -- Forzar una actualización inicial del estado del grupo
-    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    
-    return eventFrame
-end
-
--- Inicializar el módulo de grupo
-local eventFrame = InitializeGroupModule()
-
--- Inicializar el estado del grupo
-if eventFrame and eventFrame.UpdateGroupState then
-    eventFrame:UpdateGroupState(eventFrame)
-else
+    RD_Debug("Estado del grupo actualizado. Miembros detectados: %d", numGroupMembers)
 end
 
 -- Constants
@@ -717,84 +615,36 @@ end
 -- Función para extraer el nombre base del jugador sin reino
 local function GetBasePlayerName(fullName)
     if not fullName then return nil end
-    -- Dividir el nombre completo en nombre base y reino
     local baseName = string.match(fullName, "^([^%-]+)")
     return baseName or fullName
 end
 
--- Función para depuración de eventos
-
-
--- State variables
-local currentGroupMembers = {}
-local lastGroupMembers = {}
-local lastGroupUpdate = 0
-local isProcessing = false
-local isInitialized = false
-
--- Función para limpiar asignaciones de jugadores que ya no están en el grupo
-local function CleanupLeftPlayers()
-    if not isInitialized then return end
+--- Compara dos nombres de jugador (incluyendo casos con y sin reino)
+local function ComparePlayerNames(name1, name2)
+    if not name1 or not name2 then return false end
+    if name1 == name2 then return true end
     
-    -- Obtener jugadores actuales
-    local currentMembers = {}
-    for name in pairs(currentGroupMembers) do
-        currentMembers[name] = true
-    end
+    local base1 = GetBasePlayerName(tostring(name1))
+    local base2 = GetBasePlayerName(tostring(name2))
     
-    -- Verificar jugadores que ya no están
-    for name in pairs(lastGroupMembers) do
-        if not currentMembers[name] then
-            -- Limpiar roles y buffs del jugador que se fue
-            groupUtils:ResetPlayerRoles(name)
-            groupUtils:ResetPlayerBuffs(name)
-        end
-    end
-    
-    -- Actualizar la última lista conocida
-    lastGroupMembers = {}
-    for name in pairs(currentGroupMembers) do
-        lastGroupMembers[name] = true
-    end
-end
-
--- Tipos de grupo
-local GROUP_TYPES = constants.GROUP_TYPES or {
-    NONE = 0,
-    PARTY = 1,
-    RAID = 2,
-    BATTLEGROUND = 3
-}
-
--- Función interna para obtener información del grupo
-local function getGroupInfo()
-    -- Si la API no está disponible, devolver valores por defecto
-    if not IsGroupAPIAvailable() then
-        return false, false, "SOLO", 1
-    end
-    
-    -- Usar pcall para capturar cualquier error en las llamadas a la API
-    local success, inRaid, inParty, groupType, numMembers = pcall(function()
-        local inRaid = SafeIsInRaid()
-        local inParty = SafeIsInGroup() and not inRaid
-        local groupType = inRaid and "RAID" or (inParty and "PARTY" or "SOLO")
-        local numMembers = inRaid and (SafeGetNumGroupMembers() or 0) or 
-                          (inParty and (SafeGetNumGroupMembers() or 0) or 1)
-        
-        return inRaid, inParty, groupType, numMembers
-    end)
-    
-    -- Si hubo un error, devolver valores por defecto
-    if not success then
-        return false, false, "SOLO", 1
-    end
-    
-    return inRaid, inParty, groupType, numMembers
+    return base1 == base2
 end
 
 -- Función pública para obtener información del grupo
 function groupUtils:GetGroupInfo()
-    return getGroupInfo()
+    local inRaid = IsInRaid()
+    local inParty = IsInGroup() and not inRaid
+    local numMembers = 1
+    
+    if inRaid then
+        numMembers = GetNumRaidMembers() or 0
+    elseif inParty then
+        numMembers = (GetNumPartyMembers() or 0) + 1
+    end
+    
+    local groupType = inRaid and "RAID" or (inParty and "PARTY" or "SOLO")
+    
+    return inRaid, inParty, groupType, numMembers
 end
 
 --[[
@@ -1115,8 +965,8 @@ function groupUtils:UpdateGroupCache(forceUpdate)
     end
     
     -- If we're not in a group anymore, clear everything
-    local inRaid = IsInRaidCompatible()
-    local inGroup = inRaid or IsInGroupCompatible()
+    local inRaid = IsInRaid()
+    local inGroup = inRaid or IsInGroup()
     
     if not inGroup and not inRaid then
         self:HandleGroupDisband()
@@ -1232,7 +1082,7 @@ function groupUtils:ResetPlayerAssignments(playerName)
     -- Resetting player assignments
     
     -- Clean realm name if it exists
-    playerName = playerName:gsub("%-", "")
+    local basePlayerName = GetBasePlayerName(playerName)
     
     -- Ensure RaidDominionDB exists
     if not RaidDominionDB then 
@@ -1242,7 +1092,7 @@ function groupUtils:ResetPlayerAssignments(playerName)
     -- Initialize assignments if they don't exist
     RaidDominionDB.assignments = RaidDominionDB.assignments or {}
     
-    -- Function to clean assignments from a category
+    -- Función para limpiar asignaciones de una categoría
     local function cleanAssignments(category)
         if not RaidDominionDB.assignments[category] then 
             return 0, {} 
@@ -1259,19 +1109,56 @@ function groupUtils:ResetPlayerAssignments(playerName)
                 assignedTo = value.target or value.name or ""
             end
             
-            -- Clean the stored player name
-            local cleanName = tostring(assignedTo):gsub("%-", "")
-            if cleanName == playerName then
+            -- Comparar usando la nueva función ComparePlayerNames
+            if ComparePlayerNames(assignedTo, playerName) then
                 table.insert(toRemove, key)
-                table.insert(names, key) -- key is usually the spell name or role name
+                table.insert(names, key) -- key es usualmente el nombre del hechizo o rol
                 count = count + 1
             end
         end
         
-        -- Remove found assignments
+        -- Eliminar de RaidDominionDB
         for _, key in ipairs(toRemove) do
             RaidDominionDB.assignments[category][key] = nil
         end
+        
+    -- Eliminar también de RaidDominionSelections (Cache en memoria)
+    if RaidDominionSelections and RaidDominionSelections[category] then
+        if category == "roles" then
+            -- Para roles, la estructura es Selections.roles[roleName] = {player1, player2, ...}
+            for roleName, players in pairs(RaidDominionSelections.roles) do
+                if type(players) == "table" then
+                    for i = #players, 1, -1 do
+                        if ComparePlayerNames(players[i], playerName) then
+                            table.remove(players, i)
+                        end
+                    end
+                end
+            end
+        elseif category == "buffs" or category == "auras" then
+            -- Para buffs/auras, la estructura es Selections[category][spellId] = {{target="Name", ...}, ...}
+            for spellId, targets in pairs(RaidDominionSelections[category]) do
+                if type(targets) == "table" then
+                    for i = #targets, 1, -1 do
+                        if targets[i] and ComparePlayerNames(targets[i].target, playerName) then
+                            table.remove(targets, i)
+                        end
+                    end
+                end
+            end
+        elseif category == "abilities" then
+            -- Para habilidades, la estructura es Selections.abilities[abilityId] = {player1, player2, ...}
+            for abilityId, players in pairs(RaidDominionSelections.abilities) do
+                if type(players) == "table" then
+                    for i = #players, 1, -1 do
+                        if ComparePlayerNames(players[i], playerName) then
+                            table.remove(players, i)
+                        end
+                    end
+                end
+            end
+        end
+    end
         
         return count, names
     end
@@ -1345,7 +1232,7 @@ end
 function groupUtils:GetGroupMembers(includePets)
     local members = {}
     local numMembers = 0
-    local isRaid = IsInRaidCompatible()
+    local isRaid = IsInRaid()
     
     if isRaid then
         numMembers = GetNumRaidMembers() or 0
@@ -1415,7 +1302,7 @@ end
     @param unit Unidad del juego (ej: "player", "party1", "raid1")
     @return string Nombre completo o nil si no es un jugador
 ]]
-function groupUtils:GetFullPlayerName(unit)
+function groupUtils:GetFullPlayerName_Old(unit)
     if not unit then return nil end
     
     local name, realm = UnitName(unit)
@@ -1440,7 +1327,7 @@ function groupUtils:ResetPlayerRoles(playerName)
     local found = false
     for role, assignments in pairs(RaidDominionSelections.roles or {}) do
         for i = #assignments, 1, -1 do
-            if assignments[i] == GetBasePlayerName(playerName) then
+            if ComparePlayerNames(assignments[i], playerName) then
                 table.remove(assignments, i)
                 found = true
             end
@@ -1466,7 +1353,7 @@ function groupUtils:ResetPlayerBuffs(playerName)
     local found = false
     for buffId, assignments in pairs(RaidDominionSelections.buffs or {}) do
         for i = #assignments, 1, -1 do
-            if assignments[i].target == GetBasePlayerName(playerName) then
+            if assignments[i] and ComparePlayerNames(assignments[i].target, playerName) then
                 table.remove(assignments, i)
                 found = true
             end
@@ -1492,7 +1379,7 @@ function groupUtils:ResetPlayerAbilities(playerName)
     local found = false
     for abilityId, assignments in pairs(RaidDominionSelections.abilities or {}) do
         for i = #assignments, 1, -1 do
-            if assignments[i] == GetBasePlayerName(playerName) then
+            if ComparePlayerNames(assignments[i], playerName) then
                 table.remove(assignments, i)
                 found = true
             end
@@ -1517,7 +1404,7 @@ function groupUtils:ResetPlayerAuras(playerName)
     local found = false
     for auraId, assignments in pairs(RaidDominionSelections.auras or {}) do
         for i = #assignments, 1, -1 do
-            if assignments[i].target == GetBasePlayerName(playerName) then
+            if assignments[i] and ComparePlayerNames(assignments[i].target, playerName) then
                 table.remove(assignments, i)
                 found = true
             end
@@ -1597,6 +1484,25 @@ function groupUtils:Initialize()
     RaidDominionSelections.abilities = RaidDominionSelections.abilities or {}
     RaidDominionSelections.auras = RaidDominionSelections.auras or {}
     
+    -- Crear el frame de eventos para el grupo si no existe
+    if not eventFrame then
+        eventFrame = CreateFrame("Frame")
+        eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+        eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+        eventFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+        eventFrame:RegisterEvent("PARTY_LEADER_CHANGED")
+        eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+        
+        eventFrame:SetScript("OnEvent", function(f, event, ...)
+            onGroupEvent(f, event, ...)
+        end)
+        RD_Debug("Frame de eventos de grupo registrado.")
+    end
+
+    -- Inicializar el estado inicial del grupo DESPUÉS de registrar eventos
+    -- pero forzando una actualización inmediata de previousGroupMembers
+    self:UpdateGroupState()
+    
     -- Marcar como inicializado
     self.initialized = true
     
@@ -1605,28 +1511,24 @@ end
 
 -- Inicialización cuando el addon se carga
 local function OnAddonLoaded()
-    -- Verificar la API primero
-    if not IsGroupAPIAvailable() then
-        -- API no disponible, modo individual
-    end
-    
     -- Inicializar el módulo
     local initSuccess, err = pcall(function()
         return groupUtils:Initialize()
     end)
     
     if not initSuccess then
+        RD_Debug("|cffff0000Error al inicializar groupUtils:|r %s", tostring(err))
         return
     end
     
-    -- Module ready message removed
+    RD_Debug("Módulo de grupo inicializado correctamente.")
 end
 
 -- Registrar el evento de carga del addon
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("ADDON_LOADED")
 loader:SetScript("OnEvent", function(self, event, addon)
-    if addon == "RaidDominion2" then
+    if addon == addonName then
         OnAddonLoaded()
         self:UnregisterEvent("ADDON_LOADED")
     end

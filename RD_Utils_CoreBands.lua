@@ -62,6 +62,19 @@ RD.utils = RD.utils or {}
 RD.utils.coreBands = RD.utils.coreBands or {}
 local coreBandsUtils = RD.utils.coreBands
 
+-- Helper para logs centralizados
+local function Log(...)
+    if RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
 -- Helper para obtener el roster actual en una tabla de búsqueda (caché)
 -- Caché de roster para evitar reconstrucción excesiva
 local cachedRoster = nil
@@ -325,7 +338,7 @@ local function UpdateGuildOnlineCache(force)
                     isUpdatingGuild = false
                     updateCoroutine = nil
                     if not status then 
-                        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion Error]:|r " .. (err or "Unknown error in Guild Cache update"))
+                    Log("|cffff0000[RaidDominion Error]:|r " .. (err or "Unknown error in Guild Cache update"))
                     end
                 end
             else
@@ -424,7 +437,7 @@ StaticPopupDialogs["RD_CONFIRM_GUILD_KICK"] = {
         local name = self.data.name
         GuildUninvite(name)
         GuildRoster()
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Expulsando a " .. name .. " de la hermandad.")
+        Log("|cffff0000[RaidDominion]|r Expulsando a " .. name .. " de la hermandad.")
     end,
     timeout = 0,
     whileDead = true,
@@ -441,7 +454,7 @@ StaticPopupDialogs["RAID_DOMINION_RESET_CORE_BAND"] = {
         if coreData[bandIndex] then
             coreData[bandIndex].members = {}
             RD.utils.coreBands.ShowCoreBandsWindow()
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Banda " .. coreData[bandIndex].name .. " reiniciada.")
+            Log("|cff00ff00[RaidDominion]|r Banda " .. coreData[bandIndex].name .. " reiniciada.")
         end
     end,
     timeout = 0,
@@ -629,7 +642,7 @@ local function getOrCreateBandFrame()
         createFrame.acceptBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear o editar bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear o editar bandas.")
                 createFrame:Hide()
                 return
             end
@@ -680,14 +693,14 @@ end
 -- Función auxiliar para agregar un jugador a una banda
 local function addPlayerToBand(bandIndex, playerData)
     if not bandIndex or not playerData or not playerData.name then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Datos de jugador incompletos")
+        Log("|cffff0000[RaidDominion]|r Error: Datos de jugador incompletos")
         return false
     end
     
     local coreData = EnsureCoreData()
     local band = coreData[bandIndex]
     if not band then
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Banda no encontrada")
+        Log("|cffff0000[RaidDominion]|r Error: Banda no encontrada")
         return false
     end
     
@@ -709,12 +722,12 @@ local function addPlayerToBand(bandIndex, playerData)
                 if role == "nuevo" or role == "otro" then
                     -- Ya está, pero como "nuevo/otro" (oculto). No hacemos nada y retornamos true
                     -- porque técnicamente ya existe en los datos.
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r El jugador local ya está en la banda (agrupación Nuevo).")
+                    Log("|cffffff00[RaidDominion]|r El jugador local ya está en la banda (agrupación Nuevo).")
                     return true
                 end
             end
             
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: El jugador ya está en la banda")
+            Log("|cffff0000[RaidDominion]|r Error: El jugador ya está en la banda")
             return false
         end
     end
@@ -734,7 +747,6 @@ local function addPlayerToBand(bandIndex, playerData)
     -- Actualizar la interfaz para mostrar el nuevo miembro
     RD.utils.coreBands.ShowCoreBandsWindow()
     
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Jugador " .. playerData.name .. " agregado a la banda")
     return true
 end
 
@@ -856,7 +868,7 @@ local function getOrCreateInvitePopup(bandIndex)
         invitePopup.acceptBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
                 invitePopup:Hide()
                 return
             end
@@ -871,7 +883,7 @@ local function getOrCreateInvitePopup(bandIndex)
                 -- Ocultar el popup
                 invitePopup:Hide()
             else
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes ingresar un nombre de jugador")
+                Log("|cffff0000[RaidDominion]|r Error: Debes ingresar un nombre de jugador")
             end
         end)
         
@@ -1064,14 +1076,14 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.promoteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
             if name and name ~= "" then
                 GuildPromote(name)
                 GuildRoster() -- Solicitar actualización inmediata
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Ascendiendo a " .. name)
+                Log("|cff00ff00[RaidDominion]|r Ascendiendo a " .. name)
             end
         end)
         
@@ -1080,14 +1092,14 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.demoteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
             if name and name ~= "" then
                 GuildDemote(name)
                 GuildRoster() -- Solicitar actualización inmediata
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Degradando a " .. name)
+                Log("|cff00ff00[RaidDominion]|r Degradando a " .. name)
             end
         end)
 
@@ -1099,7 +1111,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.kickBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para expulsar de la hermandad.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para expulsar de la hermandad.")
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1107,7 +1119,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                 if IsShiftKeyDown() then
                     GuildUninvite(name)
                     GuildRoster()
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Expulsando a " .. name .. " de la hermandad.")
+                    Log("|cffff0000[RaidDominion]|r Expulsando a " .. name .. " de la hermandad.")
                 else
                     StaticPopup_Show("RD_CONFIRM_GUILD_KICK", name, nil, { name = name })
                 end
@@ -1120,13 +1132,13 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.inviteGuildBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para invitar a la hermandad.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para invitar a la hermandad.")
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
             if name and name ~= "" then
                 GuildInvite(name)
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Invitando a " .. name .. " a la hermandad.")
+                Log("|cff00ff00[RaidDominion]|r Invitando a " .. name .. " a la hermandad.")
             end
         end)
         playerEditFrame.inviteGuildBtn:Hide() -- Oculto por defecto
@@ -1147,7 +1159,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.noteEdit:SetScript("OnEnterPressed", function(self)
             local permLevel = GetPerms()
             if permLevel < 1 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas.")
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1156,7 +1168,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                 local idx = playerEditFrame.guildIndex
                 if idx then
                     GuildRosterSetPublicNote(idx, note)
-                    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Nota pública actualizada para " .. name)
+                    Log("|cff00ff00[RaidDominion]|r Nota pública actualizada para " .. name)
                 end
                 self:ClearFocus()
             end
@@ -1178,7 +1190,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.officerNoteEdit:SetScript("OnEnterPressed", function(self)
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Solo oficiales pueden editar notas oficiales.")
+                Log("|cffff0000[RaidDominion]|r Error: Solo oficiales pueden editar notas oficiales.")
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1187,7 +1199,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                 local idx = playerEditFrame.guildIndex
                 if idx then
                     GuildRosterSetOfficerNote(idx, note)
-                    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Nota oficial actualizada para " .. name)
+                    Log("|cff00ff00[RaidDominion]|r Nota oficial actualizada para " .. name)
                 end
                 self:ClearFocus()
             end
@@ -1201,7 +1213,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.deleteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar jugadores de la banda.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar jugadores de la banda.")
                 return
             end
             local context = playerEditFrame.context
@@ -1210,7 +1222,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                 local band = coreData[context.bandIndex]
                 if band and band.members then
                     table.remove(band.members, context.memberIndex)
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Jugador eliminado: " .. playerEditFrame.nameEdit:GetText())
+                    Log("|cffff0000[RaidDominion]|r Jugador eliminado: " .. playerEditFrame.nameEdit:GetText())
                     playerEditFrame:Hide()
                     RD.utils.coreBands.ShowCoreBandsWindow()
                 end
@@ -1271,7 +1283,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
 
                         if guildIdx then
                             -- DEBUG: Loggear el intento de guardado
-                            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Guardando nota para " .. name .. " (Índice: " .. guildIdx .. ")")
+                            Log("|cff00ff00[RaidDominion]|r Guardando nota para " .. name .. " (Índice: " .. guildIdx .. ")")
                             
                             GuildRosterSetPublicNote(guildIdx, publicNote)
                             -- Solo Oficiales (Rango Oficial/Admin+) pueden editar notas oficiales
@@ -1293,11 +1305,11 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                             GuildRoster()
                             lastGuildUpdate = 0 
                         else
-                            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No se pudo encontrar al jugador en la hermandad para guardar la nota.")
+                            Log("|cffff0000[RaidDominion]|r Error: No se pudo encontrar al jugador en la hermandad para guardar la nota.")
                         end
                     end
                 else
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas de hermandad.")
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas de hermandad.")
                 end
             end
 
@@ -1319,7 +1331,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                         end
                     end
                     if foundInCore then
-                        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Estado de sanción actualizado globalmente para: " .. name)
+                        Log("|cff00ff00[RaidDominion]|r Estado de sanción actualizado globalmente para: " .. name)
                         -- Solo actualizar la ventana del Core si ya estaba abierta y no estamos en modo búsqueda
                         local coreListFrame = _G["RaidDominionCoreListFrame"]
                         if coreListFrame and coreListFrame:IsVisible() and not playerEditFrame.isSearchMode then
@@ -1361,12 +1373,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                             table.remove(sourceBand.members, context.memberIndex)
                             if not targetBand.members then targetBand.members = {} end
                             table.insert(targetBand.members, memberData)
-                            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Jugador trasladado a: " .. (targetBand.name or targetBandIndex))
+                            Log("|cff00ff00[RaidDominion]|r Jugador trasladado a: " .. (targetBand.name or targetBandIndex))
                         end
                     else
                         -- Actualizar en la banda actual
                         sourceBand.members[context.memberIndex] = memberData
-                        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Jugador actualizado: " .. name)
+                        Log("|cff00ff00[RaidDominion]|r Jugador actualizado: " .. name)
                     end
                     
                     -- Actualizar la interfaz solo si ya estaba abierta (evita aperturas no deseadas)
@@ -1875,7 +1887,7 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                     end
                 end
                 if count > 0 then
-                    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r Invitando a %d jugadores de %s.", count, displayName))
+                    Log("|cff00ff00[RaidDominion]|r Invitando a %d jugadores de %s.", count, displayName)
                 end
             end)
         -- Botón Limpiar para Desconectados
@@ -1913,7 +1925,7 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                     for _, idx in ipairs(indicesToRemove) do
                         table.remove(currentBand.members, idx)
                     end
-                    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff00[RaidDominion]|r Se han eliminado %d jugadores sin asignación de Desconectados.", #indicesToRemove))
+                    Log("|cff00ff00[RaidDominion]|r Se han eliminado %d jugadores sin asignación de Desconectados.", #indicesToRemove)
                     if RD.utils.coreBands and RD.utils.coreBands.ShowCoreBandsWindow then
                         RD.utils.coreBands.ShowCoreBandsWindow()
                     end
@@ -2315,7 +2327,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.createBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear bandas.")
                 return
             end
             local createFrame = getOrCreateBandFrame()
@@ -2352,12 +2364,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.updateAllBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para actualizar bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para actualizar bandas.")
                 return
             end
             local coreData = EnsureCoreData()
             if not coreData or #coreData == 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No hay bandas configuradas.")
+                Log("|cffff0000[RaidDominion]|r Error: No hay bandas configuradas.")
                 return
             end
 
@@ -2397,7 +2409,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                     end
                 end
 
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Iniciando actualización (limpieza y reclutamiento online)...")
+                Log("|cff00ff00[RaidDominion]|r Iniciando actualización (limpieza y reclutamiento online)...")
 
                 for i = 1, numGuildMembers do
                     local name, rank, rankIndex, level, class, zone, note, officernote, online, status, classFileName = GetGuildRosterInfo(i)
@@ -2461,11 +2473,11 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 end
                 
                 if totalAdded > 0 or totalCleaned > 0 then
-                    DEFAULT_CHAT_FRAME:AddMessage(summary)
+                    Log(summary)
                     RD.utils.coreBands.RefreshAllVisibleCards()
                     RD.utils.coreBands.ShowCoreBandsWindow()
                 else
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r No se encontraron cambios (limpieza o nuevos jugadores).")
+                    Log("|cffffff00[RaidDominion]|r No se encontraron cambios (limpieza o nuevos jugadores).")
                     -- Aun así refrescar las tarjetas y encabezados para asegurar consistencia
                     RD.utils.coreBands.RefreshAllVisibleCards()
                     RD.utils.coreBands.ShowCoreBandsWindow()
@@ -2713,7 +2725,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.resetBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para reiniciar bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reiniciar bandas.")
                 return
             end
             if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2730,7 +2742,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                                 coreData[bandIndex].members = {}
                                 -- Actualizar ventana
                                 RD.utils.coreBands.ShowCoreBandsWindow()
-                                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Banda " .. coreData[bandIndex].name .. " reiniciada.")
+                                Log("|cff00ff00[RaidDominion]|r Banda " .. coreData[bandIndex].name .. " reiniciada.")
                             end
                         end,
                         timeout = 0,
@@ -2740,7 +2752,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 end
                 StaticPopup_Show("RAID_DOMINION_RESET_CORE_BAND", coreData[selectedBandIndex].name, nil, { bandIndex = selectedBandIndex })
             else
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+                Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
             end
         end)
         
@@ -2754,7 +2766,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.duplicateBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar bandas.")
                 return
             end
             if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2786,10 +2798,10 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 
                 -- Actualizar ventana
                 RD.utils.coreBands.ShowCoreBandsWindow()
-                DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Banda " .. bandToCopy.name .. " duplicada como " .. newBand.name .. ".")
-            else
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
-            end
+                Log("|cff00ff00[RaidDominion]|r Banda " .. bandToCopy.name .. " duplicada como " .. newBand.name .. ".")
+             else
+                 Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+             end
         end)
 
         -- Botón Subir (Nivel 1+)
@@ -2798,7 +2810,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.moveUpBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 1 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
                 return
             end
             if selectedBandIndex and selectedBandIndex > 1 then
@@ -2807,7 +2819,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 selectedBandIndex = selectedBandIndex - 1
                 RD.utils.coreBands.ShowCoreBandsWindow()
             elseif not selectedBandIndex then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+                Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
             end
         end)
 
@@ -2817,7 +2829,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.moveDownBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 1 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
                 return
             end
             if selectedBandIndex and selectedBandIndex < #coreData then
@@ -2826,7 +2838,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 selectedBandIndex = selectedBandIndex + 1
                 RD.utils.coreBands.ShowCoreBandsWindow()
             elseif not selectedBandIndex then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+                Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
             end
         end)
     end
@@ -2840,7 +2852,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
     f3.announceBtn:SetScript("OnClick", function(self, button)
         local permLevel = GetPerms()
         if permLevel < 2 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para anunciar bandas.")
+            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para anunciar bandas.")
             return
         end
         if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2867,23 +2879,23 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 if _G.SendDelayedMessages then
                     SendDelayedMessages(messages, targetChannel)
                     if button == "RightButton" then
-                        DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Anunciando en Hermandad...")
+                        Log("|cff00ff00[RaidDominion]|r Anunciando en Hermandad...")
                     end
                 else
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: SendDelayedMessages no está disponible")
+                    Log("|cffff0000[RaidDominion]|r Error: SendDelayedMessages no está disponible")
                 end
             else
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No se pudo determinar el canal de anuncio.")
+                Log("|cffff0000[RaidDominion]|r Error: No se pudo determinar el canal de anuncio.")
             end
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+            Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
         end
     end)
     
     f3.inviteBtn:SetScript("OnClick", function(self)
         local permLevel = GetPerms()
         if permLevel < 2 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores a la banda.")
+            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores a la banda.")
             return
         end
         if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2903,7 +2915,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                         class = targetClass -- Clase obtenida del objetivo
                     })
                 else
-                    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: El objetivo debe ser un jugador")
+                    Log("|cffff0000[RaidDominion]|r Error: El objetivo debe ser un jugador")
                 end
             else
                 -- Si no hay objetivo seleccionado, abrir el popup para ingresar el nombre
@@ -2911,7 +2923,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 invitePopup:Show()
             end
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+            Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
         end
     end)
     
@@ -2921,7 +2933,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         
         local permLevel = GetPerms()
         if permLevel < 2 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para reclutar bandas.")
+            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reclutar bandas.")
             return
         end
         if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2929,7 +2941,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
             local members = bandData.members or {}
             
             if #members == 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: La banda seleccionada no tiene miembros.")
+                Log("|cffff0000[RaidDominion]|r Error: La banda seleccionada no tiene miembros.")
                 return
             end
 
@@ -2947,13 +2959,13 @@ function coreBandsUtils.ShowCoreBandsWindow()
             end
 
             if #playersToInvite == 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r No hay miembros en la lista para invitar.")
+                Log("|cffffff00[RaidDominion]|r No hay miembros en la lista para invitar.")
                 return
             end
 
             -- 1. Realizar invitaciones masivas
             local rosterCache = BuildRosterCache()
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Enviando invitaciones a " .. #playersToInvite .. " miembros...")
+            Log("|cff00ff00[RaidDominion]|r Enviando invitaciones a " .. #playersToInvite .. " miembros...")
             for _, name in ipairs(playersToInvite) do
                 if not IsPlayerInGroup(name, rosterCache) then
                     InviteUnit(name)
@@ -2988,7 +3000,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 SendChatMessage("¡Por favor, acepten la invitación!", "GUILD")
             end
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+            Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
         end
     end)
 
@@ -3026,7 +3038,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
             -- Mostrar diálogo de confirmación
             StaticPopup_Show("RAID_DOMINION_DELETE_CORE_BAND", bandName, nil, { bandIndex = selectedBandIndex })
         else
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+            Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
         end
     end)
     
@@ -3134,7 +3146,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         line.nameBtn:SetScript("OnLeave", function() line.nameText:SetTextColor(1, 1, 1) end)
         line.nameBtn:SetScript("OnClick", function()
             if totalVisible == 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Esta banda no tiene miembros asignados.")
+                Log("|cffffff00[RaidDominion]|r Esta banda no tiene miembros asignados.")
                 return
             end
             local wasOpen = openMemberLists[i]
@@ -3169,7 +3181,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
         line.infoBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar bandas.")
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar bandas.")
                 return
             end
             local editFrame = getOrCreateBandFrame()

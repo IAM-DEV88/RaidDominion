@@ -111,12 +111,20 @@ end
 function roleManager:GetRoleTable(unit)
     if not unit then return {} end
     
-    -- Obtener el nombre del jugador
-    local name = type(unit) == "string" and (UnitName(unit) or unit) or nil
-    if not name then return {} end
+    -- Obtener el nombre completo del jugador (Nombre-Reino)
+    local fullName = unit
+    if RD.utils and RD.utils.group and RD.utils.group.GetFullPlayerName then
+        fullName = RD.utils.group:GetFullPlayerName(unit) or unit
+    elseif type(unit) == "string" and not unit:find("-") then
+        local name, realm = UnitName(unit)
+        if name then
+            realm = (realm and realm ~= "") and realm or GetRealmName()
+            fullName = name .. "-" .. realm
+        end
+    end
     
-    -- Asegurar que el nombre esté en el formato correcto (sin realm)
-    name = name:gsub("%-[^|]+", "")  -- Eliminar el nombre del reino si existe
+    -- Obtener nombre base para comparaciones secundarias
+    local baseName = fullName:gsub("%-[^|]+", "")
     
     -- Obtener las asignaciones
     local assignments = RaidDominionDB and RaidDominionDB.assignments
@@ -134,10 +142,12 @@ function roleManager:GetRoleTable(unit)
                 target = assignedTo.target or assignedTo.name or ""
             end
             
-            -- Limpiar el nombre del jugador guardado
-            local cleanPlayerName = tostring(target):gsub("%-[^|]+", "")
-            if cleanPlayerName == name then
-                table.insert(allRoles, role:upper()) -- Convertir a mayúsculas para consistencia
+            -- Comparar con nombre completo primero, luego con nombre base
+            local targetStr = tostring(target)
+            local targetBase = targetStr:gsub("%-[^|]+", "")
+            
+            if targetStr == fullName or targetBase == baseName then
+                table.insert(allRoles, role:upper())
             end
         end
     end

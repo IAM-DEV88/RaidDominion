@@ -21,6 +21,21 @@ RD.constants = RD.constants or {}
 -- Obtener el messageManager
 local messageManager = RD.modules and RD.modules.messageManager
 
+-- Función centralizada para loguear mensajes
+local function Log(...)
+    if RD and RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(...)
+    elseif messageManager and messageManager.SendSystemMessage then
+        messageManager:SendSystemMessage(...)
+    else
+        local msg = select(1, ...)
+        if select("#", ...) > 1 then
+            msg = string.format(...)
+        end
+        SendSystemMessage(msg)
+    end
+end
+
 -- Módulo de acciones del menú
 local MenuActions = {}
 RD.MenuActions = MenuActions
@@ -615,9 +630,7 @@ end
             end
             return
         end
-        if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-            DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[RaidDominion]|r Abre la configuración con /rdc")
-        end
+        Log("|cff33ff99[RaidDominion]|r Abre la configuración con /rdc")
     end)
     MenuActions.Register("CloseMenu", function()
         if RD.ui and RD.ui.menu and RD.ui.menu.Hide then RD.ui.menu:Hide() end
@@ -641,9 +654,9 @@ end
         -- Generar la lista de miembros de la hermandad y guardarla en RaidDominionDB.Guild.memberList
         if RD.utils and RD.utils.group then
             local guildMembers, updatesNeeded = RD.utils.group.GetGuildMemberList()
-            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00[RaidDominion]|r Lista de hermandad generada con " .. #guildMembers .. " miembros.")
+            Log("|cff00ff00[RaidDominion]|r Lista de hermandad generada con %d miembros.", #guildMembers)
             if #updatesNeeded > 0 then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Se requieren actualizaciones de notas para " .. #updatesNeeded .. " miembros.")
+                Log("|cffffff00[RaidDominion]|r Se requieren actualizaciones de notas para %d miembros.", #updatesNeeded)
             end
         end
     end)
@@ -798,7 +811,7 @@ end
     MenuActions.Register("ShowRecognition", function()
         local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
         if permLevel < 1 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para ver reconocimientos.")
+            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para ver reconocimientos.")
             return
         end
 
@@ -827,7 +840,7 @@ end
     MenuActions.Register("SearchGuildPlayer", function()
         local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
         if permLevel < 1 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar jugadores.")
+            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar jugadores.")
             return
         end
 
@@ -842,7 +855,7 @@ end
     MenuActions.Register("RecognitionCreate", function()
         local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
         if permLevel < 2 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
+            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
             return
         end
         if RD.utils and RD.utils.recognition and RD.utils.recognition.getOrCreateRecognitionFrame then
@@ -859,11 +872,11 @@ end
     MenuActions.Register("RecognitionShare", function()
         local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
         if permLevel < 2 then
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
+            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
             return
         end
         -- Lógica de compartir (pendiente)
-        DEFAULT_CHAT_FRAME:AddMessage("|cffffff00[RaidDominion]|r Lógica de compartir no implementada aún.")
+        Log("|cffffff00[RaidDominion]|r Lógica de compartir no implementada aún.")
     end)
 end
 
