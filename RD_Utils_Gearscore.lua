@@ -292,7 +292,7 @@ function gearscoreUtils.ToggleGearscoreWindows(forceShow)
         f.autoAssignBtn:SetScript("OnClick", function()
             local guildMembers = RD.utils.group.GetGuildMemberList()
             local count = 0
-            local MAX_PER_CLICK = 10 -- Límite para evitar desconexión
+            local MAX_PER_CLICK = 3 -- Límite para evitar desconexión (Reducido a 3 por petición)
             local dpsClasses = {
                 ["HUNTER"] = true,
                 ["ROGUE"] = true,
@@ -364,9 +364,16 @@ function gearscoreUtils.ToggleGearscoreWindows(forceShow)
     
     -- Categorizar jugadores
     local cat1 = {} -- Con GS y nota
-    local cat2 = {} -- Con GS sin nota
-    local cat3 = {} -- Sin GS con nota
-    local cat4 = {} -- Sin GS sin nota
+    local cat2 = {} -- Con GS sin nota (Solo DPS)
+    local cat3 = {} -- Sin GS con nota (Retirada)
+    local cat4 = {} -- Sin GS sin nota (Solo DPS)
+    
+    local dpsClasses = {
+        ["HUNTER"] = true,
+        ["ROGUE"] = true,
+        ["MAGE"] = true,
+        ["WARLOCK"] = true
+    }
     
     for _, member in ipairs(guildMembers) do
         local note = member.publicNote or ""
@@ -376,11 +383,18 @@ function gearscoreUtils.ToggleGearscoreWindows(forceShow)
         if hasGS and hasNote then
             tinsert(cat1, member)
         elseif hasGS and not hasNote then
-            tinsert(cat2, member)
+            -- Solo incluir si es clase DPS (Lista 2)
+            if dpsClasses[member.classFileName] then
+                tinsert(cat2, member)
+            end
         elseif not hasGS and hasNote then
-            tinsert(cat3, member)
+            -- Lista 3: Jugadores sin GS con nota -> Retirada
+            -- tinsert(cat3, member)
         else
-            tinsert(cat4, member)
+            -- Solo incluir si es clase DPS (Lista 4)
+            if dpsClasses[member.classFileName] then
+                tinsert(cat4, member)
+            end
         end
     end
     
@@ -451,9 +465,8 @@ function gearscoreUtils.ToggleGearscoreWindows(forceShow)
     local yOffset = 0
     local categories = {
         { data = cat1, title = "1. Jugadores con GS y nota", id = 1 },
-        { data = cat2, title = "2. Jugadores con GS sin nota", id = 2 },
-        { data = cat3, title = "3. Jugadores sin GS con nota", id = 3 },
-        { data = cat4, title = "4. Jugadores sin GS o nota", id = 4 }
+        { data = cat2, title = "2. Jugadores con GS sin nota (DPS)", id = 2 },
+        { data = cat4, title = "3. Jugadores sin GS o nota (DPS)", id = 4 }
     }
     
     local membersPerRow = 4
@@ -503,8 +516,8 @@ function gearscoreUtils.ToggleGearscoreWindows(forceShow)
     end
     
     f.content:SetHeight(yOffset)
-    f.statusText:SetText(string.format("Total: |cffffffff%d|r  -  Con GS y Nota: |cff00ff00%d|r  -  Con GS sin Nota: |cffffff00%d|r  -  Sin GS/Nota: |cffff0000%d|r", 
-        #guildMembers, #cat1, #cat2, #cat3))
+    f.statusText:SetText(string.format("Total: |cffffffff%d|r  -  Con GS y Nota: |cff00ff00%d|r  -  Con GS sin Nota (DPS): |cffffff00%d|r  -  Sin GS/Nota (DPS): |cffff0000%d|r", 
+        #guildMembers, #cat1, #cat2, #cat4))
     
     f:Show()
 end

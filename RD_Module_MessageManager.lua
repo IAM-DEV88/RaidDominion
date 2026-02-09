@@ -1211,6 +1211,37 @@ function messageManager:StartRoutineReadyCheck()
     
 end
 
+-- Función para manejar mensajes de error de permisos diferenciados
+function messageManager:PermissionError(requiredAction)
+    local permLevel = self:GetPermissionLevel()
+    local cfg = RaidDominion.constants and RaidDominion.constants.cfg_data
+    local guildName = cfg and cfg.G
+    local prefix = "|cffff0000[RaidDominion]|r Aviso: "
+    
+    -- Acción por defecto si no se proporciona
+    requiredAction = requiredAction or "realizar esta acción"
+    
+    local inAuthorizedGuild = false
+    if guildName and IsInGuild() then
+        local playerGuild = GetGuildInfo("player")
+        if playerGuild == guildName then
+            inAuthorizedGuild = true
+        end
+    end
+    
+    if not inAuthorizedGuild then
+        -- Jugador no está en la hermandad principal (o no hay hermandad definida)
+        Log(prefix .. "No tienes permisos para " .. requiredAction .. ". |cffffff00Con una donación puedes obtener los permisos completos y apoyar el desarrollo del addon.|r")
+    elseif permLevel < 2 then
+        -- Jugador está en la hermandad pero tiene rango bajo
+        local displayName = guildName or "la hermandad"
+        Log(prefix .. "No tienes permisos suficientes para " .. requiredAction .. ". |cffffff00Sugerimos subir de rango en " .. displayName .. " para obtener acceso a funciones administrativas.|r")
+    else
+        -- Tiene permisos pero quizás la acción requiere nivel 3 y tiene 2
+        Log(prefix .. "Esta acción requiere un nivel de oficial superior. Contacta con un administrador.")
+    end
+end
+
 function messageManager:WhisperAssignments()
     local raidMembers = {}
     

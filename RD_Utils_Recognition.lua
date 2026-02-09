@@ -286,7 +286,12 @@ local function getOrCreateInvitePopup()
         invitePopup.acceptBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("añadir jugadores")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                end
                 return
             end
 
@@ -400,7 +405,12 @@ function recognitionUtils.ShowPlayerSearchPopup()
         p.acceptBtn:SetScript("OnClick", function()
                     local permLevel = GetPerms()
                     if permLevel < 1 then
-                        Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar y editar jugadores.")
+                        local mm = RD.modules and RD.modules.messageManager
+                        if mm and mm.PermissionError then
+                            mm:PermissionError("buscar y editar jugadores")
+                        else
+                            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar y editar jugadores.")
+                        end
                         return
                     end
                     
@@ -546,7 +556,12 @@ local function renderRecognitionMembers(recognition, parentFrame)
         card.addBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir menciones.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("añadir menciones")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir menciones.")
+                end
                 return
             end
 
@@ -580,7 +595,12 @@ local function renderRecognitionMembers(recognition, parentFrame)
         card.remBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para quitar menciones.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("quitar menciones")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para quitar menciones.")
+                end
                 return
             end
             
@@ -733,7 +753,12 @@ RefreshRecognitionList = function()
         line.descBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("editar reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar reconocimientos.")
+                end
                 return
             end
             
@@ -902,7 +927,12 @@ function recognitionUtils.getOrCreateRecognitionFrame()
         f.saveBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para guardar reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("guardar reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para guardar reconocimientos.")
+                end
                 return
             end
             
@@ -1013,7 +1043,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.createBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("crear reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
+                end
                 return
             end
             local createFrame = recognitionUtils.getOrCreateRecognitionFrame()
@@ -1030,7 +1065,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.shareBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("compartir reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
+                end
                 return
             end
             -- Lógica de compartir (pendiente)
@@ -1048,7 +1088,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.addPlayerBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("añadir jugadores")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                end
                 return
             end
             
@@ -1075,7 +1120,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.upBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("reordenar reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
+                end
                 return
             end
 
@@ -1096,7 +1146,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.downBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("reordenar reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reordenar reconocimientos.")
+                end
                 return
             end
 
@@ -1117,7 +1172,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.duplicateBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("duplicar reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar reconocimientos.")
+                end
                 return
             end
             
@@ -1161,7 +1221,12 @@ function recognitionUtils.ShowRecognitionWindow()
         f.deleteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar reconocimientos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("eliminar reconocimientos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar reconocimientos.")
+                end
                 return
             end
 

@@ -384,6 +384,20 @@ local function EnsureCoreData()
         _G.RaidDominionDB.Core = {}
     end
     
+    -- Asegurar que existe una lista temporal si se solicita o como salvaguarda
+    local hasTemporal = false
+    for _, band in ipairs(_G.RaidDominionDB.Core) do
+        if band.name == "Temporal" then
+            hasTemporal = true
+            break
+        end
+    end
+    
+    if not hasTemporal then
+        -- No la añadimos automáticamente aquí para no ensuciar la DB si no se usa,
+        -- pero la lógica de asignación la creará si es necesario.
+    end
+    
     return _G.RaidDominionDB.Core
 end
 
@@ -642,7 +656,12 @@ local function getOrCreateBandFrame()
         createFrame.acceptBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear o editar bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("crear o editar bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear o editar bandas.")
+                end
                 createFrame:Hide()
                 return
             end
@@ -692,8 +711,12 @@ end
 
 -- Función auxiliar para agregar un jugador a una banda
 local function addPlayerToBand(bandIndex, playerData)
+    -- Verificar permisos (Nivel 2+ requerido para modificar el core)
+    if GetPerms() < 2 then
+        return false
+    end
+
     if not bandIndex or not playerData or not playerData.name then
-        Log("|cffff0000[RaidDominion]|r Error: Datos de jugador incompletos")
         return false
     end
     
@@ -727,6 +750,19 @@ local function addPlayerToBand(bandIndex, playerData)
                 end
             end
             
+            -- Si ya existe, simplemente actualizamos el rol si se proporciona uno diferente de "nuevo"
+            if playerData.role and playerData.role ~= "nuevo" then
+                member.role = playerData.role
+                Log("|cff00ff00[RaidDominion]|r Rol de " .. member.name .. " actualizado a " .. playerData.role .. " en la banda " .. band.name)
+                
+                -- Actualizar la interfaz solo si ya está abierta
+                local f3 = _G["RaidDominionCoreListFrame"]
+                if f3 and f3:IsVisible() and RD.utils.coreBands.ShowCoreBandsWindow then
+                    RD.utils.coreBands.ShowCoreBandsWindow()
+                end
+                return true
+            end
+
             Log("|cffff0000[RaidDominion]|r Error: El jugador ya está en la banda")
             return false
         end
@@ -744,11 +780,15 @@ local function addPlayerToBand(bandIndex, playerData)
     -- Agregar el miembro a la banda
     table.insert(band.members, newMember)
     
-    -- Actualizar la interfaz para mostrar el nuevo miembro
-    RD.utils.coreBands.ShowCoreBandsWindow()
+    -- Actualizar la interfaz solo si ya está abierta
+    local f3 = _G["RaidDominionCoreListFrame"]
+    if f3 and f3:IsVisible() and RD.utils.coreBands.ShowCoreBandsWindow then
+        RD.utils.coreBands.ShowCoreBandsWindow()
+    end
     
     return true
 end
+coreBandsUtils.AddPlayerToBand = addPlayerToBand
 
 -- Función para abrir el popup de invitación
 local function getOrCreateInvitePopup(bandIndex)
@@ -868,7 +908,12 @@ local function getOrCreateInvitePopup(bandIndex)
         invitePopup.acceptBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("añadir jugadores")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores.")
+                end
                 invitePopup:Hide()
                 return
             end
@@ -1076,7 +1121,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.promoteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("gestionar rangos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
+                end
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1092,7 +1142,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.demoteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("gestionar rangos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para gestionar rangos.")
+                end
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1111,7 +1166,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.kickBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para expulsar de la hermandad.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("expulsar de la hermandad")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para expulsar de la hermandad.")
+                end
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1132,7 +1192,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.inviteGuildBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para invitar a la hermandad.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("invitar a la hermandad")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para invitar a la hermandad.")
+                end
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1159,7 +1224,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.noteEdit:SetScript("OnEnterPressed", function(self)
             local permLevel = GetPerms()
             if permLevel < 1 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("editar notas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas.")
+                end
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1190,7 +1260,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.officerNoteEdit:SetScript("OnEnterPressed", function(self)
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: Solo oficiales pueden editar notas oficiales.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("editar notas de hermandad")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: Solo oficiales pueden editar notas oficiales.")
+                end
                 return
             end
             local name = playerEditFrame.nameEdit:GetText()
@@ -1213,7 +1288,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame.deleteBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar jugadores de la banda.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("eliminar jugadores")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para eliminar jugadores de la banda.")
+                end
                 return
             end
             local context = playerEditFrame.context
@@ -1309,7 +1389,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                         end
                     end
                 else
-                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas de hermandad.")
+                    local mm = RD.modules and RD.modules.messageManager
+                    if mm and mm.PermissionError then
+                        mm:PermissionError("editar notas de hermandad")
+                    else
+                        Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar notas de hermandad.")
+                    end
                 end
             end
 
@@ -2198,6 +2283,39 @@ end
 -- Variables persistentes para trackear la banda seleccionada
 local selectedBandIndex = nil
 local selectedBandLine = nil
+
+-- Función para obtener el índice de la banda seleccionada
+function coreBandsUtils.GetSelectedBandIndex()
+    return selectedBandIndex
+end
+
+-- Función para obtener o crear la banda temporal
+function coreBandsUtils.GetOrCreateTemporalBandIndex()
+    -- Verificar permisos antes de cualquier acción con la lista Temporal (Nivel 2+ requerido)
+    if GetPerms() < 2 then
+        return nil
+    end
+
+    local coreData = EnsureCoreData()
+    for i, band in ipairs(coreData) do
+        if band.name == "Temporal" then
+            return i
+        end
+    end
+    
+    -- Si no existe, crearla
+    table.insert(coreData, {
+        name = "Temporal",
+        minGS = 0,
+        schedule = "Temporal",
+        withNote = false,
+        members = {}
+    })
+    
+    Log("|cff00ff00[RaidDominion]|r Lista 'Temporal' creada automáticamente para nuevas asignaciones.")
+    return #coreData
+end
+
 local openMemberLists = {} -- Almacena los índices de bandas con listas de miembros abiertas
 
 -- Función para capitalizar todos los nombres de jugadores en todas las bandas
@@ -2327,7 +2445,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.createBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("crear bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear bandas.")
+                end
                 return
             end
             local createFrame = getOrCreateBandFrame()
@@ -2364,7 +2487,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.updateAllBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para actualizar bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("actualizar bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para actualizar bandas.")
+                end
                 return
             end
             local coreData = EnsureCoreData()
@@ -2725,7 +2853,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.resetBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reiniciar bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("reiniciar bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reiniciar bandas.")
+                end
                 return
             end
             if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2766,7 +2899,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.duplicateBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("duplicar bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para duplicar bandas.")
+                end
                 return
             end
             if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2810,7 +2948,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.moveUpBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 1 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("mover bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
+                end
                 return
             end
             if selectedBandIndex and selectedBandIndex > 1 then
@@ -2829,7 +2972,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         f3.moveDownBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 1 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("mover bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para mover bandas.")
+                end
                 return
             end
             if selectedBandIndex and selectedBandIndex < #coreData then
@@ -2850,11 +2998,6 @@ function coreBandsUtils.ShowCoreBandsWindow()
     
     -- Actualizar los scripts de los botones para usar la banda seleccionada actual
     f3.announceBtn:SetScript("OnClick", function(self, button)
-        local permLevel = GetPerms()
-        if permLevel < 2 then
-            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para anunciar bandas.")
-            return
-        end
         if selectedBandIndex and coreData[selectedBandIndex] then
             local bandData = coreData[selectedBandIndex]
             
@@ -2895,7 +3038,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
     f3.inviteBtn:SetScript("OnClick", function(self)
         local permLevel = GetPerms()
         if permLevel < 2 then
-            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores a la banda.")
+            local mm = RD.modules and RD.modules.messageManager
+            if mm and mm.PermissionError then
+                mm:PermissionError("añadir jugadores a la banda")
+            else
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para añadir jugadores a la banda.")
+            end
             return
         end
         if selectedBandIndex and coreData[selectedBandIndex] then
@@ -2933,7 +3081,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         
         local permLevel = GetPerms()
         if permLevel < 2 then
-            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reclutar bandas.")
+            local mm = RD.modules and RD.modules.messageManager
+            if mm and mm.PermissionError then
+                mm:PermissionError("reclutar bandas")
+            else
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para reclutar bandas.")
+            end
             return
         end
         if selectedBandIndex and coreData[selectedBandIndex] then
@@ -3181,7 +3334,12 @@ function coreBandsUtils.ShowCoreBandsWindow()
         line.infoBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
-                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar bandas.")
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("editar bandas")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para editar bandas.")
+                end
                 return
             end
             local editFrame = getOrCreateBandFrame()

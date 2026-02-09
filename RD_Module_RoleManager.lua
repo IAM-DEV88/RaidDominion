@@ -68,6 +68,67 @@ function roleManager:AssignItem(menuType, key, unitName)
         RD.config:Set("assignments." .. menuType .. "." .. key, unitName)
     end
     
+    -- Si es una asignación de roles (tanque o healer), sincronizar con CoreBands
+    if menuType == "roles" and (key:find("tank") or key:find("tanque") or key:find("heal") or key:find("healer") or key:find("sanador") or key:find("curador")) then
+        -- Verificar permisos para sincronizar con CoreBands (Nivel 2+ requerido)
+        local mm = RD.modules and RD.modules.messageManager
+        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
+        
+        if permLevel >= 2 and RD.utils and RD.utils.coreBands and RD.utils.coreBands.AddPlayerToBand then
+            local bandIndex = RD.utils.coreBands.GetSelectedBandIndex()
+            if not bandIndex then
+                -- Si no hay banda seleccionada, intentar usar/crear la temporal
+                bandIndex = RD.utils.coreBands.GetOrCreateTemporalBandIndex()
+            end
+            
+            -- Solo proceder si tenemos una banda válida (y permisos para crearla si era necesario)
+            if bandIndex then
+                -- Determinar el rol para CoreBands (tank o healer)
+                local coreRole = "otro"
+                if key:find("tank") or key:find("tanque") then
+                    coreRole = "tank"
+                elseif key:find("heal") or key:find("healer") or key:find("sanador") or key:find("curador") then
+                    coreRole = "healer"
+                end
+                
+                -- Obtener clase del jugador si es posible
+                local classFileName = nil
+                if UnitExists("target") and UnitName("target") == unitName then
+                    _, classFileName = UnitClass("target")
+                elseif unitName == UnitName("player") then
+                    _, classFileName = UnitClass("player")
+                end
+                
+                -- Si no es el target ni el player, intentar buscar en el grupo
+                if not classFileName then
+                    local numRaid = GetNumRaidMembers()
+                    local numParty = GetNumPartyMembers()
+                    if numRaid > 0 then
+                        for i = 1, numRaid do
+                            if UnitName("raid"..i) == unitName then
+                                _, classFileName = UnitClass("raid"..i)
+                                break
+                            end
+                        end
+                    elseif numParty > 0 then
+                        for i = 1, numParty do
+                            if UnitName("party"..i) == unitName then
+                                _, classFileName = UnitClass("party"..i)
+                                break
+                            end
+                        end
+                    end
+                end
+                
+                RD.utils.coreBands.AddPlayerToBand(bandIndex, {
+                    name = unitName,
+                    role = coreRole,
+                    class = classFileName or ""
+                })
+            end
+        end
+    end
+    
     if events and events.Publish then
         events:Publish("ROLE_UPDATE", menuType, key, unitName)
     end
@@ -92,8 +153,33 @@ function roleManager:ResetAssignment(menuType, key)
     key = string.lower(key)
     
     local RD = _G.RaidDominion
+    
+    -- Obtener quién estaba asignado antes de borrar para sincronizar con CoreBands
+    local unitName = self:GetAssignment(menuType, key)
+    
     if RD.config and RD.config.Set then
         RD.config:Set("assignments." .. menuType .. "." .. key, nil)
+    end
+    
+    -- Si era una asignación de roles, sincronizar con CoreBands (cambiar a 'otro')
+    if unitName and menuType == "roles" and (key:find("tank") or key:find("tanque") or key:find("heal") or key:find("healer") or key:find("sanador") or key:find("curador")) then
+        -- Verificar permisos para sincronizar con CoreBands (Nivel 2+ requerido)
+        local mm = RD.modules and RD.modules.messageManager
+        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
+        
+        if permLevel >= 2 and RD.utils and RD.utils.coreBands and RD.utils.coreBands.AddPlayerToBand then
+            local bandIndex = RD.utils.coreBands.GetSelectedBandIndex()
+            if not bandIndex then
+                bandIndex = RD.utils.coreBands.GetOrCreateTemporalBandIndex()
+            end
+            
+            if bandIndex then
+                RD.utils.coreBands.AddPlayerToBand(bandIndex, {
+                    name = unitName,
+                    role = "otro" -- Volver al rol por defecto
+                })
+            end
+        end
     end
     
     if events and events.Publish then

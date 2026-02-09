@@ -424,7 +424,11 @@ local function GuildLottery()
     local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
     
     if permLevel < 2 then
-        SendSystemMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos de Oficial para iniciar el sorteo.")
+        if mm and mm.PermissionError then
+            mm:PermissionError("iniciar el sorteo")
+        else
+            SendSystemMessage("|cffff0000[RaidDominion]|r Error: No tienes permisos de Oficial para iniciar el sorteo.")
+        end
         return
     end
 
@@ -809,9 +813,14 @@ end
     end)
 
     MenuActions.Register("ShowRecognition", function()
-        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        local mm = RD.modules and RD.modules.messageManager
+        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
         if permLevel < 1 then
-            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para ver reconocimientos.")
+            if mm and mm.PermissionError then
+                mm:PermissionError("ver reconocimientos")
+            else
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para ver reconocimientos.")
+            end
             return
         end
 
@@ -838,9 +847,14 @@ end
     end)
 
     MenuActions.Register("SearchGuildPlayer", function()
-        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        local mm = RD.modules and RD.modules.messageManager
+        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
         if permLevel < 1 then
-            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar jugadores.")
+            if mm and mm.PermissionError then
+                mm:PermissionError("buscar jugadores")
+            else
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para buscar jugadores.")
+            end
             return
         end
 
@@ -853,9 +867,14 @@ end
     end)
 
     MenuActions.Register("RecognitionCreate", function()
-        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        local mm = RD.modules and RD.modules.messageManager
+        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
         if permLevel < 2 then
-            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
+            if mm and mm.PermissionError then
+                mm:PermissionError("crear reconocimientos")
+            else
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para crear reconocimientos.")
+            end
             return
         end
         if RD.utils and RD.utils.recognition and RD.utils.recognition.getOrCreateRecognitionFrame then
@@ -870,9 +889,14 @@ end
     end)
 
     MenuActions.Register("RecognitionShare", function()
-        local permLevel = messageManager and messageManager.GetPermissionLevel and messageManager:GetPermissionLevel() or 0
+        local mm = RD.modules and RD.modules.messageManager
+        local permLevel = mm and mm.GetPermissionLevel and mm:GetPermissionLevel() or 0
         if permLevel < 2 then
-            Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
+            if mm and mm.PermissionError then
+                mm:PermissionError("compartir reconocimientos")
+            else
+                Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para compartir reconocimientos.")
+            end
             return
         end
         -- Lógica de compartir (pendiente)

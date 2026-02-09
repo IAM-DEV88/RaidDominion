@@ -89,7 +89,12 @@ function minigame:StartNewGame()
     end
 
     if GetPerms() < 3 then
-        Log("|cffff0000[RaidDominion]|r Error: Requiere Rango Oficial/Admin de permisos para gestionar el minijuego.")
+        local mm = RD.modules and RD.modules.messageManager
+        if mm and mm.PermissionError then
+            mm:PermissionError("gestionar el minijuego")
+        else
+            Log("|cffff0000[RaidDominion]|r Error: Requiere Rango Oficial/Admin de permisos para gestionar el minijuego.")
+        end
         return
     end
     
