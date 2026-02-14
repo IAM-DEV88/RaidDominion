@@ -13,12 +13,18 @@ local string_gsub, string_upper, string_lower, string_sub, string_find, string_f
 local UI = {}
 
 function UI.CreateLabel(parent, text, template)
+    if RD.UIUtils and RD.UIUtils.CreateLabel then
+        return RD.UIUtils.CreateLabel(parent, text, template)
+    end
     local label = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlight")
     label:SetText(text)
     return label
 end
 
 function UI.CreateEditBox(name, parent, width, height, numeric)
+    if RD.UIUtils and RD.UIUtils.CreateEditBox then
+        return RD.UIUtils.CreateEditBox(name, parent, width, height, numeric)
+    end
     local eb = CreateFrame("EditBox", name, parent, "InputBoxTemplate")
     eb:SetSize(width or 200, height or 25)
     eb:SetFontObject("ChatFontNormal")
@@ -79,9 +85,7 @@ local RefreshRecognitionList
 
 -- Función para limpiar nombres (remover servidor)
 local function CleanName(name)
-    if not name then return "" end
-    local clean = string.gsub(name, "%-.*", "")
-    return string.lower(clean)
+    return RD.UIUtils and RD.UIUtils.CleanName and RD.UIUtils.CleanName(name) or (name and string.lower(string.gsub(name, "%-.*", "")) or "")
 end
 
 -- Helper para obtener datos del jugador (clase) desde hermandad o lista de Core
@@ -125,8 +129,8 @@ end
 
 -- Función para capitalizar nombres
 local function CapitalizeName(name)
-    if not name or name == "" then return "" end
-    return (string_upper(string_sub(name, 1, 1)) .. string_lower(string_sub(name, 2)))
+    return RD.UIUtils and RD.UIUtils.CapitalizeName and RD.UIUtils.CapitalizeName(name) or 
+           (name and name ~= "" and (string_upper(string_sub(name, 1, 1)) .. string_lower(string_sub(name, 2))) or "")
 end
 
 -- Función para agregar un jugador al reconocimiento seleccionado
@@ -431,10 +435,13 @@ function recognitionUtils.ShowPlayerSearchPopup()
     p.nameEdit:SetFocus()
 end
 
-local function AcquireFrame(pool, frameType, parent)
+local function AcquireFrame(pool, frameType, parent, template, poolName)
+    if RD.UIUtils and RD.UIUtils.AcquireFrame then
+        return RD.UIUtils.AcquireFrame(poolName or "Generic", frameType, parent, template)
+    end
     local frame = table.remove(pool)
     if not frame then
-        frame = CreateFrame(frameType, nil, parent)
+        frame = CreateFrame(frameType, nil, parent, template)
     else
         frame:SetParent(parent)
         frame:Show()
@@ -442,7 +449,11 @@ local function AcquireFrame(pool, frameType, parent)
     return frame
 end
 
-local function ReleaseFrame(pool, frame)
+local function ReleaseFrame(pool, frame, poolName)
+    if RD.UIUtils and RD.UIUtils.ReleaseFrame then
+        RD.UIUtils.ReleaseFrame(poolName or "Generic", frame)
+        return
+    end
     frame:Hide()
     frame:SetParent(nil)
     table.insert(pool, frame)
@@ -468,13 +479,13 @@ local function renderRecognitionMembers(recognition, parentFrame)
     -- Limpiar tarjetas anteriores
     if parentFrame.cards then
         for _, card in ipairs(parentFrame.cards) do
-            ReleaseFrame(memberCardPool, card)
+            ReleaseFrame(memberCardPool, card, "RD_Recognition_Member")
         end
     end
     parentFrame.cards = {}
     
     for i, member in ipairs(recognition.members) do
-        local card = AcquireFrame(memberCardPool, "Button", parentFrame)
+        local card = AcquireFrame(memberCardPool, "Button", parentFrame, nil, "RD_Recognition_Member")
         card:SetSize(cardWidth, cardHeight)
         card:SetPoint("TOPLEFT", 2 + xOffset, -yOffset) -- Pequeño margen izquierdo
         
@@ -673,7 +684,7 @@ RefreshRecognitionList = function()
     -- Limpiar frames actuales
     if f.content.lines then
         for _, line in ipairs(f.content.lines) do
-            ReleaseFrame(recognitionLinePool, line)
+            ReleaseFrame(recognitionLinePool, line, "RD_Recognition_Line")
         end
     end
     f.content.lines = {}
@@ -682,7 +693,7 @@ RefreshRecognitionList = function()
     local itemHeight = 45 -- Un poco más alto para los dos botones compuestos
     
     for i, item in ipairs(data) do
-        local line = AcquireFrame(recognitionLinePool, "Frame", f.content)
+        local line = AcquireFrame(recognitionLinePool, "Frame", f.content, nil, "RD_Recognition_Line")
         line:SetSize(730, itemHeight)
         line:SetPoint("TOPLEFT", 0, -yOffset)
         line:EnableMouse(true)

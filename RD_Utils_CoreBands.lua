@@ -18,43 +18,13 @@ local tinsert, tremove, tsort = table.insert, table.remove, table.sort
 local string_gsub, string_upper, string_lower, string_sub, string_find, string_format, string_match = string.gsub, string.upper, string.lower, string.sub, string.find, string.format, string.match
 
 -- Función auxiliar para limpiar nombres (eliminar reino y normalizar a minúsculas para comparaciones)
--- Caché interna para CleanName para evitar procesamiento de strings repetitivo
-local cleanNameCache = {}
-local cleanNameCacheSize = 0
 local function CleanName(name)
-    if not name then return "" end
-    if cleanNameCache[name] then return cleanNameCache[name] end
-    
-    -- Eliminar reino y cualquier espacio en blanco accidental
-    local clean = string_gsub(name, "%-.*", "")
-    clean = string_gsub(clean, "%s+", "")
-    local result = string_lower(clean)
-    
-    -- Limitar tamaño de caché para evitar fuga de memoria (limpiar si crece demasiado)
-    if cleanNameCacheSize > 1000 then 
-        wipe(cleanNameCache) 
-        cleanNameCacheSize = 0
-    end
-    
-    cleanNameCache[name] = result
-    cleanNameCacheSize = cleanNameCacheSize + 1
-    
-    return result
+    return RD.UIUtils and RD.UIUtils.CleanName and RD.UIUtils.CleanName(name) or name:lower()
 end
 
--- Función auxiliar para capitalizar nombres correctamente (primera letra en mayúscula, resto en minúsculas)
-local capitalizedNamesCache = {}
+-- Función auxiliar para capitalizar nombres correctamente
 local function CapitalizeName(name)
-    if not name or name == "" then return "" end
-    if capitalizedNamesCache[name] then return capitalizedNamesCache[name] end
-    
-    -- Eliminar reino si existe
-    local cleanName = string_gsub(name, "%-.*", "")
-    -- Capitalizar la primera letra y hacer el resto minúsculas
-    local result = string_upper(string_sub(cleanName, 1, 1)) .. string_lower(string_sub(cleanName, 2))
-    
-    capitalizedNamesCache[name] = result
-    return result
+    return RD.UIUtils and RD.UIUtils.CapitalizeName and RD.UIUtils.CapitalizeName(name) or name
 end
 
 -- Inicializar tablas necesarias
@@ -76,65 +46,8 @@ local function Log(...)
 end
 
 -- Helper para obtener el roster actual en una tabla de búsqueda (caché)
--- Caché de roster para evitar reconstrucción excesiva
-local cachedRoster = nil
-local lastRosterUpdate = 0
-
 local function BuildRosterCache()
-    local now = GetTime()
-    if cachedRoster and (now - lastRosterUpdate < 1) then
-        return cachedRoster
-    end
-
-    local rosterCache = {}
-    
-    local numRaid = GetNumRaidMembers()
-    local numParty = GetNumPartyMembers()
-
-    if numRaid > 0 then
-        -- Estamos en Banda
-        for i = 1, numRaid do
-            local unit = "raid"..i
-            local name = UnitName(unit)
-            if name and name ~= "Unknown" then
-                local _, fileName = UnitClass(unit)
-                local clean = CleanName(name)
-                rosterCache[clean] = { name = name, class = fileName, unit = unit }
-            end
-        end
-    elseif numParty > 0 then
-        -- Estamos en Grupo (Party)
-        -- Incluir al jugador local
-        local myName = UnitName("player")
-        if myName then
-            local _, fileName = UnitClass("player")
-            local clean = CleanName(myName)
-            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
-        end
-        -- Incluir miembros del grupo
-        for i = 1, numParty do
-            local unit = "party"..i
-            local name = UnitName(unit)
-            if name and name ~= "Unknown" then
-                local _, fileName = UnitClass(unit)
-                local clean = CleanName(name)
-                rosterCache[clean] = { name = name, class = fileName, unit = unit }
-            end
-        end
-    else
-        -- Solo nosotros
-        local myName = UnitName("player")
-        if myName then
-            local _, fileName = UnitClass("player")
-            local clean = CleanName(myName)
-            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
-        end
-    end
-    
-    cachedRoster = rosterCache
-    lastRosterUpdate = now
-    
-    return rosterCache
+    return RD.UIUtils and RD.UIUtils.BuildRosterCache and RD.UIUtils.BuildRosterCache() or {}
 end
 
 -- Función para obtener una firma única del roster actual (para detectar cambios reales)
@@ -162,7 +75,7 @@ local function GetRosterSignature()
 end
 
 -- Mapa para convertir nombres de clase a inglés (para RAID_CLASS_COLORS)
-local CLASS_ENGLISH_MAP = {
+local CLASS_ENGLISH_MAP = RD.constants and RD.constants.CLASS_ENGLISH_MAP or {
     ["GUERRERO"] = "WARRIOR", ["WARRIOR"] = "WARRIOR",
     ["PALADÍN"] = "PALADIN", ["PALADIN"] = "PALADIN",
     ["CAZADOR"] = "HUNTER", ["HUNTER"] = "HUNTER",
@@ -171,14 +84,12 @@ local CLASS_ENGLISH_MAP = {
     ["CHAMÁN"] = "SHAMAN", ["CHAMAN"] = "SHAMAN", ["SHAMAN"] = "SHAMAN",
     ["MAGO"] = "MAGE", ["MAGE"] = "MAGE",
     ["BRUJO"] = "WARLOCK", ["WARLOCK"] = "WARLOCK",
-    ["MONJE"] = "MONK", ["MONK"] = "MONK",
     ["DRUIDA"] = "DRUID", ["DRUID"] = "DRUID",
-    ["CABALLERO_DE_LA_MUERTE"] = "DEATHKNIGHT", ["DEATHKNIGHT"] = "DEATHKNIGHT",
-    ["CAZADOR_DE_DEMONIOS"] = "DEMONHUNTER", ["DEMONHUNTER"] = "DEMONHUNTER"
+    ["CABALLERO_DE_LA_MUERTE"] = "DEATHKNIGHT", ["DEATHKNIGHT"] = "DEATHKNIGHT"
 }
 
 -- Mapa estático de orden de clases para optimizar ordenación
-local CLASS_ORDER = {
+local CLASS_ORDER = RD.constants and RD.constants.CLASS_ORDER or {
     ["GUERRERO"] = 1, ["WARRIOR"] = 1,
     ["PALADÍN"] = 2, ["PALADIN"] = 2,
     ["CAZADOR"] = 3, ["HUNTER"] = 3,
@@ -187,15 +98,17 @@ local CLASS_ORDER = {
     ["CHAMAN"] = 6, ["SHAMAN"] = 6,
     ["MAGO"] = 7, ["MAGE"] = 7,
     ["BRUJO"] = 8, ["WARLOCK"] = 8,
-    ["MONJE"] = 9, ["MONK"] = 9,
-    ["DRUIDA"] = 10, ["DRUID"] = 10,
-    ["CABALLERO_DE_LA_MUERTE"] = 11, ["DEATHKNIGHT"] = 11,
-    ["CAZADOR_DE_DEMONIOS"] = 12, ["DEMONHUNTER"] = 12
+    ["DRUIDA"] = 9, ["DRUID"] = 9,
+    ["CABALLERO_DE_LA_MUERTE"] = 10, ["DEATHKNIGHT"] = 10,
 }
 
 -- Helper para verificar si un jugador está en el grupo o banda actual
 -- Se añade soporte para caché opcional para optimizar bucles
 local function IsPlayerInGroup(playerName, rosterCache)
+    if RD.groupUtils and RD.groupUtils.IsPlayerInGroup then
+        return RD.groupUtils:IsPlayerInGroup(playerName, rosterCache)
+    end
+    
     if not playerName then return false end
     local cleanName = CleanName(playerName)
     
@@ -249,6 +162,16 @@ local isInternalGuildUpdate = false
 
 -- Función para actualizar la caché de la hermandad
 local function UpdateGuildOnlineCache(force)
+    if RD.groupUtils and RD.groupUtils.UpdateGuildOnlineCache then
+        local cache, fullCache = RD.groupUtils:UpdateGuildOnlineCache(force)
+        if cache then
+            guildOnlineCache = cache
+            guildFullCache = fullCache or guildFullCache
+            lastGuildUpdate = GetTime()
+            return
+        end
+    end
+
     local now = GetTime()
     local freq = 60 -- Frecuencia hardcoded (1 minuto)
     
@@ -356,7 +279,11 @@ local bandLinePool = {}
 local roleHeaderPool = {}
 local memberCardPool = {}
 
-local function AcquireFrame(pool, frameType, parent, template)
+local function AcquireFrame(pool, frameType, parent, template, poolName)
+    if RD.UIUtils and RD.UIUtils.AcquireFrame then
+        return RD.UIUtils.AcquireFrame(poolName or "Generic", frameType, parent, template)
+    end
+    
     local frame = tremove(pool)
     if not frame then
         frame = CreateFrame(frameType, nil, parent, template)
@@ -368,7 +295,12 @@ local function AcquireFrame(pool, frameType, parent, template)
     return frame
 end
 
-local function ReleaseFrame(pool, frame)
+local function ReleaseFrame(pool, frame, poolName)
+    if RD.UIUtils and RD.UIUtils.ReleaseFrame then
+        RD.UIUtils.ReleaseFrame(poolName or "Generic", frame)
+        return
+    end
+    
     frame:Hide()
     frame:SetParent(nil)
     frame:ClearAllPoints()
@@ -403,6 +335,10 @@ end
 
 -- Función auxiliar para verificar si un jugador está en línea
 local function isPlayerOnline(playerName, rosterCache)
+    if RD.groupUtils and RD.groupUtils.IsPlayerOnline then
+        return RD.groupUtils:IsPlayerOnline(playerName, rosterCache, guildOnlineCache)
+    end
+    
     if not playerName then return false end
     local cleanName = CleanName(playerName)
     
@@ -710,7 +646,7 @@ local function getOrCreateBandFrame()
 end
 
 -- Función auxiliar para agregar un jugador a una banda
-local function addPlayerToBand(bandIndex, playerData)
+local function addPlayerToBand(bandIndex, playerData, skipRefresh)
     -- Verificar permisos (Nivel 2+ requerido para modificar el core)
     if GetPerms() < 2 then
         return false
@@ -755,9 +691,9 @@ local function addPlayerToBand(bandIndex, playerData)
                 member.role = playerData.role
                 Log("|cff00ff00[RaidDominion]|r Rol de " .. member.name .. " actualizado a " .. playerData.role .. " en la banda " .. band.name)
                 
-                -- Actualizar la interfaz solo si ya está abierta
+                -- Actualizar la interfaz solo si ya está abierta y no se pide omitir
                 local f3 = _G["RaidDominionCoreListFrame"]
-                if f3 and f3:IsVisible() and RD.utils.coreBands.ShowCoreBandsWindow then
+                if not skipRefresh and f3 and f3:IsVisible() and RD.utils.coreBands.ShowCoreBandsWindow then
                     RD.utils.coreBands.ShowCoreBandsWindow()
                 end
                 return true
@@ -780,9 +716,9 @@ local function addPlayerToBand(bandIndex, playerData)
     -- Agregar el miembro a la banda
     table.insert(band.members, newMember)
     
-    -- Actualizar la interfaz solo si ya está abierta
+    -- Actualizar la interfaz solo si ya está abierta y no se pide omitir
     local f3 = _G["RaidDominionCoreListFrame"]
-    if f3 and f3:IsVisible() and RD.utils.coreBands.ShowCoreBandsWindow then
+    if not skipRefresh and f3 and f3:IsVisible() and RD.utils.coreBands.ShowCoreBandsWindow then
         RD.utils.coreBands.ShowCoreBandsWindow()
     end
     
@@ -949,6 +885,125 @@ local function getOrCreateInvitePopup(bandIndex)
     invitePopup.nameEdit:SetText("")
     
     return invitePopup
+end
+
+-- Función para crear o obtener el frame de importación
+function coreBandsUtils.GetOrCreateImportFrame()
+    local importFrame = _G["RaidDominionImportFrame"]
+    if not importFrame then
+        importFrame = CreateFrame("Frame", "RaidDominionImportFrame", UIParent)
+        importFrame:SetFrameStrata("DIALOG")
+        importFrame:SetToplevel(true)
+        importFrame:SetSize(400, 300)
+        importFrame:SetPoint("CENTER")
+        importFrame:SetBackdrop({
+            bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 }
+        })
+        importFrame:SetBackdropColor(0, 0, 0, 0.95)
+        importFrame:SetBackdropBorderColor(1, 1, 1, 0.5)
+        importFrame:EnableMouse(true)
+        importFrame:SetMovable(true)
+        importFrame:RegisterForDrag("LeftButton")
+        importFrame:SetScript("OnDragStart", importFrame.StartMoving)
+        importFrame:SetScript("OnDragStop", importFrame.StopMovingOrSizing)
+        
+        tinsert(UISpecialFrames, importFrame:GetName())
+        
+        -- Título
+        importFrame.title = UI.CreateLabel(importFrame, "Importar desde Portapapeles", "GameFontNormalLarge")
+        importFrame.title:SetPoint("TOP", 0, -15)
+        
+        -- Instrucciones
+        importFrame.desc = UI.CreateLabel(importFrame, "Formato: TJugador, HJugador, MJugador, RJugador", "GameFontHighlightSmall")
+        importFrame.desc:SetPoint("TOP", 0, -40)
+        importFrame.desc:SetTextColor(0.7, 0.7, 0.7)
+        
+        -- ScrollFrame para el EditBox grande
+        local scrollFrame = CreateFrame("ScrollFrame", "RaidDominionImportScrollFrame", importFrame, "UIPanelScrollFrameTemplate")
+        scrollFrame:SetPoint("TOPLEFT", 20, -70)
+        scrollFrame:SetPoint("BOTTOMRIGHT", -35, 60)
+        
+        -- EditBox
+        local editBox = CreateFrame("EditBox", nil, scrollFrame)
+        editBox:SetMultiLine(true)
+        editBox:SetMaxLetters(5000)
+        editBox:SetFontObject("ChatFontNormal")
+        editBox:SetWidth(340)
+        editBox:SetScript("OnEscapePressed", function() importFrame:Hide() end)
+        scrollFrame:SetScrollChild(editBox)
+        importFrame.editBox = editBox
+        
+        -- Botón Importar
+        importFrame.importBtn = CreateFrame("Button", nil, importFrame, "UIPanelButtonTemplate")
+        importFrame.importBtn:SetSize(120, 25)
+        importFrame.importBtn:SetPoint("BOTTOMLEFT", 40, 20)
+        importFrame.importBtn:SetText("Importar")
+        importFrame.importBtn:SetScript("OnClick", function()
+            local text = editBox:GetText()
+            if not text or text == "" then return end
+            
+            local bandIndex = importFrame.bandIndex
+            if not bandIndex then return end
+            
+            local coreData = EnsureCoreData()
+            local band = coreData[bandIndex]
+            if not band then return end
+            
+            -- Procesar el texto
+            local items = { strsplit(",", text) }
+            local count = 0
+            
+            for _, item in ipairs(items) do
+                item = item:trim()
+                if item ~= "" then
+                    local prefix = item:sub(1, 1):upper()
+                    local name = item:sub(2):trim()
+                    
+                    local role = "nuevo"
+                    if prefix == "T" then role = "tank"
+                    elseif prefix == "H" then role = "healer"
+                    elseif prefix == "M" then role = "melee"
+                    elseif prefix == "R" then role = "rango"
+                    else
+                        -- Si no tiene prefijo conocido, tratar como nombre completo
+                        name = item
+                    end
+                    
+                    if name ~= "" then
+                        if addPlayerToBand(bandIndex, { name = name, role = role }, true) then
+                            count = count + 1
+                        end
+                    end
+                end
+            end
+            
+            Log(string.format("|cff00ff00[RaidDominion]|r Se han importado %d jugadores a la banda %s.", count, band.name or ""))
+             importFrame:Hide()
+             editBox:SetText("")
+             
+             -- Asegurar que la banda esté expandida y seleccionada
+             coreBandsUtils.ExpandBand(bandIndex)
+             selectedBandIndex = bandIndex
+             
+             -- Forzar actualización inmediata (saltando el throttle)
+             coreBandsUtils.lastShowTime = 0
+             RD.utils.coreBands.ShowCoreBandsWindow()
+        end)
+        
+        -- Botón Cancelar
+        importFrame.cancelBtn = CreateFrame("Button", nil, importFrame, "UIPanelButtonTemplate")
+        importFrame.cancelBtn:SetSize(120, 25)
+        importFrame.cancelBtn:SetPoint("BOTTOMRIGHT", -40, 20)
+        importFrame.cancelBtn:SetText("Cancelar")
+        importFrame.cancelBtn:SetScript("OnClick", function()
+            importFrame:Hide()
+            editBox:SetText("")
+        end)
+    end
+    return importFrame
 end
 
 -- Función para abrir el marco de edición de jugador
@@ -1499,7 +1554,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         
         -- Reinicializar menús para asegurar datos actualizados
         UIDropDownMenu_Initialize(playerEditFrame.roleDropDown, function(self, level)
-            local roleOptions = { "Tank", "Healer", "Dps", "Nuevo" }
+            local roleOptions = { "Tank", "Healer", "Rango", "Melee", "Nuevo" }
             for _, role in ipairs(roleOptions) do
                 local info = UIDropDownMenu_CreateInfo()
                 info.text = role
@@ -1894,13 +1949,13 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
         elseif isInGroup then
             tinsert(membersByRole.en_grupo, member)
         -- 3. Exploradores (G): Hermandad, no en grupo, con rol asignado
-        elseif isGuildMember and isOnline and (role == "tank" or role == "healer" or role == "dps") then
+        elseif isGuildMember and isOnline and (role == "tank" or role == "healer" or role == "rango" or role == "melee") then
             tinsert(membersByRole.exploradores, member)
         -- 4. Hermandad (G): Hermandad, en linea, sin rol asignado o no en grupo
         elseif isGuildMember and isOnline then
             tinsert(membersByRole.hermandad, member)
         -- 5. Posada (P): No hermandad, con rol asignado
-        elseif not isGuildMember and (role == "tank" or role == "healer" or role == "dps") then
+        elseif not isGuildMember and (role == "tank" or role == "healer" or role == "rango" or role == "melee") then
             tinsert(membersByRole.posada, member)
         -- 6. Desconectados: Si está OFF o no tiene rol asignado
         else
@@ -1927,7 +1982,7 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
     
     -- Función interna para crear encabezados
     local function createRoleHeader(roleName, displayName, yOffset)
-        local header = AcquireFrame(roleHeaderPool, "Frame", parentFrame)
+        local header = AcquireFrame(roleHeaderPool, "Frame", parentFrame, nil, "RD_CoreBand_Header")
         header:SetSize(738, 20) -- Aumentado para coincidir con el nuevo ancho de las member cards
         header:SetPoint("TOPLEFT", 5, -yOffset)
         header:SetBackdrop({ bgFile = "Interface/QuestFrame/UI-QuestTitleHighlight" })
@@ -2023,7 +2078,7 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
     
     -- Función interna para crear tarjetas
     local function createMemberCard(member, xOffset, yOffset, roleGroup, memberIndex)
-        local memberCard = AcquireFrame(memberCardPool, "Button", parentFrame)
+        local memberCard = AcquireFrame(memberCardPool, "Button", parentFrame, nil, "RD_CoreBand_Member")
         memberCard:SetSize(182, 20) -- Aumentado de 132 a 182 (+50px)
         memberCard:SetPoint("TOPLEFT", 6 + xOffset, -yOffset)
         memberCard:EnableMouse(true)
@@ -2113,9 +2168,14 @@ local function renderBandMembers(band, parentFrame, bandIndex, rosterCache)
                         self.roleIndicator:SetTextColor(0.1, 1, 0.1) -- Verde para Healer
                         self.roleIndicator:Show()
                         if self.memberText then self.memberText:SetPoint("LEFT", 18, 0) end
-                    elseif role == "dps" then
-                        self.roleIndicator:SetText("D")
-                        self.roleIndicator:SetTextColor(1, 0.2, 0.2) -- Rojo para DPS
+                    elseif role == "rango" then
+                        self.roleIndicator:SetText("R")
+                        self.roleIndicator:SetTextColor(1, 0.5, 0) -- Naranja para Rango
+                        self.roleIndicator:Show()
+                        if self.memberText then self.memberText:SetPoint("LEFT", 18, 0) end
+                    elseif role == "melee" then
+                        self.roleIndicator:SetText("M")
+                        self.roleIndicator:SetTextColor(1, 0.2, 0.2) -- Rojo para Melee
                         self.roleIndicator:Show()
                         if self.memberText then self.memberText:SetPoint("LEFT", 18, 0) end
                     else
@@ -2318,6 +2378,11 @@ end
 
 local openMemberLists = {} -- Almacena los índices de bandas con listas de miembros abiertas
 
+-- Función para expandir una banda externamente
+function coreBandsUtils.ExpandBand(bandIndex)
+    openMemberLists[bandIndex] = true
+end
+
 -- Función para capitalizar todos los nombres de jugadores en todas las bandas
 local function CapitalizeAllMemberNames()
     local coreData = EnsureCoreData()
@@ -2459,7 +2524,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
             createFrame.title:SetText("Crear Nueva Banda")
             createFrame.nameEdit:SetText("")
             createFrame.gsEdit:SetText("5000")
-            createFrame.scheduleEdit:SetText("Lunes y Miércoles 20:00")
+            createFrame.scheduleEdit:SetText("DIA 20:00")
             createFrame.withNoteCheck:SetChecked(false) -- Inicia desmarcado
             createFrame:Show()
         end)
@@ -2582,7 +2647,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                                             class = classFileName or class,
                                             mainRole = "",
                                             dualRole = ""
-                                        })
+                                        }, true)
                                         totalAdded = totalAdded + 1
                                         playersInBand[bIdx][cleanName] = true
                                     end
@@ -2603,11 +2668,15 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 if totalAdded > 0 or totalCleaned > 0 then
                     Log(summary)
                     RD.utils.coreBands.RefreshAllVisibleCards()
+                    -- Forzar actualización inmediata (saltando el throttle)
+                    coreBandsUtils.lastShowTime = 0
                     RD.utils.coreBands.ShowCoreBandsWindow()
                 else
                     Log("|cffffff00[RaidDominion]|r No se encontraron cambios (limpieza o nuevos jugadores).")
                     -- Aun así refrescar las tarjetas y encabezados para asegurar consistencia
                     RD.utils.coreBands.RefreshAllVisibleCards()
+                    -- Forzar actualización inmediata (saltando el throttle)
+                    coreBandsUtils.lastShowTime = 0
                     RD.utils.coreBands.ShowCoreBandsWindow()
                 end
             end
@@ -2790,9 +2859,9 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 local mChildren = {child.membersFrame:GetChildren()}
                 for _, mChild in ipairs(mChildren) do
                     if mChild.playerName then
-                        ReleaseFrame(memberCardPool, mChild)
+                        ReleaseFrame(memberCardPool, mChild, "RD_CoreBand_Member")
                     elseif mChild.text then -- Es un header
-                        ReleaseFrame(roleHeaderPool, mChild)
+                        ReleaseFrame(roleHeaderPool, mChild, "RD_CoreBand_Header")
                     else
                         mChild:Hide()
                         mChild:SetParent(nil)
@@ -2802,7 +2871,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 child.membersFrame:SetParent(nil)
                 child.membersFrame = nil
             end
-            ReleaseFrame(bandLinePool, child)
+            ReleaseFrame(bandLinePool, child, "RD_CoreBand_Line")
         else
             child:Hide()
             child:SetParent(nil)
@@ -2821,7 +2890,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
     if not f3.headerButtonsFrame then
         -- Crear frame de encabezado con botones fuera del área de scroll
         f3.headerButtonsFrame = CreateFrame("Frame", nil, f3)
-        f3.headerButtonsFrame:SetSize(330, 35)
+        f3.headerButtonsFrame:SetSize(370, 35)
         f3.headerButtonsFrame:SetPoint("TOPRIGHT", -15, -35)
         f3.headerButtonsFrame:Show()
         f3.headerButtonsFrame:EnableMouse(true)
@@ -2896,6 +2965,32 @@ function coreBandsUtils.ShowCoreBandsWindow()
         -- Botón Duplicar (Nuevo)
         f3.duplicateBtn = CreateStyledButton("RaidDominionCoreDuplicateBtn", f3.headerButtonsFrame, 30, 30, nil, "Interface/Icons/Spell_Holy_PrayerOfHealing02", "Duplicar Banda")
         f3.duplicateBtn:SetPoint("TOPLEFT", 205, -2)
+        
+        -- Botón Importar Portapapeles (Nuevo)
+        f3.importBtn = CreateStyledButton("RaidDominionCoreImportBtn", f3.headerButtonsFrame, 30, 30, nil, "Interface/Icons/INV_Misc_Note_02", "Importar Portapapeles")
+        f3.importBtn:SetPoint("TOPLEFT", 325, -2)
+        f3.importBtn:SetScript("OnClick", function()
+            local permLevel = GetPerms()
+            if permLevel < 2 then
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("importar datos")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para importar datos.")
+                end
+                return
+            end
+            
+            if not selectedBandIndex then
+                Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
+                return
+            end
+            
+            local importFrame = coreBandsUtils.GetOrCreateImportFrame()
+            importFrame.bandIndex = selectedBandIndex
+            importFrame:Show()
+        end)
+
         f3.duplicateBtn:SetScript("OnClick", function()
             local permLevel = GetPerms()
             if permLevel < 2 then
@@ -3203,7 +3298,7 @@ function coreBandsUtils.ShowCoreBandsWindow()
     
     for i, band in ipairs(coreData) do
         
-        local line = AcquireFrame(bandLinePool, "Frame", f3.content)
+        local line = AcquireFrame(bandLinePool, "Frame", f3.content, nil, "RD_CoreBand_Line")
         line:SetSize(748, 40) -- Aumentado de 548 a 748 (+200px)
         line:SetPoint("TOPLEFT", 0, -yOffset)
         line:EnableMouse(true)
@@ -3377,9 +3472,9 @@ function coreBandsUtils.ShowCoreBandsWindow()
             local mChildren = {line.membersFrame:GetChildren()}
             for _, mChild in ipairs(mChildren) do
                 if mChild.playerName then
-                    ReleaseFrame(memberCardPool, mChild)
+                    ReleaseFrame(memberCardPool, mChild, "RD_CoreBand_Member")
                 elseif mChild.text then
-                    ReleaseFrame(roleHeaderPool, mChild)
+                    ReleaseFrame(roleHeaderPool, mChild, "RD_CoreBand_Header")
                 else
                     mChild:Hide()
                     mChild:SetParent(nil)

@@ -321,13 +321,21 @@ function MenuFactory:CreateMenu(parent, items, yOffset, onClick, assignable, rol
         -- Configurar tooltip
         if item.tooltip then
             button:SetScript("OnEnter", function(self)
+                local fs = self:GetFontString()
+                if fs then fs:SetTextColor(1, 0.82, 0) end
+                
+                if RD.config and RD.config.Get and not RD.config:Get("ui.showTooltips", true) then
+                    return
+                end
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:SetText(item.name or "", 1, 1, 1, 1, true)
-                GameTooltip:AddLine(item.tooltip, nil, nil, nil, true)
+                GameTooltip:AddLine(item.tooltip, 1, 0.82, 0, true)
                 GameTooltip:Show()
             end)
             
-            button:SetScript("OnLeave", function()
+            button:SetScript("OnLeave", function(self)
+                local fs = self:GetFontString()
+                if fs then fs:SetTextColor(1, 1, 1, 1) end
                 GameTooltip:Hide()
             end)
         end

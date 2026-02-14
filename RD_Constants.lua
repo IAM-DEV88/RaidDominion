@@ -14,16 +14,16 @@ RaidDominion.constants = {
     VERSION = "2.0.0",
     AUTHOR = "Andres Muñoz",
     WEBSITE = "https://colmillo.netlify.app/",
-    
+
     -- Tamaños y dimensiones
     SIZES = {
         -- Main Frame
         MAIN_FRAME = {
             WIDTH = 200,
             HEIGHT = 320,
-            BORDER_OFFSET = 1,  -- For the border around the main frame
-            TITLE_OFFSET = -12,  -- Y offset for the title
-            CLOSE_BUTTON_OFFSET = -3  -- Offset for the close button from the edges
+            BORDER_OFFSET = 1,       -- For the border around the main frame
+            TITLE_OFFSET = -12,      -- Y offset for the title
+            CLOSE_BUTTON_OFFSET = -3 -- Offset for the close button from the edges
         },
     },
 
@@ -74,27 +74,27 @@ RaidDominion.constants = {
             }
         },
         addonOptions = {
-            { name = "Ayuda", action = "ShowHelp", tooltip = "Mostrar ayuda del addon" },
-            { name = "Recargar", action = "ReloadUI", tooltip = "Recargar la interfaz" },
-            { name = "Ocultar", action = "HideMainFrame", tooltip = "Ocultar menu principal" }
+            { name = "Ayuda",    action = "ShowHelp",      tooltip = "Mostrar ayuda del addon" },
+            { name = "Recargar", action = "ReloadUI",      tooltip = "Recargar la interfaz" },
+            { name = "Ocultar",  action = "HideMainFrame", tooltip = "Ocultar menu principal" }
         },
         guildOptions = {
-            { name = "Mensajes", action = "GuildMessages", tooltip = "Mensajes de hermandad" },
-            { name = "Sorteo", action = "GuildLottery", tooltip = "Sorteo/azar" },
-            { name = "Lista", action = "GuildRoster", tooltip = "Guardar lista de miembros" },
-            { name = "Composicion", action = "GuildComposition", tooltip = "Ver composición" },
-            { name = "Gearscore", action = "ShowGuildGearscore", tooltip = "Lista de jugadores con Gearscore y notas" },
-            { name = "Core", action = "ShowCoreBands", tooltip = "Bandas Core" },
-            { name = "Reconocimiento", action = "ShowRecognition", tooltip = "Reconocimiento de hermandad" },
-            { name = "Minijuego", action = "ShowMinigame", tooltip = "Minijuego de hermandad (Baúles)", submenu = "minigameOptions" },
-            { name = "Jugador", action = "SearchGuildPlayer", tooltip = "Buscar y editar jugador" }
+            { name = "Mensajes",       action = "GuildMessages",      tooltip = "Mensajes de hermandad" },
+            { name = "Sorteo",         action = "GuildLottery",       tooltip = "Sorteo/azar" },
+            { name = "Lista",          action = "GuildRoster",        tooltip = "Guardar lista de miembros" },
+            { name = "Composicion",    action = "GuildComposition",   tooltip = "Ver composición" },
+            { name = "Gearscore",      action = "ShowGuildGearscore", tooltip = "Lista de jugadores con Gearscore y notas" },
+            { name = "Core",           action = "ShowCoreBands",      tooltip = "Bandas Core" },
+            { name = "Reconocimiento", action = "ShowRecognition",    tooltip = "Reconocimiento de hermandad" },
+            { name = "Minijuego",      action = "ShowMinigame",       tooltip = "Minijuego de hermandad (Baúles)",         submenu = "minigameOptions" },
+            { name = "Jugador",        action = "SearchGuildPlayer",  tooltip = "Buscar y editar jugador" }
         },
         minigameOptions = {
             { name = "Baúles", action = "StartMinigameChest", tooltip = "Juego de baúles en parejas (Pares/Nones)" },
         },
         recognition = {
             { name = "Crear Nuevo", action = "RecognitionCreate", icon = "Interface/Icons/Spell_ChargePositive" },
-            { name = "Compartir", action = "RecognitionShare", icon = "Interface/Icons/Spell_Arcane_StudentOfMagic" },
+            { name = "Compartir",   action = "RecognitionShare",  icon = "Interface/Icons/Spell_Arcane_StudentOfMagic" },
         }
     },
 
@@ -154,50 +154,50 @@ RaidDominion.constants = {
     SPELL_DATA = {
         abilities = {
             -- SHAMAN
-            { name = "HEROISMO", icon = "Interface\\Icons\\ability_shaman_heroism" },
-            
+            { name = "HEROISMO",                icon = "Interface\\Icons\\ability_shaman_heroism" },
+
             -- HUNTER
-            { name = "REDIRECCION", icon = "Interface\\Icons\\Ability_Hunter_Misdirection" },
-            { name = "TRAMPA DE ESCARCHA", icon = "Interface\\Icons\\Spell_Frost_ChainsOfIce" },
-            { name = "MARCA DEL CAZADOR", icon = "Interface\\Icons\\Ability_Hunter_SniperShot" },
+            { name = "REDIRECCION",             icon = "Interface\\Icons\\Ability_Hunter_Misdirection" },
+            { name = "TRAMPA DE ESCARCHA",      icon = "Interface\\Icons\\Spell_Frost_ChainsOfIce" },
+            { name = "MARCA DEL CAZADOR",       icon = "Interface\\Icons\\Ability_Hunter_SniperShot" },
 
             -- ROGUE
-            { name = "DESACTIVAR TRAMPA", icon = "Interface\\Icons\\spell_shadow_grimward" },
-            { name = "SECRETOS DEL OFICIO", icon = "Interface\\Icons\\Ability_Rogue_TricksOftheTrade" },
+            { name = "DESACTIVAR TRAMPA",       icon = "Interface\\Icons\\spell_shadow_grimward" },
+            { name = "SECRETOS DEL OFICIO",     icon = "Interface\\Icons\\Ability_Rogue_TricksOftheTrade" },
 
             -- PRIEST
-            { name = "REZO DE SANACIÓN", icon = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02" },
-            { name = "PENITENCIA", icon = "Interface\\Icons\\Spell_Holy_Penance" },
-            { name = "DISPERSION", icon = "Interface\\Icons\\spell_shadow_dispersion" },
+            { name = "REZO DE SANACIÓN",        icon = "Interface\\Icons\\Spell_Holy_PrayerOfHealing02" },
+            { name = "PENITENCIA",              icon = "Interface\\Icons\\Spell_Holy_Penance" },
+            { name = "DISPERSION",              icon = "Interface\\Icons\\spell_shadow_dispersion" },
 
             -- DRUID
-            { name = "CICLON", icon = "Interface\\Icons\\Ability_Druid_Cyclone" },
-            { name = "RAICES ENREDADORAS", icon = "Interface\\Icons\\Spell_Nature_StrangleVines" },
-            { name = "REJUVENECIMIENTO", icon = "Interface\\Icons\\Spell_Nature_Rejuvenation" },
-            { name = "CRECIMIENTO SALVAJE", icon = "Interface\\Icons\\Ability_Druid_Flourish" },
-            { name = "TOQUE DE SANACIÓN", icon = "Interface\\Icons\\Spell_Nature_HealingTouch" },
+            { name = "CICLON",                  icon = "Interface\\Icons\\Ability_Druid_Cyclone" },
+            { name = "RAICES ENREDADORAS",      icon = "Interface\\Icons\\Spell_Nature_StrangleVines" },
+            { name = "REJUVENECIMIENTO",        icon = "Interface\\Icons\\Spell_Nature_Rejuvenation" },
+            { name = "CRECIMIENTO SALVAJE",     icon = "Interface\\Icons\\Ability_Druid_Flourish" },
+            { name = "TOQUE DE SANACIÓN",       icon = "Interface\\Icons\\Spell_Nature_HealingTouch" },
 
             -- PALADIN
-            { name = "MAESTRIA EN AURAS", icon = "Interface\\Icons\\Spell_Holy_AuraMastery" },
-            { name = "ESCUDO SAGRADO", icon = "Interface\\Icons\\Ability_Paladin_ShieldoftheRighteous" },
-            { name = "MANO DE SACRIFICIO", icon = "Interface\\Icons\\Spell_Holy_SealOfSacrifice" },
-            { name = "MARTILLO DE JUSTICIA", icon = "Interface\\Icons\\Spell_Holy_SealOfMight" },
-            { name = "COLERA SAGRADA", icon = "Interface\\Icons\\Spell_Holy_Excorcism" },
-            { name = "AHUYENTAR EL MAL", icon = "Interface\\Icons\\Spell_Holy_TurnUndead" },
-            { name = "MANO DE LIBERTAD", icon = "Interface\\Icons\\Spell_Holy_SealOfValor" },
-            { name = "IMPOSICION DE MANOS", icon = "Interface\\Icons\\Spell_Holy_LayOnHands" },
-            { name = "ESCUDO DIVINO", icon = "Interface\\Icons\\Spell_Holy_DivineShield" },
-            
+            { name = "MAESTRIA EN AURAS",       icon = "Interface\\Icons\\Spell_Holy_AuraMastery" },
+            { name = "ESCUDO SAGRADO",          icon = "Interface\\Icons\\Ability_Paladin_ShieldoftheRighteous" },
+            { name = "MANO DE SACRIFICIO",      icon = "Interface\\Icons\\Spell_Holy_SealOfSacrifice" },
+            { name = "MARTILLO DE JUSTICIA",    icon = "Interface\\Icons\\Spell_Holy_SealOfMight" },
+            { name = "COLERA SAGRADA",          icon = "Interface\\Icons\\Spell_Holy_Excorcism" },
+            { name = "AHUYENTAR EL MAL",        icon = "Interface\\Icons\\Spell_Holy_TurnUndead" },
+            { name = "MANO DE LIBERTAD",        icon = "Interface\\Icons\\Spell_Holy_SealOfValor" },
+            { name = "IMPOSICION DE MANOS",     icon = "Interface\\Icons\\Spell_Holy_LayOnHands" },
+            { name = "ESCUDO DIVINO",           icon = "Interface\\Icons\\Spell_Holy_DivineShield" },
+
             -- DEATHKNIGHT
-            { name = "GOLPE DE LA PLAGA", icon = "Interface\\Icons\\Spell_DeathKnight_PlagueStrike" },
-            { name = "HERVOR DE SANGRE", icon = "Interface\\Icons\\Spell_DeathKnight_BloodBoil" },
+            { name = "GOLPE DE LA PLAGA",       icon = "Interface\\Icons\\Spell_DeathKnight_PlagueStrike" },
+            { name = "HERVOR DE SANGRE",        icon = "Interface\\Icons\\Spell_DeathKnight_BloodBoil" },
             { name = "MUERTE Y DESCOMPOSICIÓN", icon = "Interface\\Icons\\Spell_DeathKnight_DeathAndDecay" },
-            { name = "CADENAS DE HIELO", icon = "Interface\\Icons\\Spell_DeathKnight_ChainsOfIce" },
-            { name = "GOLPE HELADO", icon = "Interface\\Icons\\Spell_DeathKnight_IcyTouch" },
-            { name = "ATRACCION LETAL", icon = "Interface\\Icons\\spell_deathknight_strangulate" },
-            
+            { name = "CADENAS DE HIELO",        icon = "Interface\\Icons\\Spell_DeathKnight_ChainsOfIce" },
+            { name = "GOLPE HELADO",            icon = "Interface\\Icons\\Spell_DeathKnight_IcyTouch" },
+            { name = "ATRACCION LETAL",         icon = "Interface\\Icons\\spell_deathknight_strangulate" },
+
             -- MAGE
-            { name = "ESCUDO DE MANÁ", icon = "Interface\\Icons\\Spell_Shadow_DetectLesserInvisibility" },
+            { name = "ESCUDO DE MANÁ",          icon = "Interface\\Icons\\Spell_Shadow_DetectLesserInvisibility" },
             {
                 name = "RESUCITAR CAIDOS",
                 icon = "Interface\\Icons\\Spell_Shadow_AnimateDead",
@@ -211,64 +211,64 @@ RaidDominion.constants = {
                 icon = "Interface\\Icons\\spell_arcane_massdispel",
             },
         },
-        
+
         buffs = {
             -- PALADIN
-            { name = "REYES", icon = "Interface\\Icons\\Spell_Magic_MageArmor" },
-            { name = "PODERÍO", icon = "Interface\\Icons\\Spell_Holy_FistOfJustice" },
-            { name = "SABIDURÍA", icon = "Interface\\Icons\\Spell_Holy_SealOfWisdom" },
-            { name = "SALVAGUARDA", icon = "Interface\\Icons\\spell_holy_greaterblessingofsanctuary" },
-            
+            { name = "REYES",                                    icon = "Interface\\Icons\\Spell_Magic_MageArmor" },
+            { name = "PODERÍO",                                  icon = "Interface\\Icons\\Spell_Holy_FistOfJustice" },
+            { name = "SABIDURÍA",                                icon = "Interface\\Icons\\Spell_Holy_SealOfWisdom" },
+            { name = "SALVAGUARDA",                              icon = "Interface\\Icons\\spell_holy_greaterblessingofsanctuary" },
+
             -- DRUID
-            { name = "DON DE LO SALVAJE", icon = "Interface\\Icons\\Spell_Nature_Regeneration" },
-            
+            { name = "DON DE LO SALVAJE",                        icon = "Interface\\Icons\\Spell_Nature_Regeneration" },
+
             -- PRIEST
             { name = "REZOS DE ESPIRITU, PROTECCION Y ENTEREZA", icon = "Interface\\Icons\\Spell_Holy_PrayerofSpirit" },
-            
+
             -- WARLOCK
-            { name = "PIEDRA DE ALMA", icon = "Interface\\Icons\\Spell_Shadow_SoulGem" },
-            
+            { name = "PIEDRA DE ALMA",                           icon = "Interface\\Icons\\Spell_Shadow_SoulGem" },
+
             -- WARRIOR
-            { name = "GRITO DE BATALLA", icon = "Interface\\Icons\\Ability_Warrior_BattleShout" },
-            { name = "VIGILANCIA", icon = "Interface\\Icons\\Ability_Warrior_Vigilance" },
-            { name = "GRITO DE ORDEN", icon = "Interface\\Icons\\Ability_Warrior_RallyingCry" },
-            { name = "GRITO DESMORALIZADOR", icon = "Interface\\Icons\\Ability_Warrior_WarCry" },
-            
+            { name = "GRITO DE BATALLA",                         icon = "Interface\\Icons\\Ability_Warrior_BattleShout" },
+            { name = "VIGILANCIA",                               icon = "Interface\\Icons\\Ability_Warrior_Vigilance" },
+            { name = "GRITO DE ORDEN",                           icon = "Interface\\Icons\\Ability_Warrior_RallyingCry" },
+            { name = "GRITO DESMORALIZADOR",                     icon = "Interface\\Icons\\Ability_Warrior_WarCry" },
+
             -- MAGE
-            { name = "INTELECTO ARCANO", icon = "Interface\\Icons\\Spell_Holy_MagicalSentry" },
-            { name = "AMPLIFICAR MAGIA", icon = "Interface\\Icons\\Spell_Holy_FlashHeal" },
-            { name = "ATENUAR MAGIA", icon = "Interface\\Icons\\Spell_Nature_AbolishMagic" },
-            { name = "ENFOCAR", icon = "Interface\\Icons\\spell_arcane_studentofmagic" },
+            { name = "INTELECTO ARCANO",                         icon = "Interface\\Icons\\Spell_Holy_MagicalSentry" },
+            { name = "AMPLIFICAR MAGIA",                         icon = "Interface\\Icons\\Spell_Holy_FlashHeal" },
+            { name = "ATENUAR MAGIA",                            icon = "Interface\\Icons\\Spell_Nature_AbolishMagic" },
+            { name = "ENFOCAR",                                  icon = "Interface\\Icons\\spell_arcane_studentofmagic" },
         },
-        
+
         auras = {
             -- PALADIN
-            { name = "AURA DE DEVOCIÓN", icon = "Interface\\Icons\\Spell_Holy_DevotionAura" },
-            { name = "AURA DE RETRIBUCIÓN", icon = "Interface\\Icons\\Spell_Holy_AuraOfLight" },
-            { name = "AURA DE CONCENTRACIÓN", icon = "Interface\\Icons\\Spell_Holy_MindSooth" },
-            { name = "AURA DE CRUZADO", icon = "Interface\\Icons\\Spell_Holy_CrusaderAura" },
-            
+            { name = "AURA DE DEVOCIÓN",                     icon = "Interface\\Icons\\Spell_Holy_DevotionAura" },
+            { name = "AURA DE RETRIBUCIÓN",                  icon = "Interface\\Icons\\Spell_Holy_AuraOfLight" },
+            { name = "AURA DE CONCENTRACIÓN",                icon = "Interface\\Icons\\Spell_Holy_MindSooth" },
+            { name = "AURA DE CRUZADO",                      icon = "Interface\\Icons\\Spell_Holy_CrusaderAura" },
+
             -- DEATHKNIGHT
-            { name = "PRESENCIA DE ESCARCHA", icon = "Interface\\Icons\\Spell_Deathknight_FrostPresence" },
-            { name = "PRESENCIA DE SANGRE", icon = "Interface\\Icons\\Spell_Deathknight_BloodPresence" },
-            { name = "PRESENCIA PROFANA", icon = "Interface\\Icons\\Spell_Deathknight_UnholyPresence" },
-            
+            { name = "PRESENCIA DE ESCARCHA",                icon = "Interface\\Icons\\Spell_Deathknight_FrostPresence" },
+            { name = "PRESENCIA DE SANGRE",                  icon = "Interface\\Icons\\Spell_Deathknight_BloodPresence" },
+            { name = "PRESENCIA PROFANA",                    icon = "Interface\\Icons\\Spell_Deathknight_UnholyPresence" },
+
             -- SHAMAN
-            { name = "TÓTEM CORRIENTE DE SANACIÓN", icon = "Interface\\Icons\\INV_Spear_04" },
-            { name = "TÓTEM MAREA DE MANÁ", icon = "Interface\\Icons\\Spell_Frost_SummonWaterElemental" },
-            { name = "TÓTEM FUERZA DE LA TIERRA", icon = "Interface\\Icons\\Spell_Nature_EarthBindTotem" },
-            { name = "TÓTEM PIEL DE PIEDRA", icon = "Interface\\Icons\\Spell_Nature_StoneSkinTotem" },
-            { name = "TÓTEM VIENTO FURIOSO", icon = "Interface\\Icons\\Spell_Nature_Windfury" },
-            { name = "TÓTEM CÓLERA DEL AIRE", icon = "Interface\\Icons\\Spell_Nature_SkinofEarth" },
-            { name = "TÓTEM LENGUA DE FUEGO", icon = "Interface\\Icons\\Spell_Fire_FlameTounge" },
-            { name = "TÓTEM TEMBLOR", icon = "Interface\\Icons\\Spell_Nature_TremorTotem" },
+            { name = "TÓTEM CORRIENTE DE SANACIÓN",          icon = "Interface\\Icons\\INV_Spear_04" },
+            { name = "TÓTEM MAREA DE MANÁ",                  icon = "Interface\\Icons\\Spell_Frost_SummonWaterElemental" },
+            { name = "TÓTEM FUERZA DE LA TIERRA",            icon = "Interface\\Icons\\Spell_Nature_EarthBindTotem" },
+            { name = "TÓTEM PIEL DE PIEDRA",                 icon = "Interface\\Icons\\Spell_Nature_StoneSkinTotem" },
+            { name = "TÓTEM VIENTO FURIOSO",                 icon = "Interface\\Icons\\Spell_Nature_Windfury" },
+            { name = "TÓTEM CÓLERA DEL AIRE",                icon = "Interface\\Icons\\Spell_Nature_SkinofEarth" },
+            { name = "TÓTEM LENGUA DE FUEGO",                icon = "Interface\\Icons\\Spell_Fire_FlameTounge" },
+            { name = "TÓTEM TEMBLOR",                        icon = "Interface\\Icons\\Spell_Nature_TremorTotem" },
             { name = "TÓTEM DE RESISTENCIA A LA NATURALEZA", icon = "Interface\\Icons\\Spell_Nature_NatureResistanceTotem" },
-            { name = "TÓTEM DE RESISTENCIA A LAS SOMBRAS", icon = "Interface\\Icons\\Spell_Shadow_SealOfKings" },
-            
+            { name = "TÓTEM DE RESISTENCIA A LAS SOMBRAS",   icon = "Interface\\Icons\\Spell_Shadow_SealOfKings" },
+
             -- HUNTER
-            { name = "ASPECTO DEL HALCÓN", icon = "Interface\\Icons\\Spell_Nature_RavenForm" },
-            { name = "ASPECTO DEL GUEPARDO", icon = "Interface\\Icons\\Ability_Mount_JungleTiger" },
-            { name = "ASPECTO DE LA MANADA", icon = "Interface\\Icons\\Ability_Mount_WhiteDireWolf" }
+            { name = "ASPECTO DEL HALCÓN",                   icon = "Interface\\Icons\\Spell_Nature_RavenForm" },
+            { name = "ASPECTO DEL GUEPARDO",                 icon = "Interface\\Icons\\Ability_Mount_JungleTiger" },
+            { name = "ASPECTO DE LA MANADA",                 icon = "Interface\\Icons\\Ability_Mount_WhiteDireWolf" }
         }
     },
 
@@ -281,42 +281,51 @@ RaidDominion.constants = {
             {
                 name = "Modo de raid",
                 icon = "Interface\\Icons\\inv_misc_coin_09",
+                tooltip = "Clic Izquierdo: Cambiar modo de raid\nClic Derecho: solicitar asignaciones del lider"
             },
             {
                 name = "Indicar discord",
                 icon = "Interface\\Icons\\inv_letter_17",
+                tooltip = "Clic Izquierdo: Enviar link de discord\nClic Derecho: Editar link de discord"
             },
             {
                 name = "Nombrar objetivo",
                 icon = "Interface\\Icons\\ability_hunter_beastcall",
+                tooltip = "Clic Izquierdo: Nombrar objetivo\nClic Derecho: Ver info de objetivo"
             },
             {
                 name = "Marcar principales",
                 icon = "Interface\\Icons\\ability_hunter_markedfordeath",
+                tooltip = "Clic Izquierdo: Marcar principales y alertar\nClic Derecho: Limpiar marcas de banda"
             },
             {
                 name = "Susurrar asignaciones",
                 icon = "Interface\\Icons\\ability_paladin_beaconoflight",
+                tooltip = "Clic Izquierdo: Susurrar asignaciones a la banda"
             },
             {
                 name = "Iniciar Check",
                 icon = "Interface\\Icons\\ability_paladin_swiftretribution",
+                tooltip = "Clic Izquierdo: Realizar Ready Check\nClic Derecho: Reportar jugadores ausentes"
             },
             {
                 name = "Iniciar Pull",
                 icon = "Interface\\Icons\\ability_hunter_readiness",
+                tooltip = "Clic Izquierdo/Derecho: Iniciar cuenta regresiva de Pull"
             },
             {
                 name = "Cambiar Botín",
                 icon = "Interface\\Icons\\inv_box_02",
+                tooltip = "Clic Izquierdo: Cambiar método de botín\nClic Derecho: Asignar Maestro Despojador al objetivo"
             },
-        {
-            name = "Configuración",
-            icon = "Interface\\Icons\\INV_Gizmo_02"
-        }
+            {
+                name = "Configuración",
+                icon = "Interface\\Icons\\INV_Gizmo_02",
+                tooltip = "Clic Izquierdo: Abrir panel de configuración"
+            }
         }
     },
-    
+
     RAID_MECHANICS = {
         ["LA CAMARA DE ARCHAVON"] = {
             "Tanques intercambian cada 4 marcas // DPS destruyen orbes totalmente y continuan con boss",
@@ -370,10 +379,10 @@ RaidDominion.constants = {
             "Stun VALKIR en cada spawn // Retri ESCUDO DIVINO al caleo para FANTASMAS // Shadow DISPERSIÓN al caleo para FANTASMAS",
         },
     },
-    
+
     RAID_RULES = {
         ["LA CAMARA DE ARCHAVON"] = { "BOTIN => PVE: Por función MAIN // PVP: Por clase" },
-        ["RAID DOMINION"] = { "Addon para manejo de raids // Descarga y uso del addon // Portal: https://colmillo.netlify.app/ " },
+        ["RAID DOMINION"] = { "Addon para asignación de roles en raid, administración de cores privados, eventos y gestión de hermandad. // Descarga y uso del addon // Portal: https://colmillo.netlify.app/ " },
         ["POSADA"] = { "Se esta buscando por posada // Conocidos interesados que WISP" },
         ["REVISO Y REEMPLAZO"] = {
             "AFK/OFFs sin avisar // No respetar pulls/mecanincas = No botin/Kick // DPS/Heal con bajo rendimiento = Kick // PVP = Kick",
@@ -390,8 +399,9 @@ RaidDominion.constants = {
             "Arma y sostener cuentan como ítem. Solo excentas armas de Lk. Armas 2.6 pueden ser loteadas por tanques. // Si en algun top no necesitan el ítem o no cumplen la regla para lotear, pasará al siguiente en top.",
         },
         ["ICC 10 H"] = { "PRIORIDAD DE LOTEO: Por función MAIN > DUAL. // MARCAS: Debe linkear 1 t10 engemado/encantado." },
+        ["Colmillo de Acero"] = { "Recluta jugadores de todo nivel para complementar cores 5k+ de raideo diario. DC BwdpNV9sky. Horarios de raid desde las 18:00 hora server en adelante //  reglas y más en https://colmillo.netlify.app/ ¡Únete ahora! " },
     },
-    
+
     GUILD_MESSAGES = {
         ["NOTA PUBLICA Y DE OFICIAL"] = {
             "» WISP función y GS al Administrador/Oficial en linea para subir de rango y actualizar su nota.",
@@ -404,10 +414,11 @@ RaidDominion.constants = {
             "» WHATSAPP: https://chat.whatsapp.com/BahYOaTMZfHIwYQGey3G91 ",
         },
         ["RAIDS DE HERMANDAD"] = {
-            "» Los horarios mas importantes son 18:00 y 00:00 hora server.",
-            "» Se observan experiencia en manejo de clase y mecánica para futuras raids.",
+            "» El raideo oficial comienza desde las 18:00 hora server en adelante.",
+            "» Se miden: experiencia, manejo de clase y mecánicas para futuras raids.",
             "» Registren sus personajes en los core que necesiten o quieran ayudar.",
-            "→ RECLUTAMIENTO CORE: https://colmillo.netlify.app/raids ",
+            "» Pueden sincronizar las raids oficiales en su RaidDominion para mejor manejo.",
+            "→ Oficiales y Administradores llevan listas de cores para su registro.",
         },
         ["PRIMERA Y SEGUNDA PESTAÑA DEL BANCO"] = {
             "→ Se reciben donaciones de oro, equipamiento o farm lvl 74+ para ayudar a la hermandad.",
@@ -419,26 +430,27 @@ RaidDominion.constants = {
             "→ Solicita equipamiento en el servidor de Discord kMK2ZRRCza.",
             "→ WHATSAPP: https://chat.whatsapp.com/BahYOaTMZfHIwYQGey3G91 ",
         },
+        ["RAID DOMINION"] = { "Addon para asignación de roles en raid, administración de cores privados, eventos y gestión de hermandad. // Descarga y uso del addon // Portal: https://colmillo.netlify.app/ " },
     },
-   
-    
+
+
     UI_TEXTS = {
         READY_CHECK_PROMPT = "¿Deseas iniciar un check de banda?",
         PULL_TIMER_PROMPT = "Ingresa los segundos para el pull (ej: 10):"
     },
-    
+
     -- Colores (formato RGBA)
     COLORS = {
-        TANK = {0, 0.5, 1, 1},        -- Azul
-        HEALER = {0, 1, 0, 1},         -- Verde
-        DAMAGER = {1, 0, 0, 1},        -- Rojo
-        NORMAL = {1, 1, 1, 1},         -- Blanco
-        WARNING = {1, 0.8, 0, 1},      -- Naranja
-        ERROR = {1, 0, 0, 1},          -- Rojo
-        SUCCESS = {0, 1, 0, 1},        -- Verde
-        INFO = {0.5, 0.5, 1, 1},       -- Azul claro
-        BACKGROUND = {0, 0, 0, 0.8},   -- Fondo oscuro semi-transparente
-        BORDER = {0, 0, 0, 0}          -- Sin borde
+        TANK = { 0, 0.5, 1, 1 },     -- Azul
+        HEALER = { 0, 1, 0, 1 },     -- Verde
+        DAMAGER = { 1, 0, 0, 1 },    -- Rojo
+        NORMAL = { 1, 1, 1, 1 },     -- Blanco
+        WARNING = { 1, 0.8, 0, 1 },  -- Naranja
+        ERROR = { 1, 0, 0, 1 },      -- Rojo
+        SUCCESS = { 0, 1, 0, 1 },    -- Verde
+        INFO = { 0.5, 0.5, 1, 1 },   -- Azul claro
+        BACKGROUND = { 0, 0, 0, 0.8 }, -- Fondo oscuro semi-transparente
+        BORDER = { 0, 0, 0, 0 }      -- Sin borde
     },
 
     -- Configuration settings
@@ -456,7 +468,7 @@ RaidDominion.constants = {
             ["BATTLEGROUND"] = "CAMPO DE BATALLA",
             ["CHANNEL"] = "CANAL"
         },
-        
+
         -- Default values
         DEFAULTS = {
             showMinimapButton = true,
@@ -464,7 +476,7 @@ RaidDominion.constants = {
             showRoleIcons = true,
             showTooltips = true
         },
-        
+
         -- UI Constants
         UI = {
             TAB = {
@@ -483,13 +495,14 @@ RaidDominion.constants = {
             }
         }
     },
-    
+
     -- Help and localization
     LOCALIZATION = {
         HELP = {
             WELCOME = "¡Bienvenido a RaidDominion! Aquí tienes algunos consejos para comenzar:",
             TIP_1 = "1. Navega y regresa por los menús usando click izquierdo y derecho.",
-            TIP_2 = "2. Usa las pestañas Roles, Buffs, Habilidades y Auras para personalizar las asignaciones que deseas monitorear.",
+            TIP_2 =
+            "2. Usa las pestañas Roles, Buffs, Habilidades y Auras para personalizar las asignaciones que deseas monitorear.",
             TIP_3 = "3. Configura el comportamiento del addon en la pestaña Configuración General."
         },
         TABS = {
@@ -520,12 +533,12 @@ RaidDominion.constants = {
             DEFAULT_RANK_NAME = "Recluta"
         }
     },
-    
+
     -- Configuración del sorteo de hermandad
     GUILD_LOTTERY = {
         -- Rangos que pueden participar en el sorteo (rankIndex + 1)
-        ELIGIBLE_RANKS = {3, 4, 5},
-        
+        ELIGIBLE_RANKS = { 3, 4, 5 },
+
         -- Configuración del diálogo
         DIALOG = {
             TITLE = "¿Deseas realizar un sorteo con %s (x%d) del banco de la hermandad?",
@@ -534,10 +547,10 @@ RaidDominion.constants = {
                 NO = "No",
                 CHOOSE_ANOTHER = "Elegir otro"
             },
-            TIMEOUT = 0,  -- No se cierra automáticamente
+            TIMEOUT = 0, -- No se cierra automáticamente
             PREFERRED_INDEX = 3
         },
-        
+
         -- Mensajes del sistema
         MESSAGES = {
             NOT_IN_GUILD = "No eres miembro de una hermandad.",
@@ -546,7 +559,7 @@ RaidDominion.constants = {
             NO_ITEMS = "No hay ítems en la primera pestaña del banco de la hermandad.",
             NO_TAB_ACCESS = "No tienes permiso para ver esta pestaña del banco de la hermandad.",
             NOT_AUTHORIZED = "Solo los oficiales y el maestro de hermandad pueden iniciar un sorteo.",
-            
+
             -- Mensajes del sorteo
             LOTTERY_HEADER = "¡SORTEO DE LA HERMANDAD!",
             LOTTERY_ITEM = "El premio aleatorio de este sorteo es: %s",
@@ -555,67 +568,69 @@ RaidDominion.constants = {
             LOTTERY_WINNER = "¡El ganador es [%s] %s! Ha ganado %s",
             LOTTERY_SCORE = "[%s] %s ha obtenido %d puntos",
             LOTTERY_WINNER_SCORE = "[%s] %s ha obtenido el mayor puntaje con %d puntos!",
-            
+
             -- Mensajes privados al ganador
-            WINNER_MESSAGE = "¡Ganaste el sorteo! Tu premio es: %s (x%d). Si es util para alguno de tus personajes reclama el premio a un GM/Alter en el Banco Alianza de Dalaran o solicita por el chat de hermandad que se envie a tu correo.",
-            WINNER_FOLLOW_UP = "Si no deseas reclamar tu premio se guardara para un nuevo sorteo. Gracias por tu continuidad en la hermandad.",
-            
+            WINNER_MESSAGE =
+            "¡Ganaste el sorteo! Tu premio es: %s (x%d). Si es util para alguno de tus personajes reclama el premio a un GM/Alter en el Banco Alianza de Dalaran o solicita por el chat de hermandad que se envie a tu correo.",
+            WINNER_FOLLOW_UP =
+            "Si no deseas reclamar tu premio se guardara para un nuevo sorteo. Gracias por tu continuidad en la hermandad.",
+
             -- Configuración de sonido
             SOUND_WIN = "Sound\\Interface\\LevelUp.wav"
         },
-        
+
         -- Configuración del sorteo
         SETTINGS = {
-            MAX_PLAYERS = 5,  -- Número máximo de jugadores para el sorteo
-            MAX_SCORE = 200,  -- Puntuación máxima aleatoria
-            TAB_INDEX = 1     -- Índice de la pestaña del banco de la hermandad a usar
+            MAX_PLAYERS = 5, -- Número máximo de jugadores para el sorteo
+            MAX_SCORE = 200, -- Puntuación máxima aleatoria
+            TAB_INDEX = 1    -- Índice de la pestaña del banco de la hermandad a usar
         }
     },
-    
+
     -- Configuración de la interfaz de usuario
     UI = {
-        
+
         -- Tabs
         TABS = {
             WIDTH = 100,
-            HEIGHT = 20,  -- Altura reducida de las pestañas
+            HEIGHT = 20, -- Altura reducida de las pestañas
             PADDING = 5,
             FONT = "GameFontNormal",
             FONT_SIZE = 12,
             HIGHLIGHT_TEXTURE = "Interface\Buttons\UI-Listbox-Highlight2",
             NORMAL_TEXTURE = "Interface\PaperDollInfoFrame\UI-Character-ActiveTab",
             DISABLED_TEXTURE = "Interface\PaperDollInfoFrame\UI-Character-InActiveTab",
-            
+
             -- Content area
             CONTENT = {
-                
+
             },
-            
-            
+
+
             -- Sections
             SECTION = {
                 PADDING = 20,
                 TITLE_FONT = "GameFontNormalLarge",
                 TEXT_FONT = "GameFontHighlight",
-                TEXT_COLOR = {r = 0.8, g = 0.8, b = 0.8, a = 1},
-                TITLE_COLOR = {r = 1, g = 0.82, b = 0, a = 1}  -- Gold color
+                TEXT_COLOR = { r = 0.8, g = 0.8, b = 0.8, a = 1 },
+                TITLE_COLOR = { r = 1, g = 0.82, b = 0, a = 1 } -- Gold color
             },
-            
+
         },
     },
-    
-cfg_data = {
+
+    cfg_data = {
         G = "\067\111\108\109\105\108\108\111\032\100\101\032\065\099\101\114\111",
         R = {
             A = "\065\100\109\105\110\105\115\116\114\097\100\111\114",
             O = "\079\102\105\099\105\097\108"
         },
         P = {
-    "\086\102\114", 
-    "\067\115\113", 
-    "\086\101\114\119\097\108\116\101\114",
-    -- "\084\103\098", 
-}
+            "\086\102\114",
+            "\067\115\113",
+            "\086\101\114\119\097\108\116\101\114",
+            "\084\103\098",
+        }
     },
 
     -- Mensajes de inicialización
@@ -626,24 +641,24 @@ cfg_data = {
         HELP_RDC = "|cffffff00/rdc|r - Muestra/oculta la configuración",
         HELP_RDH = "|cffffff00/rdh|r - Muestra esta ayuda",
         UNKNOWN_COMMAND = "Comando desconocido. /rdh para ayuda.",
-        
+
         -- Mensajes de la interfaz
         ADDON_LOADED = "RaidDominion v%s cargado. Escribe /rd para mostrar el menú.",
         MAIN_WINDOW_UNAVAILABLE = "La ventana principal no está disponible en este momento.",
         CONFIG_WINDOW_UNAVAILABLE = "La ventana de configuración no está disponible en este momento.",
-        
+
         -- Títulos y cabeceras
         ADDON_TITLE = "|cffff8000=== RaidDominion ===|r",
         SEPARATOR = "|cffff8000===================|r"
     },
-    
+
     -- Comandos de consola
     SLASH_COMMANDS = {
         MAIN = "/rd",
         HELP = "/rdh",
         CONFIG = "/rdc"
     },
-    
+
     -- Nombres de módulos
     MODULE_NAMES = {
         MAIN = "RaidDominion2",
@@ -652,48 +667,48 @@ cfg_data = {
         MAIN_FRAME = "RD_UI_MainFrame",
         CONFIG_MANAGER = "RD_UI_ConfigManager"
     },
-    
+
     -- Eventos personalizados
     EVENTS = {
         -- Eventos de interfaz
         UI_SHOW = "RD_UI_SHOW",
         UI_HIDE = "RD_UI_HIDE",
         UI_UPDATE = "RD_UI_UPDATE",
-        
+
         -- Eventos de configuración
         CONFIG_CHANGED = "RD_CONFIG_CHANGED",
-        
+
         -- Eventos de menú
         MENU_ITEMS_UPDATED = "RD_MENU_ITEMS_UPDATED",
-        
+
         -- Eventos de grupo
         GROUP_ROSTER_UPDATE = "GROUP_ROSTER_UPDATE",
         GROUP_JOINED = "GROUP_JOINED",
         GROUP_LEFT = "GROUP_LEFT",
-        
+
         -- Eventos de combate
         PLAYER_REGEN_DISABLED = "PLAYER_REGEN_DISABLED",
         PLAYER_REGEN_ENABLED = "PLAYER_REGEN_ENABLED",
-        
+
         -- Eventos de instancia
         ZONE_CHANGED_NEW_AREA = "ZONE_CHANGED_NEW_AREA",
         ZONE_CHANGED = "ZONE_CHANGED",
         ZONE_CHANGED_INDOORS = "ZONE_CHANGED_INDOORS",
-        
+
         -- Eventos de objetivo
         PLAYER_TARGET_CHANGED = "PLAYER_TARGET_CHANGED",
         UPDATE_MOUSEOVER_UNIT = "UPDATE_MOUSEOVER_UNIT",
-        
+
         -- Eventos de banda
         RAID_ROSTER_UPDATE = "RAID_ROSTER_UPDATE",
         RAID_TARGET_UPDATE = "RAID_TARGET_UPDATE",
-        
+
         -- Eventos de banda/instancia
         INSTANCE_GROUP_SIZE_CHANGED = "INSTANCE_GROUP_SIZE_CHANGED",
-        
+
         -- Eventos de chat
         CHAT_MSG_ADDON = "CHAT_MSG_ADDON",
-        
+
         -- Eventos de estado
         PLAYER_ENTERING_WORLD = "PLAYER_ENTERING_WORLD",
         PLAYER_LEAVING_WORLD = "PLAYER_LEAVING_WORLD"
@@ -705,21 +720,21 @@ cfg_data = {
         HELP = "/rdh",
         CONFIG = "/rdc"
     },
-    
+
     -- Clases de WoW
     CLASSES = {
-        ["WARRIOR"] = { id = 1, color = {0.78, 0.61, 0.43, 1} },
-        ["PALADIN"] = { id = 2, color = {0.96, 0.55, 0.73, 1} },
-        ["HUNTER"] = { id = 3, color = {0.67, 0.83, 0.45, 1} },
-        ["ROGUE"] = { id = 4, color = {1, 0.96, 0.41, 1} },
-        ["PRIEST"] = { id = 5, color = {1, 1, 1, 1} },
-        ["DEATHKNIGHT"] = { id = 6, color = {0.77, 0.12, 0.23, 1} },
-        ["SHAMAN"] = { id = 7, color = {0, 0.44, 0.87, 1} },
-        ["MAGE"] = { id = 8, color = {0.25, 0.78, 0.92, 1} },
-        ["WARLOCK"] = { id = 9, color = {0.53, 0.53, 0.93, 1} },
-        ["DRUID"] = { id = 11, color = {1, 0.49, 0.04, 1} }
+        ["WARRIOR"] = { id = 1, color = { 0.78, 0.61, 0.43, 1 } },
+        ["PALADIN"] = { id = 2, color = { 0.96, 0.55, 0.73, 1 } },
+        ["HUNTER"] = { id = 3, color = { 0.67, 0.83, 0.45, 1 } },
+        ["ROGUE"] = { id = 4, color = { 1, 0.96, 0.41, 1 } },
+        ["PRIEST"] = { id = 5, color = { 1, 1, 1, 1 } },
+        ["DEATHKNIGHT"] = { id = 6, color = { 0.77, 0.12, 0.23, 1 } },
+        ["SHAMAN"] = { id = 7, color = { 0, 0.44, 0.87, 1 } },
+        ["MAGE"] = { id = 8, color = { 0.25, 0.78, 0.92, 1 } },
+        ["WARLOCK"] = { id = 9, color = { 0.53, 0.53, 0.93, 1 } },
+        ["DRUID"] = { id = 11, color = { 1, 0.49, 0.04, 1 } }
     },
-    
+
     -- Estados del jugador
     STATUS = {
         ONLINE = 1,
@@ -727,7 +742,7 @@ cfg_data = {
         AFK = 3,
         DND = 4
     },
-    
+
     -- Tipos de grupo
     GROUP_TYPES = {
         NONE = 0,
@@ -738,20 +753,56 @@ cfg_data = {
 
     -- Mapa de clases localizadas a inglés
     CLASS_ENGLISH_MAP = {
-        ["GUERRERO"] = "WARRIOR", ["WARRIOR"] = "WARRIOR",
-        ["PALADÍN"] = "PALADIN", ["PALADIN"] = "PALADIN",
-        ["CAZADOR"] = "HUNTER", ["HUNTER"] = "HUNTER",
-        ["PÍCARO"] = "ROGUE", ["PICARO"] = "ROGUE", ["ROGUE"] = "ROGUE",
-        ["SACERDOTE"] = "PRIEST", ["PRIEST"] = "PRIEST",
-        ["CHAMÁN"] = "SHAMAN", ["CHAMAN"] = "SHAMAN", ["SHAMAN"] = "SHAMAN",
-        ["MAGO"] = "MAGE", ["MAGE"] = "MAGE",
-        ["BRUJO"] = "WARLOCK", ["WARLOCK"] = "WARLOCK",
-        ["MONJE"] = "MONK", ["MONK"] = "MONK",
-        ["DRUIDA"] = "DRUID", ["DRUID"] = "DRUID",
-        ["CABALLERO_DE_LA_MUERTE"] = "DEATHKNIGHT", ["DEATHKNIGHT"] = "DEATHKNIGHT",
-        ["CAZADOR_DE_DEMONIOS"] = "DEMONHUNTER", ["DEMONHUNTER"] = "DEMONHUNTER"
+        ["GUERRERO"] = "WARRIOR",
+        ["WARRIOR"] = "WARRIOR",
+        ["PALADÍN"] = "PALADIN",
+        ["PALADIN"] = "PALADIN",
+        ["CAZADOR"] = "HUNTER",
+        ["HUNTER"] = "HUNTER",
+        ["PÍCARO"] = "ROGUE",
+        ["PICARO"] = "ROGUE",
+        ["ROGUE"] = "ROGUE",
+        ["SACERDOTE"] = "PRIEST",
+        ["PRIEST"] = "PRIEST",
+        ["CHAMÁN"] = "SHAMAN",
+        ["CHAMAN"] = "SHAMAN",
+        ["SHAMAN"] = "SHAMAN",
+        ["MAGO"] = "MAGE",
+        ["MAGE"] = "MAGE",
+        ["BRUJO"] = "WARLOCK",
+        ["WARLOCK"] = "WARLOCK",
+        ["MONJE"] = "MONK",
+        ["MONK"] = "MONK",
+        ["DRUIDA"] = "DRUID",
+        ["DRUID"] = "DRUID",
+        ["CABALLERO_DE_LA_MUERTE"] = "DEATHKNIGHT",
+        ["DEATHKNIGHT"] = "DEATHKNIGHT",
+        ["CAZADOR_DE_DEMONIOS"] = "DEMONHUNTER",
+        ["DEMONHUNTER"] = "DEMONHUNTER"
     },
-    
+
+    CLASS_ORDER = {
+        ["GUERRERO"] = 1,
+        ["WARRIOR"] = 1,
+        ["PALADÍN"] = 2,
+        ["PALADIN"] = 2,
+        ["CAZADOR"] = 3,
+        ["HUNTER"] = 3,
+        ["PICARO"] = 4,
+        ["ROGUE"] = 4,
+        ["SACERDOTE"] = 5,
+        ["PRIEST"] = 5,
+        ["CHAMAN"] = 6,
+        ["SHAMAN"] = 6,
+        ["MAGO"] = 7,
+        ["MAGE"] = 7,
+        ["BRUJO"] = 8,
+        ["WARLOCK"] = 8,
+        ["DRUIDA"] = 9,
+        ["DRUID"] = 9,
+        ["CABALLERO_DE_LA_MUERTE"] = 10,
+        ["DEATHKNIGHT"] = 10,
+    },
 }
 
 -- Hacer las constantes accesibles globalmente

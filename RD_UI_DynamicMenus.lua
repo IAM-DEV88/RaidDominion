@@ -371,8 +371,32 @@ function DynamicMenus:Render(menuType)
                 if self.bg and not (isAssignableMenu and assignedUnit) then
                     self.bg:SetTexture(0.3, 0.3, 0.3, 0.8)
                 end
+
+                -- Tooltip con contenido para Mecánicas, Reglas y Mensajes
+                if (menuType == MENU_TYPES.MECHANICS or menuType == MENU_TYPES.RULES or menuType == MENU_TYPES.GUILD_MESSAGES) and item.messages then
+                    if RD.config and RD.config.Get and not RD.config:Get("ui.showTooltips", true) then
+                        return
+                    end
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText(item.name, 1, 1, 1)
+                    
+                    for _, msg in ipairs(item.messages) do
+                        -- Limpiar posibles separadores "//" para el tooltip y mostrar como líneas
+                        local parts = { strsplit("//", msg) }
+                        for _, part in ipairs(parts) do
+                            local cleanPart = part:match("^%s*(.-)%s*$")
+                            if cleanPart and cleanPart ~= "" then
+                                GameTooltip:AddLine(cleanPart, 1, 0.82, 0, true)
+                            end
+                        end
+                    end
+                    
+                    GameTooltip:AddLine("\n|cff00ff00Clic:|r Anunciar en el chat", 1, 0.82, 0)
+                    GameTooltip:Show()
+                end
             end)
             button:SetScript("OnLeave", function(self)
+                GameTooltip:Hide()
                 -- Restaurar color verde si está asignado, gris oscuro si no
                 if self.bg then
                     if isAssignableMenu and assignedUnit then
@@ -391,13 +415,16 @@ function DynamicMenus:Render(menuType)
             
             if iconBtn and isAssignableMenu then
                 iconBtn:SetScript("OnEnter", function(self)
+                    if RD.config and RD.config.Get and not RD.config:Get("ui.showTooltips", true) then
+                        return
+                    end
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetText("Asignación rápida", 1, 1, 1)
-                    GameTooltip:AddLine("Clic Izquierdo: Asignar al objetivo / Resetear", nil, nil, nil, true)
+                    GameTooltip:AddLine("Clic Izquierdo: Asignar al objetivo / Resetear", 1, 0.82, 0, true)
                     if menuType == MENU_TYPES.AURAS or menuType == MENU_TYPES.BUFFS then
-                        GameTooltip:AddLine("Clic Derecho: Anunciar QUITAR", nil, nil, nil, true)
+                        GameTooltip:AddLine("Clic Derecho: Anunciar QUITAR", 1, 0.82, 0, true)
                     end
-                    GameTooltip:AddLine("Requiere tener objetivo seleccionado para asignar", nil, nil, nil, true)
+                    GameTooltip:AddLine("Requiere tener objetivo seleccionado para asignar", 1, 0.82, 0, true)
                     GameTooltip:Show()
                 end)
                 iconBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)

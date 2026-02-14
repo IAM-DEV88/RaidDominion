@@ -119,6 +119,72 @@ function UIUtils.BuildRosterCache()
 end
 
 -- =============================================
+-- GESTIÓN DE FRAMES Y POOLING
+-- =============================================
+
+local framePools = {}
+
+--- Adquiere un frame de un pool o crea uno nuevo si no existe
+-- @param poolName string Nombre único para el pool
+-- @param frameType string Tipo de frame (ej: "Frame", "Button")
+-- @param parent Frame El frame padre
+-- @param template string Template opcional
+-- @return Frame El frame adquirido
+function UIUtils.AcquireFrame(poolName, frameType, parent, template)
+    local key = poolName .. (frameType or "Frame")
+    if not framePools[key] then framePools[key] = {} end
+    local pool = framePools[key]
+    
+    local frame = table.remove(pool)
+    if not frame then
+        frame = CreateFrame(frameType, nil, parent, template)
+    else
+        frame:SetParent(parent)
+        frame:ClearAllPoints()
+    end
+    frame:Show()
+    return frame
+end
+
+--- Libera un frame de vuelta al pool
+-- @param poolName string Nombre del pool
+-- @param frame Frame El frame a liberar
+function UIUtils.ReleaseFrame(poolName, frame)
+    local frameType = frame:GetObjectType()
+    local key = poolName .. frameType
+    
+    if not framePools[key] then framePools[key] = {} end
+    local pool = framePools[key]
+    
+    frame:Hide()
+    frame:SetParent(nil)
+    frame:ClearAllPoints()
+    table.insert(pool, frame)
+end
+
+-- =============================================
+-- UTILIDADES DE CREACIÓN DE UI
+-- =============================================
+
+--- Crea un label (FontString)
+function UIUtils.CreateLabel(parent, text, template)
+    local label = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlight")
+    label:SetText(text)
+    return label
+end
+
+--- Crea un EditBox estándar
+function UIUtils.CreateEditBox(name, parent, width, height, numeric)
+    local eb = CreateFrame("EditBox", name, parent, "InputBoxTemplate")
+    eb:SetSize(width or 100, height or 20)
+    eb:SetAutoFocus(false)
+    if numeric then
+        eb:SetNumeric(true)
+    end
+    return eb
+end
+
+-- =============================================
 -- SISTEMA DE SEGUIMIENTO DE AURAS (BUFFS/DEBUFFS)
 -- =============================================
 

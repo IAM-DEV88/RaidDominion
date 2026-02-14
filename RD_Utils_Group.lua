@@ -314,6 +314,67 @@ function groupUtils:GetGuildFullCache()
     return guildFullCache
 end
 
+--- Verifica si un jugador está en el grupo o banda actual
+-- @param playerName string El nombre del jugador
+-- @param rosterCache table Opcional: Caché del roster para búsqueda O(1)
+-- @return boolean true si está en el grupo
+function groupUtils:IsPlayerInGroup(playerName, rosterCache)
+    if not playerName then return false end
+    local cleanName = RD.utils.CleanName and RD.utils.CleanName(playerName) or playerName:lower()
+    
+    -- Si hay caché, usarla (O(1))
+    if rosterCache then
+        return rosterCache[cleanName] ~= nil
+    end
+    
+    -- Si no hay caché, búsqueda manual (O(N))
+    local numRaid = GetNumRaidMembers()
+    if numRaid > 0 then
+        for i = 1, numRaid do
+            local name = GetRaidRosterInfo(i)
+            if name and (RD.utils.CleanName and RD.utils.CleanName(name) or name:lower()) == cleanName then
+                return true
+            end
+        end
+    else
+        local numParty = GetNumPartyMembers()
+        if numParty > 0 then
+            if (RD.utils.CleanName and RD.utils.CleanName(UnitName("player")) or UnitName("player"):lower()) == cleanName then
+                return true
+            end
+            for i = 1, numParty do
+                local name = UnitName("party"..i)
+                if name and (RD.utils.CleanName and RD.utils.CleanName(name) or name:lower()) == cleanName then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+--- Verifica si un jugador está online (en grupo, hermandad o vía API)
+-- @param playerName string El nombre del jugador
+-- @param rosterCache table Opcional: Caché del roster
+-- @return boolean true si está online
+function groupUtils:IsPlayerOnline(playerName, rosterCache)
+    if not playerName then return false end
+    local cleanName = RD.utils.CleanName and RD.utils.CleanName(playerName) or playerName:lower()
+    
+    -- 1. Si está en el grupo/raid, está online por definición
+    if rosterCache and rosterCache[cleanName] then
+        return true
+    end
+    
+    -- 2. Si está en la caché de hermandad
+    if guildOnlineCache[cleanName] ~= nil then
+        return guildOnlineCache[cleanName]
+    end
+    
+    -- 3. Fallback: UnitExists
+    return UnitExists(playerName)
+end
+
 -- Variables de estado del grupo (internas)
 local inRaid = false
 local inParty = false

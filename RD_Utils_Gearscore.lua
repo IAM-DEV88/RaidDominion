@@ -26,16 +26,13 @@ local linePool = {}
 
 -- Función auxiliar para limpiar nombres (eliminar reino y normalizar a minúsculas)
 local function CleanName(name)
-    if not name then return "" end
-    local clean = string.gsub(name, "%-.*", "")
-    return string.lower(clean)
+    return RD.UIUtils and RD.UIUtils.CleanName and RD.UIUtils.CleanName(name) or (name and string.lower(string.gsub(name, "%-.*", "")) or "")
 end
 
 -- Función auxiliar para capitalizar nombres
 local function CapitalizeName(name)
-    if not name or name == "" then return "" end
-    local cleanName = string.gsub(name, "%-.*", "")
-    return string.upper(string.sub(cleanName, 1, 1)) .. string.lower(string.sub(cleanName, 2))
+    return RD.UIUtils and RD.UIUtils.CapitalizeName and RD.UIUtils.CapitalizeName(name) or 
+           (name and name ~= "" and (string.upper(string.sub(string.gsub(name, "%-.*", ""), 1, 1)) .. string.lower(string.sub(string.gsub(name, "%-.*", ""), 2))) or "")
 end
 
 -- Pool de frames para member cards (reutilizando lógica de Core)
@@ -44,7 +41,10 @@ end
     local categoryPages = { [1] = 1, [2] = 1, [3] = 1, [4] = 1 }
     local ITEMS_PER_PAGE = 25
 
-local function AcquireFrame(pool, frameType, parent, template)
+local function AcquireFrame(pool, frameType, parent, template, poolName)
+    if RD.UIUtils and RD.UIUtils.AcquireFrame then
+        return RD.UIUtils.AcquireFrame(poolName or "Generic", frameType, parent, template)
+    end
     local frame = tremove(pool)
     if not frame then
         frame = CreateFrame(frameType, nil, parent, template)
@@ -56,7 +56,11 @@ local function AcquireFrame(pool, frameType, parent, template)
     return frame
 end
 
-local function ReleaseFrame(pool, frame)
+local function ReleaseFrame(pool, frame, poolName)
+    if RD.UIUtils and RD.UIUtils.ReleaseFrame then
+        RD.UIUtils.ReleaseFrame(poolName or "Generic", frame)
+        return
+    end
     frame:Hide()
     frame:SetParent(nil)
     frame:ClearAllPoints()
@@ -65,7 +69,7 @@ end
 
 -- Función para crear tarjetas de miembros estilo Core
 local function CreateGSMemberCard(parent, member, xOffset, yOffset, category)
-    local card = AcquireFrame(memberCardPool, "Button", parent)
+    local card = AcquireFrame(memberCardPool, "Button", parent, nil, "RD_Gearscore_Member")
     card:SetSize(182, 20)
     card:SetPoint("TOPLEFT", 6 + xOffset, -yOffset)
     card:EnableMouse(true)
@@ -161,7 +165,7 @@ end
 -- Pool para cabeceras de sección
 local headerPool = {}
 local function CreateSectionHeader(parent, text, yOffset, categoryID, totalItems)
-    local header = AcquireFrame(headerPool, "Frame", parent)
+    local header = AcquireFrame(headerPool, "Frame", parent, nil, "RD_Gearscore_Header")
     header:SetSize(740, 24)
     header:SetPoint("TOPLEFT", 0, -yOffset)
     
@@ -448,13 +452,11 @@ function gearscoreUtils.ToggleGearscoreWindows(forceShow)
     local function ReleaseAll(parent)
         local children = {parent:GetChildren()}
         for _, child in ipairs(children) do
-            child:Hide()
-            child:SetParent(nil)
             -- Devolver al pool correspondiente
             if child.playerName then -- Es una member card
-                tinsert(memberCardPool, child)
+                ReleaseFrame(memberCardPool, child, "RD_Gearscore_Member")
             else -- Es una cabecera
-                tinsert(headerPool, child)
+                ReleaseFrame(headerPool, child, "RD_Gearscore_Header")
             end
         end
     end

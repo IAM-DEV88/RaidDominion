@@ -403,6 +403,9 @@ function mainFrame:CreateActionBar()
         
         if tooltipText then
             button:SetScript("OnEnter", function(self)
+                if RaidDominion.config and RaidDominion.config.Get and not RaidDominion.config:Get("ui.showTooltips", true) then
+                    return
+                end
                 GameTooltip:SetOwner(self, "ANCHOR_TOP")
                 GameTooltip:SetText(tooltipText, 1, 1, 1, 1, true)
                 GameTooltip:Show()
@@ -430,6 +433,26 @@ function mainFrame:CreateActionBar()
             texture,
             tooltipText
         )
+        
+        -- Personalizar el tooltip si tiene información de clics
+        if item.tooltip then
+            button:SetScript("OnEnter", function(self)
+                if RaidDominion.config and RaidDominion.config.Get and not RaidDominion.config:Get("ui.showTooltips", true) then
+                    return
+                end
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:SetText(item.name, 1, 1, 1, 1, true)
+                
+                -- Dividir el tooltip por saltos de línea y añadir como líneas secundarias
+                local lines = { strsplit("\n", item.tooltip) }
+                for _, line in ipairs(lines) do
+                    if line ~= "" and line ~= item.name then
+                        GameTooltip:AddLine(line, 1, 0.82, 0, true)
+                    end
+                end
+                GameTooltip:Show()
+            end)
+        end
         
         -- Posicionar el botón (sin cambios en layout)
         button:SetPoint("LEFT", actionBar, "LEFT", (i-1) * (buttonSize + padding), -1)

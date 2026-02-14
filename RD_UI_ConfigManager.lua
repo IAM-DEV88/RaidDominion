@@ -700,6 +700,7 @@ local tabDefinitions = {
             yOffset = CreateMenuCheckbox(content, "Mostrar Menú Principal al iniciar", "ui.showMainMenuOnStart", yOffset)
             yOffset = CreateMenuCheckbox(content, "Mostrar Menú Mecánicas", "ui.showMechanicsMenu", yOffset)
             yOffset = CreateMenuCheckbox(content, "Mostrar Menú Hermandad", "ui.showGuildMenu", yOffset)
+            yOffset = CreateMenuCheckbox(content, "Ver información de ayuda", "ui.showTooltips", yOffset)
             
             -- Chat Channel Section with reduced spacing
             yOffset = CreateSectionHeader(content, "Canal de Chat", yOffset - 10)  -- Reduced from -20 to -10
