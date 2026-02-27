@@ -518,13 +518,16 @@ function messageManager:BroadcastCoreData(channel)
     local function serialize(t)
         local s = "{"
         for k, v in pairs(t) do
-            local key = type(k) == "number" and "["..k.."]" or "['"..tostring(k).."']"
-            if type(v) == "table" then
-                s = s .. key .. "=" .. serialize(v) .. ","
-            elseif type(v) == "string" then
-                s = s .. key .. "='" .. v:gsub("'", "\\'") .. "',"
-            elseif type(v) == "number" or type(v) == "boolean" then
-                s = s .. key .. "=" .. tostring(v) .. ","
+            -- No serializar la nota personal ya que es privada
+            if k ~= "personalNote" then
+                local key = type(k) == "number" and "["..k.."]" or "['"..tostring(k).."']"
+                if type(v) == "table" then
+                    s = s .. key .. "=" .. serialize(v) .. ","
+                elseif type(v) == "string" then
+                    s = s .. key .. "='" .. v:gsub("'", "\\'") .. "',"
+                elseif type(v) == "number" or type(v) == "boolean" then
+                    s = s .. key .. "=" .. tostring(v) .. ","
+                end
             end
         end
         return s .. "}"
@@ -558,8 +561,33 @@ function messageManager:ProcessIncomingData()
                 if not RaidDominionDB then RaidDominionDB = {} end
                 if not RaidDominionDB.Core then RaidDominionDB.Core = {} end
                 
+                -- PASO 1: Recopilar todas las notas personales locales existentes para preservarlas
+                -- Esto protege contra pérdidas cuando un jugador es movido de banda por otro oficial
+                local allPersonalNotes = {}
+                for _, band in ipairs(RaidDominionDB.Core) do
+                    if band.members then
+                        for _, m in ipairs(band.members) do
+                            if m.name and m.personalNote then
+                                allPersonalNotes[m.name:lower()] = m.personalNote
+                            end
+                        end
+                    end
+                end
+                
                 -- Fusionar o actualizar datos
                 for _, newBand in ipairs(newCoreData) do
+                    -- Restaurar notas en la nueva banda antes de procesarla
+                    if newBand.members then
+                        for _, m in ipairs(newBand.members) do
+                            if m.name then
+                                local note = allPersonalNotes[m.name:lower()]
+                                if note then
+                                    m.personalNote = note
+                                end
+                            end
+                        end
+                    end
+
                     local existingIndex = nil
                     for i, existingBand in ipairs(RaidDominionDB.Core) do
                         if existingBand.name == newBand.name then
@@ -569,7 +597,7 @@ function messageManager:ProcessIncomingData()
                     end
                     
                     if existingIndex then
-                        -- Si ya existe, actualizarla por completo (incluyendo miembros con roles)
+                        -- Si ya existe, actualizarla por completo (con las notas restauradas)
                         RaidDominionDB.Core[existingIndex] = newBand
                     else
                         -- Si no existe, añadirla como nueva

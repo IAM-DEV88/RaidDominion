@@ -179,6 +179,120 @@ end
 
 local selectedGuildBankItem = nil
 
+local function PerformContributorRecognition()
+    local CONST = RD.constants.GUILD_LOTTERY
+    local MSG = CONST.MESSAGES
+
+    -- Escanear banco y reconocer contribuidores
+    if RD.utils and RD.utils.guildBank and RD.utils.guildBank.ScanTabsForDonations then
+        Log("|cff00ff00[RaidDominion]|r " .. MSG.SCAN_START)
+        
+        RD.utils.guildBank.ScanTabsForDonations(function(donations)
+            if not donations or #donations == 0 then
+                Log("|cff00ff00[RaidDominion]|r " .. MSG.NO_NEW_DONATIONS)
+                return
+            end
+
+            -- Variables para el proceso
+            local index = 1
+            local uniqueContributors = {} -- Para el mensaje final
+
+            -- Función recursiva para procesar donaciones una por una
+            local function ProcessNextDonation()
+                if index > #donations then
+                    -- Al finalizar, enviar mensaje de agradecimiento si hubo aceptados
+                    local nameList = ""
+                    local count = 0
+                    for name, _ in pairs(uniqueContributors) do
+                        if nameList == "" then
+                            nameList = name
+                        else
+                            nameList = nameList .. ", " .. name
+                        end
+                        count = count + 1
+                    end
+                    
+                    if count > 0 then
+                        -- Mensaje conciso y enganchante
+                        local thanksMsg = string.format(MSG.THANKS_MESSAGE, nameList)
+                        SendChatMessage(thanksMsg, "GUILD")
+                        Log("|cff00ff00[RaidDominion]|r " .. string.format(MSG.RECOGNITION_COMPLETE, count))
+                    else
+                         Log("|cff00ff00[RaidDominion]|r " .. MSG.RECOGNITION_FINISHED_NONE)
+                    end
+                    return
+                end
+
+                local donation = donations[index]
+                index = index + 1
+
+                if donation.type == "item" then
+                    -- Mostrar popup para items
+                    local itemLink = donation.itemLink or "Ítem desconocido"
+                    local count = donation.count or 1
+                    local name = donation.name or "Desconocido"
+                    
+                    local itemDisplay = string.format("%s x%d", itemLink, count)
+                    -- Verificar si ya hay un popup activo para esperar
+                    if StaticPopup_Visible("RD_CONFIRM_DONATION") then
+                        -- Reintentar en un momento si ya hay uno visible
+                        local f = CreateFrame("Frame")
+                        f.elapsed = 0
+                        f:SetScript("OnUpdate", function(self, elapsed)
+                            self.elapsed = self.elapsed + elapsed
+                            if self.elapsed >= 1 then
+                                self:SetScript("OnUpdate", nil)
+                                -- Retroceder índice para reintentar
+                                index = index - 1
+                                ProcessNextDonation()
+                            end
+                        end)
+                        return
+                    end
+
+                    local dialog = StaticPopup_Show("RD_CONFIRM_DONATION", name, itemDisplay)
+                    if dialog then
+                        dialog.data = {
+                            callback = function(accepted)
+                                if accepted then
+                                    if RD.utils.guildBank.AddContributor(name) then
+                                        uniqueContributors[name] = true
+                                    end
+                                end
+                                -- Continuar con la siguiente donación después de un pequeño delay
+                                local f = CreateFrame("Frame")
+                                f.elapsed = 0
+                                f:SetScript("OnUpdate", function(self, elapsed)
+                                    self.elapsed = self.elapsed + elapsed
+                                    if self.elapsed >= 0.2 then
+                                        self:SetScript("OnUpdate", nil)
+                                        ProcessNextDonation()
+                                    end
+                                end)
+                            end
+                        }
+                    else
+                        -- Si no se puede mostrar el diálogo, saltar y loguear error
+                        Log("|cffff0000[RaidDominion]|r " .. string.format(MSG.ERROR_DIALOG, name))
+                        ProcessNextDonation()
+                    end
+                elseif donation.type == "money" then
+                    -- Dinero: Agregar directo
+                    if RD.utils.guildBank.AddContributor(donation.name) then
+                        uniqueContributors[donation.name] = true
+                    end
+                    ProcessNextDonation()
+                else
+                    ProcessNextDonation()
+                end
+            end
+
+            -- Iniciar proceso
+            ProcessNextDonation()
+        end)
+    end
+end
+
 -- Mover la función PerformGuildRoulette antes de OpenGuildBankAndGetItems
 local function PerformGuildRoulette()
     if not selectedGuildBankItem then
@@ -437,7 +551,10 @@ local function GuildLottery()
         ShowUIPanel(GuildBankFrame)
     end
 
-    -- Iniciar el escaneo de ítems
+    -- Iniciar escaneo de contribuidores (independiente del sorteo)
+    PerformContributorRecognition()
+
+    -- Iniciar el escaneo de ítems para sorteo
     OpenGuildBankAndGetItems()
 end
 
@@ -524,6 +641,32 @@ end
                 whileDead = 1,
                 hideOnEscape = 1,
                 preferredIndex = CONST.DIALOG.PREFERRED_INDEX,
+            }
+        end
+
+        if not StaticPopupDialogs["RD_CONFIRM_DONATION"] then
+            local CONST = RD.constants.GUILD_LOTTERY
+            StaticPopupDialogs["RD_CONFIRM_DONATION"] = {
+                text = CONST.DIALOG.RECOGNIZE_DONATION,
+                button1 = "Sí",
+                button2 = "No",
+                OnAccept = function(self)
+                    if self.data and self.data.callback then
+                        self.data.callback(true)
+                    end
+                end,
+                OnCancel = function(self)
+                    -- OnCancel se llama al pulsar No, Escape o Timeout
+                    -- Necesitamos asegurarnos de que no se llame dos veces si ya se procesó en OnAccept
+                    -- Pero como OnAccept cierra el diálogo, no debería haber conflicto
+                    if self.data and self.data.callback then
+                        self.data.callback(false)
+                    end
+                end,
+                timeout = 0,
+                whileDead = 1,
+                hideOnEscape = 1, -- Permitir cerrar con Escape
+                preferredIndex = 3,
             }
         end
     

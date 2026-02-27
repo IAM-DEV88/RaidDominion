@@ -414,20 +414,20 @@ RaidDominion.constants = {
             "» WHATSAPP: https://chat.whatsapp.com/BahYOaTMZfHIwYQGey3G91 ",
         },
         ["RAIDS DE HERMANDAD"] = {
-            "» El raideo oficial comienza desde las 18:00 hora server en adelante.",
-            "» Se miden: experiencia, manejo de clase y mecánicas para futuras raids.",
+            "» Consulten horarios y cores disponibles en nuestra web.",
+            "» Se mide experiencia, manejo de clase y mecánicas para futuras raids.",
             "» Registren sus personajes en los core que necesiten o quieran ayudar.",
-            "» Pueden sincronizar las raids oficiales en su RaidDominion para mejor manejo.",
-            "→ Oficiales y Administradores llevan listas de cores para su registro.",
+            "» Jugadores con RaidDominion pueden sincronizar las raids oficiales para mejor manejo durante las raid.",
+            "→ https://colmillo.netlify.app/raids",
         },
         ["PRIMERA Y SEGUNDA PESTAÑA DEL BANCO"] = {
-            "→ Se reciben donaciones de oro, equipamiento o farm lvl 74+ para ayudar a la hermandad.",
-            "→ Sorteos diarios entre los rangos Iniciado y superiores.",
+            "→ Se reciben donaciones de oro, equipamiento o farm lvl 74+ para sortear y ayudar a la hermandad.",
+            "→ Sorteos diarios para rangos Iniciado y superiores.",
             "» WISP función y GS al Administrador/Oficial en linea para subir de rango.",
         },
         ["PESTAÑA DE EQUIPAMIENTO DEL BANCO"] = {
-            "» Acceso a los elementos del baul de equipamiento. A consideración del Administrador.",
-            "→ Solicita equipamiento en el servidor de Discord kMK2ZRRCza.",
+            "» Acceso a los elementos del baul de equipamiento mediante solicitud.",
+            "→ DISCORD: kMK2ZRRCza",
             "→ WHATSAPP: https://chat.whatsapp.com/BahYOaTMZfHIwYQGey3G91 ",
         },
         ["RAID DOMINION"] = { "Addon para asignación de roles en raid, administración de cores privados, eventos y gestión de hermandad. // Descarga y uso del addon // Portal: https://colmillo.netlify.app/ " },
@@ -542,6 +542,7 @@ RaidDominion.constants = {
         -- Configuración del diálogo
         DIALOG = {
             TITLE = "¿Deseas realizar un sorteo con %s (x%d) del banco de la hermandad?",
+            RECOGNIZE_DONATION = "¿Reconocer donación de %s?\n%s",
             BUTTONS = {
                 YES = "Sí",
                 NO = "No",
@@ -559,6 +560,14 @@ RaidDominion.constants = {
             NO_ITEMS = "No hay ítems en la primera pestaña del banco de la hermandad.",
             NO_TAB_ACCESS = "No tienes permiso para ver esta pestaña del banco de la hermandad.",
             NOT_AUTHORIZED = "Solo los oficiales y el maestro de hermandad pueden iniciar un sorteo.",
+
+            -- Mensajes de reconocimiento
+            SCAN_START = "Iniciando escaneo de donaciones para reconocimiento...",
+            NO_NEW_DONATIONS = "No se encontraron nuevas donaciones elegibles.",
+            THANKS_MESSAGE = "¡Gracias a nuestros Contribuidores Destacados de hoy: %s! Su apoyo hace grande a nuestra hermandad. ¡Sigamos así! 💪✨",
+            RECOGNITION_COMPLETE = "Reconocimiento completado. %d jugadores añadidos.",
+            RECOGNITION_FINISHED_NONE = "Proceso de reconocimiento finalizado. Ningún contribuidor nuevo añadido.",
+            ERROR_DIALOG = "Error: No se pudo mostrar diálogo para %s",
 
             -- Mensajes del sorteo
             LOTTERY_HEADER = "¡SORTEO DE LA HERMANDAD!",

@@ -1013,7 +1013,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         playerEditFrame = CreateFrame("Frame", "RaidDominionPlayerEditFrame", UIParent)
         playerEditFrame:SetFrameStrata("DIALOG")
         playerEditFrame:SetToplevel(true)
-        playerEditFrame:SetSize(350, 420) -- Aumentado para acomodar nota oficial y padding
+        playerEditFrame:SetSize(350, 550) -- Aumentado para acomodar nota personal y padding
         playerEditFrame:SetPoint("CENTER")
         playerEditFrame:SetBackdrop({
             bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -1335,6 +1335,35 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
             end
         end)
 
+        -- Nota Personal (Privada)
+        playerEditFrame.personalNoteLabel = UI.CreateLabel(playerEditFrame, "Nota Personal (Privada):")
+        playerEditFrame.personalNoteLabel:SetPoint("TOPLEFT", 20, -310)
+
+        playerEditFrame.personalNoteScroll = CreateFrame("ScrollFrame", "RaidDominionPlayerEditPersonalNoteScroll", playerEditFrame, "UIPanelScrollFrameTemplate")
+        playerEditFrame.personalNoteScroll:SetSize(280, 120)
+        playerEditFrame.personalNoteScroll:SetPoint("TOPLEFT", 25, -330)
+
+        playerEditFrame.personalNoteEdit = CreateFrame("EditBox", "RaidDominionPlayerEditPersonalNoteEdit", playerEditFrame.personalNoteScroll)
+        playerEditFrame.personalNoteEdit:SetSize(280, 120)
+        playerEditFrame.personalNoteEdit:SetMultiLine(true)
+        playerEditFrame.personalNoteEdit:SetFontObject("ChatFontNormal")
+        playerEditFrame.personalNoteEdit:SetAutoFocus(false)
+        playerEditFrame.personalNoteEdit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+        
+        playerEditFrame.personalNoteScroll:SetScrollChild(playerEditFrame.personalNoteEdit)
+        
+        -- Background for the edit box area
+        playerEditFrame.personalNoteBg = CreateFrame("Frame", nil, playerEditFrame)
+        playerEditFrame.personalNoteBg:SetPoint("TOPLEFT", playerEditFrame.personalNoteScroll, -5, 5)
+        playerEditFrame.personalNoteBg:SetPoint("BOTTOMRIGHT", playerEditFrame.personalNoteScroll, 25, -5)
+        playerEditFrame.personalNoteBg:SetBackdrop({
+            bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 }
+        })
+        playerEditFrame.personalNoteBg:SetBackdropColor(0, 0, 0, 0.5)
+
         -- Botón Eliminar
         playerEditFrame.deleteBtn = CreateFrame("Button", nil, playerEditFrame, "UIPanelButtonTemplate")
         playerEditFrame.deleteBtn:SetSize(120, 25)
@@ -1373,6 +1402,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
             local permLevel = GetPerms()
             -- Obtener los valores de los campos
             local name = playerEditFrame.nameEdit:GetText()
+            local personalNote = playerEditFrame.personalNoteEdit:GetText()
             local role = playerEditFrame.selectedRole
             
             -- Asegurar que el rol no esté vacío. Si lo está, asignar "Nuevo" como predeterminado
@@ -1453,30 +1483,31 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                 end
             end
 
-            -- Si estamos en modo búsqueda/reconocimiento, también queremos poder guardar el estado de sancionado
-            -- Buscamos al jugador en todas las bandas del Core para aplicar el cambio globalmente
-            if playerEditFrame.isSearchMode and permLevel >= 2 then
-                if name and name ~= "" then
-                    local cleanTarget = CleanName(name)
-                    local coreData = EnsureCoreData()
-                    local foundInCore = false
-                    for bIdx, band in ipairs(coreData) do
-                        if band.members then
-                            for mIdx, member in ipairs(band.members) do
-                                if member.name and CleanName(member.name) == cleanTarget then
-                                    member.isSanctioned = isSanctioned
-                                    foundInCore = true
-                                end
+            -- Actualizar globalmente Nota Personal y Sanción (para todos los modos si se tienen permisos)
+            -- Esto asegura consistencia entre todas las instancias del jugador en diferentes bandas
+            if permLevel >= 2 and name and name ~= "" then
+                local cleanTarget = CleanName(name)
+                local coreData = EnsureCoreData()
+                local foundInCore = false
+                for bIdx, band in ipairs(coreData) do
+                    if band.members then
+                        for mIdx, member in ipairs(band.members) do
+                            if member.name and CleanName(member.name) == cleanTarget then
+                                member.isSanctioned = isSanctioned
+                                member.personalNote = personalNote
+                                foundInCore = true
                             end
                         end
                     end
-                    if foundInCore then
-                        Log("|cff00ff00[RaidDominion]|r Estado de sanción actualizado globalmente para: " .. name)
-                        -- Solo actualizar la ventana del Core si ya estaba abierta y no estamos en modo búsqueda
-                        local coreListFrame = _G["RaidDominionCoreListFrame"]
-                        if coreListFrame and coreListFrame:IsVisible() and not playerEditFrame.isSearchMode then
-                            RD.utils.coreBands.ShowCoreBandsWindow()
-                        end
+                end
+                
+                -- Solo actualizar la ventana del Core si estamos en modo búsqueda/gearscore
+                -- (El modo normal tiene su propia lógica de refresco más abajo)
+                if foundInCore and (playerEditFrame.isSearchMode or playerEditFrame.isGearscoreMode) then
+                    Log("|cff00ff00[RaidDominion]|r Datos actualizados globalmente para: " .. name)
+                    local coreListFrame = _G["RaidDominionCoreListFrame"]
+                    if coreListFrame and coreListFrame:IsVisible() then
+                        RD.utils.coreBands.ShowCoreBandsWindow()
                     end
                 end
             end
@@ -1499,6 +1530,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
                     local currentMember = sourceBand.members[context.memberIndex]
                     local memberData = {
                         name = name,
+                        personalNote = personalNote,
                         role = role,
                         class = playerEditFrame.playerClass or currentMember.class,
                         isLeader = isLeader,
@@ -1592,6 +1624,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
         end
 
         playerEditFrame.nameEdit:SetText(playerData.name or "")
+        playerEditFrame.personalNoteEdit:SetText(playerData.personalNote or "")
         playerEditFrame.guildIndex = playerData.index -- Guardar el índice de hermandad si viene de Gearscore
         local currentRole = playerData.role or "Nuevo"
         -- Capitalizar el rol para consistencia (ej: "tank" -> "Tank")
@@ -1615,6 +1648,11 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
              playerEditFrame.isLeaderCheck:Hide()
              playerEditFrame.isLeaderLabel:Hide()
              
+             -- Mostrar nota personal
+             playerEditFrame.personalNoteLabel:Show()
+             playerEditFrame.personalNoteScroll:Show()
+             playerEditFrame.personalNoteBg:Show()
+             
              -- Mostrar sancionado y reposicionarlo
              playerEditFrame.isSanctionedCheck:Show()
              playerEditFrame.isSanctionedLabel:Show()
@@ -1626,7 +1664,12 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
              
              -- Reposicionar sección de hermandad debajo de sancionado
              playerEditFrame.guildSection:SetPoint("TOPLEFT", 20, -110)
-             playerEditFrame:SetSize(350, 280)
+             
+             -- Reposicionar nota personal debajo de sección de hermandad
+             playerEditFrame.personalNoteLabel:SetPoint("TOPLEFT", 20, -220)
+             playerEditFrame.personalNoteScroll:SetPoint("TOPLEFT", 25, -240)
+             
+             playerEditFrame:SetSize(350, 420)
              playerEditFrame.title:SetText("Jugador: " .. (playerData.name or ""))
              playerEditFrame.acceptBtn:Show()
          elseif playerEditFrame.isSearchMode then
@@ -1634,6 +1677,11 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
              playerEditFrame.roleDropDown:Hide()
              playerEditFrame.isLeaderCheck:Hide()
              playerEditFrame.isLeaderLabel:Hide()
+             
+             -- Mostrar nota personal
+             playerEditFrame.personalNoteLabel:Show()
+             playerEditFrame.personalNoteScroll:Show()
+             playerEditFrame.personalNoteBg:Show()
              
              -- Mostrar sancionado pero reposicionado en el modo simplificado
              playerEditFrame.isSanctionedCheck:Show()
@@ -1646,13 +1694,21 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
              
              -- Reposicionar sección de hermandad más abajo para dar espacio a sancionado
              playerEditFrame.guildSection:SetPoint("TOPLEFT", 20, -110)
-             playerEditFrame:SetSize(350, 280)
+             
+             -- Reposicionar nota personal debajo de sección de hermandad
+             playerEditFrame.personalNoteLabel:SetPoint("TOPLEFT", 20, -220)
+             playerEditFrame.personalNoteScroll:SetPoint("TOPLEFT", 25, -240)
+             
+             playerEditFrame:SetSize(350, 420)
              playerEditFrame.title:SetText("Jugador: " .. (playerData.name or ""))
              
              -- El botón de guardar debe estar visible para permitir guardar las notas de hermandad
              playerEditFrame.acceptBtn:Show()
          else
              playerEditFrame.roleLabel:Show()
+             playerEditFrame.personalNoteLabel:Show()
+             playerEditFrame.personalNoteScroll:Show()
+             playerEditFrame.personalNoteBg:Show()
              playerEditFrame.roleDropDown:Show()
              playerEditFrame.isLeaderCheck:Show()
              playerEditFrame.isLeaderLabel:Show()
@@ -1662,13 +1718,17 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
              playerEditFrame.isSanctionedLabel:Show()
              playerEditFrame.isSanctionedCheck:SetPoint("TOPLEFT", 100, -140)
              
+             -- Restaurar posición original de nota personal
+             playerEditFrame.personalNoteLabel:SetPoint("TOPLEFT", 20, -310)
+             playerEditFrame.personalNoteScroll:SetPoint("TOPLEFT", 25, -330)
+             
              playerEditFrame.moveLabel:Show()
              playerEditFrame.moveDropDown:Show()
              playerEditFrame.deleteBtn:Show()
              playerEditFrame.acceptBtn:Show()
              
              playerEditFrame.guildSection:SetPoint("TOPLEFT", 20, -200)
-             playerEditFrame:SetSize(350, 420)
+             playerEditFrame:SetSize(350, 550)
              playerEditFrame.title:SetText("Editar Jugador")
          end
 
@@ -1681,6 +1741,7 @@ function coreBandsUtils.GetOrCreatePlayerEditFrame(playerData, isGearscoreMode)
     else
         -- Limpiar campos si no se proporcionan datos
         playerEditFrame.nameEdit:SetText("")
+        playerEditFrame.personalNoteEdit:SetText("")
         UIDropDownMenu_SetText(playerEditFrame.roleDropDown, "Seleccionar Rol")
         playerEditFrame.selectedRole = ""
         playerEditFrame.isLeaderCheck:SetChecked(false)
@@ -1739,6 +1800,7 @@ function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode, isGear
                         -- Solo nos interesa el estado de sanción para el modo búsqueda/gearscore
                         playerDataForSearch = {
                             name = member.name,
+                            personalNote = member.personalNote,
                             isSanctioned = member.isSanctioned,
                             class = member.class
                         }
@@ -1774,8 +1836,9 @@ function RD.utils.coreBands.OpenPlayerEditFrame(playerName, isSearchMode, isGear
 
     editFrame = coreBandsUtils.GetOrCreatePlayerEditFrame(playerDataForSearch or {name = playerName}, isGearscoreMode)
     if editFrame then
-        -- Establecer el modo búsqueda
+        -- Establecer el modo búsqueda y gearscore
         editFrame.isSearchMode = isSearchMode
+        editFrame.isGearscoreMode = isGearscoreMode
         
         -- Si se encontró en el Core (y no estamos en modo búsqueda/gearscore), actualizar el contexto
         if not (isSearchMode or isGearscoreMode) and bandIndex and memberIndex then
@@ -2683,6 +2746,119 @@ function coreBandsUtils.ShowCoreBandsWindow()
 
             executeUpdate()
         end)
+
+        -- Botón Invitar Hermandad (Nuevo)
+        f3.inviteGuildBtn = CreateStyledButton("RaidDominionCoreInviteGuildBtn", f3, 30, 30, nil, "Interface/Icons/Spell_Magic_MageArmor", "Invitar a Hermandad a todos los no miembros")
+        f3.inviteGuildBtn:SetPoint("LEFT", f3.updateAllBtn, "RIGHT", 10, 0)
+        f3.inviteGuildBtn:SetScript("OnClick", function()
+            local permLevel = GetPerms()
+            if permLevel < 2 then
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("invitar a la hermandad")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para invitar a la hermandad.")
+                end
+                return
+            end
+            
+            if not IsInGuild() then
+                Log("|cffff0000[RaidDominion]|r Error: No estás en una hermandad.")
+                return
+            end
+
+            local coreData = EnsureCoreData()
+            
+            -- Construir mapa de miembros de hermandad
+            local guildMembers = {}
+            local numGuildMembers = GetNumGuildMembers(true)
+            for i = 1, numGuildMembers do
+                local name = GetGuildRosterInfo(i)
+                if name then
+                    name = name:match("([^%-]+)") -- Remover reino
+                    if name then
+                        guildMembers[name:lower()] = true
+                    end
+                end
+            end
+
+            -- Encontrar no miembros en todas las listas
+            local toInvite = {}
+            local seen = {}
+            for _, band in ipairs(coreData) do
+                if band.members then
+                    for _, member in ipairs(band.members) do
+                        if member.name then
+                            local cleanName = CleanName(member.name)
+                            local rawName = member.name:match("([^%-]+)")
+                            if rawName and not guildMembers[cleanName] and not seen[cleanName] then
+                                table.insert(toInvite, rawName)
+                                seen[cleanName] = true
+                            end
+                        end
+                    end
+                end
+            end
+            
+            -- Escanear base de datos de GearScore
+            local gsData = _G["GS_Data"]
+            local realm = GetRealmName()
+            if gsData and gsData[realm] and gsData[realm]["Players"] then
+                local gsPlayers = gsData[realm]["Players"]
+                for playerName, _ in pairs(gsPlayers) do
+                    if type(playerName) == "string" then
+                         local rawName = playerName:match("([^%-]+)")
+                         if rawName then
+                             local cleanName = rawName:lower()
+                             if not guildMembers[cleanName] and not seen[cleanName] then
+                                 table.insert(toInvite, rawName)
+                                 seen[cleanName] = true
+                             end
+                         end
+                    end
+                end
+            end
+
+            if #toInvite == 0 then
+                Log("|cff00ff00[RaidDominion]|r Todos los miembros de las listas ya están en la hermandad.")
+                return
+            end
+
+            Log("|cff00ff00[RaidDominion]|r Iniciando invitaciones para " .. #toInvite .. " jugadores...")
+
+            -- Inicializar ticker para proceso por lotes
+            if not f3.inviteTicker then
+                f3.inviteTicker = CreateFrame("Frame", nil, f3)
+            end
+            
+            f3.inviteTicker.queue = toInvite
+            f3.inviteTicker.index = 1
+            f3.inviteTicker.timeSinceLast = 3 -- Forzar ejecución inmediata del primer lote
+            f3.inviteTicker.delay = 3 -- Segundos entre lotes
+            f3.inviteTicker.batchSize = 3 -- Invitaciones por lote
+            
+            f3.inviteTicker:SetScript("OnUpdate", function(self, elapsed)
+                self.timeSinceLast = self.timeSinceLast + elapsed
+                if self.timeSinceLast >= self.delay then
+                    self.timeSinceLast = 0
+                    local count = 0
+                    while count < self.batchSize and self.index <= #self.queue do
+                         local name = self.queue[self.index]
+                         GuildInvite(name)
+                         Log("Invitando a: " .. name)
+                         self.index = self.index + 1
+                         count = count + 1
+                    end
+                    
+                    if self.index > #self.queue then
+                         self:Hide()
+                         Log("|cff00ff00[RaidDominion]|r Invitaciones completadas.")
+                    end
+                end
+            end)
+            
+            f3.inviteTicker:Show()
+        end)
         
         -- ScrollFrame
         f3.scroll = CreateFrame("ScrollFrame", "RaidDominionCoreListScroll", f3, "UIPanelScrollFrameTemplate")
@@ -3193,60 +3369,90 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 return
             end
 
-            -- Obtener lista de jugadores para invitar (indiferente de si son de hermandad o no)
-            local playersToInvite = {}
-            local summonedNames = {}
+            -- Obtener lista de jugadores para invitar con su rol (indiferente de si son de hermandad o no)
+            local entriesToInvite = {}
+            local invitedNames = {}
             
             for _, member in ipairs(members) do
                 -- Ya no filtramos por rol "nuevo" para permitir invitar a todos los de la lista
                 local cleanName = CleanName(member.name)
                 -- Usar el nombre de la hermandad si está disponible (por capitalización), si no, el nombre guardado
                 local displayName = guildFullCache[cleanName] and guildFullCache[cleanName].name or member.name
-                table.insert(playersToInvite, displayName)
-                table.insert(summonedNames, displayName)
+                table.insert(entriesToInvite, { name = displayName, role = member.role or "nuevo" })
             end
 
-            if #playersToInvite == 0 then
+            if #entriesToInvite == 0 then
                 Log("|cffffff00[RaidDominion]|r No hay miembros en la lista para invitar.")
                 return
             end
 
-            -- 1. Realizar invitaciones masivas
+            -- 1. Realizar invitaciones (máximo 5 por petición) con mensaje personalizado, secuenciadas y fuera de combate
             local rosterCache = BuildRosterCache()
-            Log("|cff00ff00[RaidDominion]|r Enviando invitaciones a " .. #playersToInvite .. " miembros...")
-            for _, name in ipairs(playersToInvite) do
-                if not IsPlayerInGroup(name, rosterCache) then
-                    InviteUnit(name)
-                end
+            local limit = 5
+            local queue = {}
+            for i = 1, math.min(limit, #entriesToInvite) do
+                table.insert(queue, entriesToInvite[i])
             end
+            Log("|cff00ff00[RaidDominion]|r Enviando hasta " .. #queue .. " invitaciones...")
 
-            -- 2. Anunciar en hermandad
-            if IsInGuild() then
-                local summonedList = table.concat(summonedNames, ", ")
-                -- Usamos %s para minGS para preservar el formato (ej: "0.0") si el usuario lo introdujo así
-                local displayMinGS = bandData.minGS or "0"
-                local msgHeader = string.format("RD: Convocando a [%s] (Min GS: %s) - %s", bandData.name, displayMinGS, bandData.schedule or "")
-                local msgSummoned = "Convocados: " .. summonedList
-                
-                -- Dividir el mensaje si es muy largo (WoW chat limit is ~255 chars)
-                SendChatMessage(msgHeader, "GUILD")
-                
-                -- Si la lista de convocados es larga, enviarla en partes
-                local currentPart = "Convocados: "
-                for i, name in ipairs(summonedNames) do
-                    if string.len(currentPart .. name .. ", ") > 250 then
-                        SendChatMessage(currentPart, "GUILD")
-                        currentPart = "Continuación: " .. name .. ", "
+            if not f3.recruitTicker then
+                f3.recruitTicker = CreateFrame("Frame", nil, f3)
+                f3.recruitTicker:Hide()
+            end
+            f3.recruitTicker.queue = queue
+            f3.recruitTicker.index = 1
+            f3.recruitTicker.elapsed = 0
+            f3.recruitTicker.delay = 0.3
+            f3.recruitTicker.invitedNames = {}
+            f3.recruitTicker.bandName = bandData.name or "Raid"
+            f3.recruitTicker:SetScript("OnUpdate", function(self, elapsed)
+                self.elapsed = self.elapsed + elapsed
+                if self.elapsed >= self.delay then
+                    self.elapsed = 0
+                    local entry = self.queue[self.index]
+                    if entry then
+                        local name = entry.name
+                        if name and name ~= "" then
+                            if not IsPlayerInGroup(name, rosterCache) then
+                                InviteUnit(name)
+                            end
+                            local role = (entry.role or "miembro")
+                            role = role:lower()
+                            if role == "rango" then
+                                role = "DPS a distancia"
+                            elseif role == "melee" then
+                                role = "DPS cuerpo a cuerpo"
+                            elseif role == "tank" then
+                                role = "tanque"
+                            elseif role == "healer" then
+                                role = "sanador"
+                            end
+                            local whisper = string.format("¡Hola! Estamos formando la raid [%s]. Te invitamos como %s. Si estás disponible, únete.", self.bandName, role)
+                            SendChatMessage(whisper, "WHISPER", nil, name)
+                            table.insert(self.invitedNames, name)
+                        end
+                        self.index = self.index + 1
                     else
-                        currentPart = currentPart .. name .. (i == #summonedNames and "" or ", ")
+                        self:Hide()
+                        Log("|cff00ff00[RaidDominion]|r Invitaciones completadas: " .. table.concat(self.invitedNames, ", "))
                     end
                 end
-                if currentPart ~= "Continuación: " and currentPart ~= "Convocados: " then
-                    SendChatMessage(currentPart, "GUILD")
-                end
-                
-                SendChatMessage("¡Por favor, acepten la invitación!", "GUILD")
+            end)
+
+            if InCombatLockdown() then
+                f3.recruitTicker:RegisterEvent("PLAYER_REGEN_ENABLED")
+                f3.recruitTicker:SetScript("OnEvent", function(self, event)
+                    if event == "PLAYER_REGEN_ENABLED" then
+                        self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+                        self:Show()
+                    end
+                end)
+                Log("|cffffff00[RaidDominion]|r En combate: las invitaciones se enviarán al salir de combate.")
+            else
+                f3.recruitTicker:Show()
             end
+
+            -- Nota: No se envía anuncio por hermandad aquí para ceñirnos al requerimiento.
         else
             Log("|cffff0000[RaidDominion]|r Error: Debes seleccionar una banda primero")
         end

@@ -168,7 +168,7 @@ local function addPlayerToRecognition(index, playerData)
         -- Nuevo registro
         table.insert(recognition.members, {
             name = CapitalizeName(playerData.name),
-            class = playerData.class or "",
+            class = playerData.class or GetPlayerClassData(playerData.name) or "Unknown",
             count = 1,
             timestamps = { timestamp }
         })
@@ -184,6 +184,9 @@ local function addPlayerToRecognition(index, playerData)
     if RefreshRecognitionList then RefreshRecognitionList() end
     return true
 end
+
+-- Exponer función públicamente
+recognitionUtils.AddPlayer = addPlayerToRecognition
 
 -- Función para abrir el popup de invitación
 local function getOrCreateInvitePopup()
@@ -429,6 +432,31 @@ function recognitionUtils.ShowPlayerSearchPopup()
                         end
                     end
                 end)
+
+        p.selfBtn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+        p.selfBtn:SetSize(100, 25)
+        p.selfBtn:SetPoint("BOTTOMRIGHT", -30, 15)
+        p.selfBtn:SetText(UnitName("player"))
+        p.selfBtn:SetScript("OnClick", function()
+            local permLevel = GetPerms()
+            if permLevel < 1 then
+                local mm = RD.modules and RD.modules.messageManager
+                if mm and mm.PermissionError then
+                    mm:PermissionError("ver detalles propios")
+                else
+                    Log("|cffff0000[RaidDominion]|r Error: No tienes permisos para ver detalles.")
+                end
+                return
+            end
+            
+            local name = UnitName("player")
+            if RD.utils and RD.utils.coreBands and RD.utils.coreBands.OpenPlayerEditFrame then
+                RD.utils.coreBands.OpenPlayerEditFrame(name, true)
+                p:Hide()
+            else
+                Log("|cffff0000[RaidDominion]|r Error: El módulo CoreBands no está disponible.")
+            end
+        end)
     end
     p:Show()
     p.nameEdit:SetText("")
