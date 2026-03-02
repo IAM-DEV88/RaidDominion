@@ -2826,38 +2826,36 @@ function coreBandsUtils.ShowCoreBandsWindow()
 
             Log("|cff00ff00[RaidDominion]|r Iniciando invitaciones para " .. #toInvite .. " jugadores...")
 
-            -- Inicializar ticker para proceso por lotes
-            if not f3.inviteTicker then
-                f3.inviteTicker = CreateFrame("Frame", nil, f3)
+            RD.tickers = RD.tickers or {}
+            if not RD.tickers.inviteGuild then
+                RD.tickers.inviteGuild = CreateFrame("Frame", nil, UIParent)
+                RD.tickers.inviteGuild:Hide()
             end
-            
-            f3.inviteTicker.queue = toInvite
-            f3.inviteTicker.index = 1
-            f3.inviteTicker.timeSinceLast = 3 -- Forzar ejecución inmediata del primer lote
-            f3.inviteTicker.delay = 3 -- Segundos entre lotes
-            f3.inviteTicker.batchSize = 3 -- Invitaciones por lote
-            
-            f3.inviteTicker:SetScript("OnUpdate", function(self, elapsed)
+            RD.tickers.inviteGuild.queue = toInvite
+            RD.tickers.inviteGuild.index = 1
+            RD.tickers.inviteGuild.timeSinceLast = 0
+            RD.tickers.inviteGuild.delay = 1
+            RD.tickers.inviteGuild:SetScript("OnUpdate", function(self, elapsed)
                 self.timeSinceLast = self.timeSinceLast + elapsed
                 if self.timeSinceLast >= self.delay then
                     self.timeSinceLast = 0
                     local count = 0
-                    while count < self.batchSize and self.index <= #self.queue do
-                         local name = self.queue[self.index]
-                         GuildInvite(name)
-                         Log("Invitando a: " .. name)
-                         self.index = self.index + 1
-                         count = count + 1
+                    while count < 5 and self.index <= #self.queue do
+                        local name = self.queue[self.index]
+                        if name then
+                            GuildInvite(name)
+                            Log("Invitando a: " .. name)
+                            self.index = self.index + 1
+                        end
+                        count = count + 1
                     end
-                    
                     if self.index > #self.queue then
-                         self:Hide()
-                         Log("|cff00ff00[RaidDominion]|r Invitaciones completadas.")
+                        self:Hide()
+                        Log("|cff00ff00[RaidDominion]|r Invitaciones completadas.")
                     end
                 end
             end)
-            
-            f3.inviteTicker:Show()
+            RD.tickers.inviteGuild:Show()
         end)
         
         -- ScrollFrame
@@ -3386,38 +3384,42 @@ function coreBandsUtils.ShowCoreBandsWindow()
                 return
             end
 
-            -- 1. Realizar invitaciones (máximo 5 por petición) con mensaje personalizado, secuenciadas y fuera de combate
+            -- 1. Realizar todas las invitaciones en lotes de 5 hasta terminar
             local rosterCache = BuildRosterCache()
-            local limit = 5
             local queue = {}
-            for i = 1, math.min(limit, #entriesToInvite) do
+            for i = 1, #entriesToInvite do
                 table.insert(queue, entriesToInvite[i])
             end
-            Log("|cff00ff00[RaidDominion]|r Enviando hasta " .. #queue .. " invitaciones...")
-
-            if not f3.recruitTicker then
-                f3.recruitTicker = CreateFrame("Frame", nil, f3)
-                f3.recruitTicker:Hide()
+            if #queue == 0 then
+                Log("|cffffff00[RaidDominion]|r No hay miembros para invitar (excluyendo sancionados).")
+                return
             end
-            f3.recruitTicker.queue = queue
-            f3.recruitTicker.index = 1
-            f3.recruitTicker.elapsed = 0
-            f3.recruitTicker.delay = 0.3
-            f3.recruitTicker.invitedNames = {}
-            f3.recruitTicker.bandName = bandData.name or "Raid"
-            f3.recruitTicker:SetScript("OnUpdate", function(self, elapsed)
-                self.elapsed = self.elapsed + elapsed
-                if self.elapsed >= self.delay then
-                    self.elapsed = 0
-                    local entry = self.queue[self.index]
-                    if entry then
-                        local name = entry.name
+            Log("|cff00ff00[RaidDominion]|r Reclutando " .. #queue .. " miembros en lotes de 5...")
+
+            RD.tickers = RD.tickers or {}
+            if not RD.tickers.recruit then
+                RD.tickers.recruit = CreateFrame("Frame", nil, UIParent)
+                RD.tickers.recruit:Hide()
+            end
+            RD.tickers.recruit.queue = queue
+            RD.tickers.recruit.index = 1
+            RD.tickers.recruit.timeSinceLast = 0
+            RD.tickers.recruit.delay = 1
+            RD.tickers.recruit.invitedNames = {}
+            RD.tickers.recruit.bandName = bandData.name or "Raid"
+            RD.tickers.recruit:SetScript("OnUpdate", function(self, elapsed)
+                self.timeSinceLast = self.timeSinceLast + elapsed
+                if self.timeSinceLast >= self.delay then
+                    self.timeSinceLast = 0
+                    local count = 0
+                    while count < 5 and self.index <= #self.queue do
+                        local entry = self.queue[self.index]
+                        local name = entry and entry.name
                         if name and name ~= "" then
                             if not IsPlayerInGroup(name, rosterCache) then
                                 InviteUnit(name)
                             end
-                            local role = (entry.role or "miembro")
-                            role = role:lower()
+                            local role = (entry.role or "miembro"):lower()
                             if role == "rango" then
                                 role = "DPS a distancia"
                             elseif role == "melee" then
@@ -3432,25 +3434,15 @@ function coreBandsUtils.ShowCoreBandsWindow()
                             table.insert(self.invitedNames, name)
                         end
                         self.index = self.index + 1
-                    else
+                        count = count + 1
+                    end
+                    if self.index > #self.queue then
                         self:Hide()
-                        Log("|cff00ff00[RaidDominion]|r Invitaciones completadas: " .. table.concat(self.invitedNames, ", "))
+                        Log("|cff00ff00[RaidDominion]|r Reclutamiento completado: " .. table.concat(self.invitedNames, ", "))
                     end
                 end
             end)
-
-            if InCombatLockdown() then
-                f3.recruitTicker:RegisterEvent("PLAYER_REGEN_ENABLED")
-                f3.recruitTicker:SetScript("OnEvent", function(self, event)
-                    if event == "PLAYER_REGEN_ENABLED" then
-                        self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-                        self:Show()
-                    end
-                end)
-                Log("|cffffff00[RaidDominion]|r En combate: las invitaciones se enviarán al salir de combate.")
-            else
-                f3.recruitTicker:Show()
-            end
+            RD.tickers.recruit:Show()
 
             -- Nota: No se envía anuncio por hermandad aquí para ceñirnos al requerimiento.
         else
