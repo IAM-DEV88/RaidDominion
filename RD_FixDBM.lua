@@ -12,41 +12,26 @@ local function FixDBM()
     
     -- Solo aplicar si existe la función problemática
     if _G.DBM.RAID_ROSTER_UPDATE then
-        -- En lugar de reemplazar la función (que causa taint), envolvemos la llamada
-        -- protegiendo GetRaidRosterInfo SOLO durante la ejecución de DBM
+        -- En lugar de reemplazar GetRaidRosterInfo (que causa Taint y rompe marcos de blizzard),
+        -- envolvemos la función de DBM en un pcall para que si falla por un nil no rompa nada más.
         
         local original_RAID_ROSTER_UPDATE = _G.DBM.RAID_ROSTER_UPDATE
         
         _G.DBM.RAID_ROSTER_UPDATE = function(self, ...)
-            local old_GetRaidRosterInfo = _G.GetRaidRosterInfo
-            
-            -- Hook temporal seguro: Solo intercepta nils, pasa todo lo demás tal cual
-            _G.GetRaidRosterInfo = function(index)
-                local name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML = old_GetRaidRosterInfo(index)
-                if not name then
-                    -- Retornar datos dummy seguros para evitar crash de DBM
-                    return "Unknown", 0, 1, 1, "WARRIOR", "WARRIOR", "Unknown", false, false, "MAINTANK", false
-                end
-                return name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML
-            end
-            
             -- Ejecutar la función original de DBM en modo protegido
+            -- Si DBM intenta indexar un nil, el error morirá aquí y no propagará Taint a Blizzard
             local ok, err = pcall(original_RAID_ROSTER_UPDATE, self, ...)
             
-            -- Restaurar INMEDIATAMENTE la función global
-            _G.GetRaidRosterInfo = old_GetRaidRosterInfo
-            
             if not ok then
-                -- Silenciar el error específico de nil index si ocurre a pesar del parche
-                if err and not string.find(err, "table index is nil") then
-                    if _G.geterrorhandler then
-                        _G.geterrorhandler()(err)
-                    end
+                -- Opcionalmente loguear el error solo en modo debug o si no es el esperado
+                if err and not string.find(err, "attempt to index local 'name'") then
+                    -- Solo reportamos si es un error distinto al que estamos tratando de mitigar
+                    -- (aunque en general es mejor el silencio para evitar Taint via error handlers)
                 end
             end
         end
         
-        print("|cff00ff00RaidDominion:|r Parche de compatibilidad DBM aplicado (Modo Seguro).")
+        print("|cff00ff00RaidDominion:|r Parche de estabilidad para DBM aplicado (Modo Ultra-Seguro).")
     end
 end
 
