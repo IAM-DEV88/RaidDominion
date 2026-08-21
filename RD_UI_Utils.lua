@@ -1,140 +1,193 @@
 --[[
     RD_UI_Utils.lua
-    PURPOSE: General UI utility functions for RaidDominion
-    PUBLIC API:
-        - RaidDominion.UIUtils:CreateFrame(name, parent, template, width, height)
-        - RaidDominion.UIUtils:CreateButton(name, parent, text, width, height, onClick)
-        - RaidDominion.UIUtils:CreateHelpSection(parent, title, content, yOffset)
-        - RaidDominion.UIUtils:CreateCheckbox(name, parent, label, onClick)
-        - RaidDominion.UIUtils:CreateScrollFrame(name, parent, width, height)
+    PROPÓSITO: Utilidades generales de UI (frames, strings, pooling).
+    API PÚBLICA:
+        - RD.UIUtils:CleanName(name)
+        - RD.UIUtils:CapitalizeName(name)
+        - RD.UIUtils:AcquireFrame(poolName, frameType, parent, template)
+        - RD.UIUtils:ReleaseFrame(poolName, frame)
 ]]
 
 local addonName, private = ...
+local RD = _G.RaidDominion or {}
+_G.RaidDominion = RD
+
 local UIUtils = {}
 
 -- =============================================
--- UTILIDADES DE STRINGS Y NOMBRES
+-- HELPERS GENERALES (compartidos por módulos/UI)
+-- =============================================
+
+-- Mensaje de sistema con fallback a print (si messageManager no está cargado).
+-- Centraliza el patrón Log que se repetía en varios archivos.
+function UIUtils.Log(msg)
+    if RD.messageManager and RD.messageManager.SendSystemMessage then
+        RD.messageManager:SendSystemMessage(msg)
+    else
+        print(msg)
+    end
+end
+
+-- Orden estable por `order` (los ítems sin order conservan su posición relativa).
+-- Centraliza el insertion-sort que se duplicaba en MenuFactory y ConfigWindow.
+function UIUtils.SortByOrder(list)
+    local sorted = {}
+    for _, v in ipairs(list or {}) do table.insert(sorted, v) end
+    for i = 2, #sorted do
+        local key = sorted[i]
+        local keyOrder = key.order or 0
+        local j = i - 1
+        while j >= 1 and (sorted[j].order or 0) > keyOrder do
+            sorted[j + 1] = sorted[j]
+            j = j - 1
+        end
+        sorted[j + 1] = key
+    end
+    return sorted
+end
+
+-- Copia profunda de una tabla (para sembrar listas sin compartir referencias).
+function UIUtils.DeepCopy(orig)
+    local origType = type(orig)
+    if origType ~= "table" then return orig end
+    local copy = {}
+    for k, v in next, orig, nil do
+        copy[UIUtils.DeepCopy(k)] = UIUtils.DeepCopy(v)
+    end
+    return setmetatable(copy, UIUtils.DeepCopy(getmetatable(orig)))
+end
+
+-- Estima el número de líneas envueltas de un texto a un ancho y fuente dados
+-- (salto de línea + excedente por wrap). Se usa como fallback cuando la medición
+-- de un FontString oculto devuelve 0 en 3.3.5a (layout diferido). Centraliza la
+-- heurística que se duplicaba en ConfigWindow_Render y BandsPlayerEditor.
+function UIUtils.EstimateWrappedLines(str, width, fontSize)
+    local text = tostring(str or "")
+    local fs = fontSize or 14
+    local newlines = select(2, text:gsub("\n", "\n"))
+    local cpl = math.max(30, math.floor((width or 400) * 2 / fs))
+    return newlines + 1 + math.max(0, math.ceil(#text / cpl))
+end
+
+--[[
+    Convención de EditBox multilínea dentro de un ScrollFrame (paridad entre el
+    campo Notas del modal de editar jugador y el campo Mensaje del spammer):
+    el EditBox de 3.3.5a no recorta su texto, así que se crea un FontString de
+    medida oculto con el mismo ancho/fuente y se crece la caja a su contenido
+    dentro del ScrollFrame (que lo recorta y scrollea). Si GetStringHeight()
+    devuelve 0 (layout diferido en 3.3.5a) se usa EstimateWrappedLines como
+    fallback. El alto mínimo es el alto actual del ScrollFrame.
+    Devuelve la función resize() para asignar a OnTextChanged/OnTextSet.
+]]
+function UIUtils.MakeAutoResizeMultiline(editBox, scrollFrame, measureW)
+    local measureFS = scrollFrame:CreateFontString(nil, "ARTWORK")
+    local font, size = editBox:GetFont()
+    if font and size then
+        measureFS:SetFont(font, size)
+    end
+    measureFS:SetWordWrap(true)
+    measureFS:SetJustifyH("LEFT")
+    measureFS:Hide()
+
+    return function()
+        if not editBox or not scrollFrame then return end
+        local _, fontSize = editBox:GetFont()
+        local lineHeight = (fontSize or 15) * 1.2
+        measureFS:SetWidth(measureW)
+        measureFS:SetText(editBox:GetText() or "")
+        local h = measureFS:GetStringHeight() or 0
+        if h < lineHeight then
+            local str = measureFS:GetText() or ""
+            local estLines = UIUtils.EstimateWrappedLines(str, measureW, fontSize or 15)
+            h = estLines * lineHeight
+        end
+        local minH = (scrollFrame.GetHeight and scrollFrame:GetHeight()) or 80
+        editBox:SetHeight(math.max(minH, h + 8))
+        if scrollFrame.UpdateScrollChildRect then
+            scrollFrame:UpdateScrollChildRect()
+        end
+    end
+end
+
+-- =============================================
+-- FRAMES: nombres únicos globales
+-- =============================================
+
+-- Contador ÚNICO del addon para nombres de frames. Centralizarlo aquí evita
+-- colisiones entre archivos: en WoW 3.3.5a, CreateFrame con un nombre ya usado
+-- devuelve el frame previo (no crea uno nuevo), lo que corrompía los botones de
+-- cerrar (5 archivos generaban "RDCl1" cada uno con su contador local).
+local nameCounter = 0
+function UIUtils.UniqueName(prefix)
+    nameCounter = nameCounter + 1
+    return string.format("RD%s%d", prefix or "Ux", nameCounter)
+end
+
+-- =============================================
+-- STRINGS
 -- =============================================
 
 local cleanNameCache = {}
-local cleanNameCacheSize = 0
 
---- Limpia un nombre eliminando el reino y normalizando a minúsculas
--- @param name string El nombre a limpiar
--- @return string El nombre limpio
+-- Limpia un nombre (elimina reino "-xxx" y espacios, minúsculas)
 function UIUtils.CleanName(name)
     if not name then return "" end
     if cleanNameCache[name] then return cleanNameCache[name] end
-    
-    -- Eliminar reino y cualquier espacio en blanco accidental
     local clean = string.gsub(name, "%-.*", "")
     clean = string.gsub(clean, "%s+", "")
     local result = string.lower(clean)
-    
-    -- Limitar tamaño de caché para evitar fuga de memoria
-    if cleanNameCacheSize > 1000 then 
-        wipe(cleanNameCache) 
-        cleanNameCacheSize = 0
-    end
-    
     cleanNameCache[name] = result
-    cleanNameCacheSize = cleanNameCacheSize + 1
-    
     return result
 end
 
-local capitalizedNamesCache = {}
-
---- Capitaliza un nombre (Primera letra Mayúscula, resto minúsculas)
--- @param name string El nombre a capitalizar
--- @return string El nombre capitalizado
+-- Capitaliza un nombre
 function UIUtils.CapitalizeName(name)
     if not name or name == "" then return "" end
-    if capitalizedNamesCache[name] then return capitalizedNamesCache[name] end
-    
-    local cleanName = string.gsub(name, "%-.*", "")
-    local result = string.upper(string.sub(cleanName, 1, 1)) .. string.lower(string.sub(cleanName, 2))
-    
-    capitalizedNamesCache[name] = result
-    return result
+    local clean = string.gsub(name, "%-.*", "")
+    return string.upper(string.sub(clean, 1, 1)) .. string.lower(string.sub(clean, 2))
+end
+
+-- Escala la fuente de un FontString (pct = 1.25 => +25%). Válido en 3.3.5a.
+function UIUtils.ScaleFont(fs, pct)
+    if not fs or not fs.GetFont then return end
+    local font, size = fs:GetFont()
+    if font and size then
+        fs:SetFont(font, math.max(8, math.floor(size * (pct or 1))))
+    end
+end
+
+-- Limita el alto de un modal a la pantalla disponible (alto máximo). Si el alto
+-- natural del modal supera el máximo, se reduce el `flexBox` (área que scrollea
+-- internamente: EditBox multilínea o scroll frame) para que el modal quepa
+-- completo. Los widgets que no caben siguen accesibles vía el scroll del flexBox.
+function UIUtils.ClampModalToScreen(modal, flexBox, margin)
+    if not modal or not modal.SetHeight then return end
+    margin = margin or 20
+    local scale = (UIParent and UIParent.GetScale and UIParent:GetScale()) or 1
+    if not scale or scale <= 0 then scale = 1 end
+    local screenH = (GetScreenHeight and GetScreenHeight() / scale) or 800
+    local maxH = math.max(180, screenH - margin * 2)
+    local naturalH = modal:GetHeight() or 0
+    if naturalH <= maxH then return end
+    local shrink = naturalH - maxH
+    if flexBox and flexBox.SetHeight then
+        flexBox:SetHeight(math.max(60, (flexBox:GetHeight() or 0) - shrink))
+    end
+    modal:SetHeight(maxH)
 end
 
 -- =============================================
--- GESTIÓN DE ROSTER Y GRUPO
--- =============================================
-
-local cachedRoster = nil
-local lastRosterUpdate = 0
-
---- Construye una caché del roster actual
--- @return table La tabla de caché del roster
-function UIUtils.BuildRosterCache()
-    local now = GetTime()
-    if cachedRoster and (now - lastRosterUpdate < 1) then
-        return cachedRoster
-    end
-
-    local rosterCache = {}
-    local numRaid = GetNumRaidMembers()
-    local numParty = GetNumPartyMembers()
-
-    if numRaid > 0 then
-        for i = 1, numRaid do
-            local unit = "raid"..i
-            local name = UnitName(unit)
-            if name and name ~= "Unknown" then
-                local _, fileName = UnitClass(unit)
-                local clean = UIUtils.CleanName(name)
-                rosterCache[clean] = { name = name, class = fileName, unit = unit }
-            end
-        end
-    elseif numParty > 0 then
-        local myName = UnitName("player")
-        if myName then
-            local _, fileName = UnitClass("player")
-            local clean = UIUtils.CleanName(myName)
-            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
-        end
-        for i = 1, numParty do
-            local unit = "party"..i
-            local name = UnitName(unit)
-            if name and name ~= "Unknown" then
-                local _, fileName = UnitClass(unit)
-                local clean = UIUtils.CleanName(name)
-                rosterCache[clean] = { name = name, class = fileName, unit = unit }
-            end
-        end
-    else
-        local myName = UnitName("player")
-        if myName then
-            local _, fileName = UnitClass("player")
-            local clean = UIUtils.CleanName(myName)
-            rosterCache[clean] = { name = myName, class = fileName, unit = "player" }
-        end
-    end
-
-    cachedRoster = rosterCache
-    lastRosterUpdate = now
-    return rosterCache
-end
-
--- =============================================
--- GESTIÓN DE FRAMES Y POOLING
+-- POOLING DE FRAMES
 -- =============================================
 
 local framePools = {}
 
---- Adquiere un frame de un pool o crea uno nuevo si no existe
--- @param poolName string Nombre único para el pool
--- @param frameType string Tipo de frame (ej: "Frame", "Button")
--- @param parent Frame El frame padre
--- @param template string Template opcional
--- @return Frame El frame adquirido
+-- Adquiere un frame de un pool o lo crea
 function UIUtils.AcquireFrame(poolName, frameType, parent, template)
     local key = poolName .. (frameType or "Frame")
     if not framePools[key] then framePools[key] = {} end
     local pool = framePools[key]
-    
+
     local frame = table.remove(pool)
     if not frame then
         frame = CreateFrame(frameType, nil, parent, template)
@@ -146,254 +199,346 @@ function UIUtils.AcquireFrame(poolName, frameType, parent, template)
     return frame
 end
 
---- Libera un frame de vuelta al pool
--- @param poolName string Nombre del pool
--- @param frame Frame El frame a liberar
+-- Libera un frame de vuelta al pool
 function UIUtils.ReleaseFrame(poolName, frame)
     local frameType = frame:GetObjectType()
     local key = poolName .. frameType
-    
     if not framePools[key] then framePools[key] = {} end
-    local pool = framePools[key]
-    
+
     frame:Hide()
     frame:SetParent(nil)
     frame:ClearAllPoints()
-    table.insert(pool, frame)
+    table.insert(framePools[key], frame)
 end
 
--- =============================================
--- UTILIDADES DE CREACIÓN DE UI
--- =============================================
-
---- Crea un label (FontString)
+-- Crea un label (FontString)
 function UIUtils.CreateLabel(parent, text, template)
     local label = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlight")
-    label:SetText(text)
+    label:SetText(text or "")
     return label
 end
 
---- Crea un EditBox estándar
-function UIUtils.CreateEditBox(name, parent, width, height, numeric)
-    local eb = CreateFrame("EditBox", name, parent, "InputBoxTemplate")
-    eb:SetSize(width or 100, height or 20)
-    eb:SetAutoFocus(false)
-    if numeric then
-        eb:SetNumeric(true)
-    end
-    return eb
+-- Mensaje vacío dentro de un scroll/panel (frame: se limpia con SetParent(nil))
+function UIUtils.CreateEmptyMessage(parent, text, y)
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(300, 20)
+    f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y or 0)
+    local fs = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    fs:SetText(text)
+    fs:SetTextColor(0.7, 0.7, 0.7)
+    fs:SetJustifyH("LEFT")
+    fs:SetPoint("LEFT", f, "LEFT", 0, 0)
+    return f
 end
 
--- =============================================
--- SISTEMA DE SEGUIMIENTO DE AURAS (BUFFS/DEBUFFS)
--- =============================================
-
--- Función para manejar clics en buffs/auras
-function UIUtils.HandleBuffClick(buffName)
-    if RaidDominion and RaidDominion.HandleAssignableRole then
-        RaidDominion:HandleAssignableRole(buffName)
-    end
+-- Convención de lista vacía (editores de lista y CRUD de bandas): frame con la
+-- indicación para crear el primer elemento, alineado a la izquierda con padding.
+-- Devuelve el frame (se limpia con SetParent(nil)).
+function UIUtils.CreateEmptyList(parent, width, text, y)
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(width, 20)
+    f:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, y or 0)
+    local fs = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    fs:SetText(text)
+    fs:SetTextColor(0.7, 0.7, 0.7)
+    fs:SetJustifyH("LEFT")
+    fs:SetPoint("LEFT", f, "LEFT", 0, 0)
+    return f
 end
 
--- Función para enviar mensajes de auras al chat
-local function SendAuraMessage(name, duration, expirationTime)
-    if not name then return end
-    
-    local message
-    
-    -- Check if the aura has a duration (expirationTime > 0)
-    if not expirationTime or expirationTime == 0 then
-        message = string.format("Aura: %s (permanente)", name)
-    else
-        local timeLeft = expirationTime - GetTime()
-        -- Handle expired auras
-        if timeLeft <= 0 then
-            message = string.format("Aura: %s - Tiempo agotado", name)
+-- Medidor de texto reutilizable: envuelve el tooltip a un ancho máximo para que
+-- no se estire a casi toda la pantalla. En 3.3.5a, wrap=true de GameTooltip
+-- dimensiona la caja según la línea más larga ANTES de envolver, así que se
+-- mide con una fuente real y se insertan saltos de línea a mano.
+local measureFS = nil
+local function MeasureTextWidth(text)
+    if not measureFS then
+        measureFS = CreateFrame("Frame", nil, UIParent)
+        measureFS:SetSize(10, 10)
+        measureFS:Hide()
+        measureFS.fs = measureFS:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    end
+    measureFS.fs:SetText(text)
+    return measureFS.fs:GetStringWidth() or 0
+end
+
+-- Envuelve palabras a un ancho máximo (px) respetando saltos de línea previos.
+local function WrapTextToWidth(text, maxW)
+    maxW = maxW or 300
+    local out = {}
+    for line in tostring(text or ""):gmatch("[^\r\n]+") do
+        if MeasureTextWidth(line) <= maxW then
+            out[#out + 1] = line
         else
-            -- Format time as HH:MM:SS or MM:SS
-            local hours = math.floor(timeLeft / 3600)
-            local minutes = math.floor((timeLeft % 3600) / 60)
-            local seconds = math.floor(timeLeft % 60)
-            
-            if hours > 0 then
-                message = string.format("Aura: %s - Tiempo restante: %d:%02d:%02d", name, hours, minutes, seconds)
+            local current = ""
+            for w in line:gmatch("%S+") do
+                local candidate = (current == "") and w or (current .. " " .. w)
+                if MeasureTextWidth(candidate) <= maxW then
+                    current = candidate
+                else
+                    if current ~= "" then out[#out + 1] = current end
+                    current = w
+                end
+            end
+            if current ~= "" then out[#out + 1] = current end
+        end
+    end
+    return table.concat(out, "\n")
+end
+
+-- Tooltip compartido con ancho acotado (no abarca toda la pantalla).
+function UIUtils.ShowTooltip(owner, text, anchor, maxW)
+    if not owner or not owner.SetPoint then return end
+    local t = tostring(text or "")
+    if t == "" then return end
+    GameTooltip:SetOwner(owner, anchor or "ANCHOR_RIGHT")
+    GameTooltip:SetText(WrapTextToWidth(t, maxW), 1, 0.82, 0)
+    GameTooltip:Show()
+end
+
+-- Muestra el tooltip de ayuda de una fila si "ui.showTooltips" está activo.
+local function ShowRowTooltip(owner, getTooltip)
+    local enabled = true
+    if RD.config and RD.config.Get then
+        enabled = RD.config:Get("ui.showTooltips", true)
+    end
+    if not enabled then return end
+    local text = getTooltip and getTooltip()
+    if not text or text == "" then return end
+    UIUtils.ShowTooltip(owner, text)
+end
+
+-- Hover sutil en filas interactivas (feedback de legibilidad). Opcionalmente
+-- muestra el tooltip de ayuda de la fila (gated por ui.showTooltips). Los
+-- controles del widget (checkbox, slider, botón, etc.) capturan el ratón, así
+-- que `extraFrames` (p.ej. widget.rdHoverTargets) recibe los mismos handlers
+-- para que el hover/tooltip cubra TODO el elemento.
+function UIUtils.AddRowHover(row, getTooltip, extraFrames)
+    if not row or not row.CreateTexture or row.rdRowFx then return end
+    local hl = row:CreateTexture(nil, "OVERLAY")
+    hl:SetAllPoints()
+    hl:SetTexture("Interface\\Buttons\\UI-Listbox-Highlight2")
+    hl:SetBlendMode("ADD")
+    hl:SetAlpha(0.12)
+    hl:Hide()
+    row.rdRowFx = true
+    local function Enter(self)
+        hl:Show()
+        ShowRowTooltip(self, getTooltip)
+    end
+    local function Leave()
+        hl:Hide()
+        GameTooltip:Hide()
+    end
+    row:EnableMouse(true)
+    row:SetScript("OnEnter", Enter)
+    row:SetScript("OnLeave", Leave)
+    for _, f in ipairs(extraFrames or {}) do
+        if f and f.SetScript and f ~= row then
+            f:SetScript("OnEnter", Enter)
+            f:SetScript("OnLeave", Leave)
+        end
+    end
+end
+
+-- Tooltip de ayuda para BOTONES principales (p.ej. "Añadir"/"Obtener" de los
+-- editores de lista), gated por ui.showTooltips.
+function UIUtils.AddButtonTooltip(button, getTooltip)
+    if not button or not button.SetScript or button.rdBtnTip then return end
+    button.rdBtnTip = true
+    button:SetScript("OnEnter", function(self)
+        -- Conserva el highlight hover del chip (MakeChipButton) si lo tiene,
+        -- ya que este OnEnter reemplaza al del chip.
+        if button.rdHl then button.rdHl:Show() end
+        ShowRowTooltip(self, getTooltip)
+    end)
+    button:SetScript("OnLeave", function()
+        if button.rdHl then button.rdHl:Hide() end
+        GameTooltip:Hide()
+    end)
+end
+
+-- Hace que un frame suba al frente al hacer clic sobre su fondo, de modo que
+-- entre las ventanas de RaidDominion siempre quede arriba la activa.
+function UIUtils.MakeClickToTop(frame)
+    if not frame or not frame.SetScript then return end
+    frame:SetScript("OnMouseDown", function()
+        if frame.Raise then frame:Raise() end
+    end)
+end
+
+-- ============================================================
+-- CONVENCIONES DE ESTILO (jerarquía y consistencia)
+-- Fuentes base de 3.3.5a: NormalLarge=15, Normal=12, NormalSmall=10.
+-- Escala sobre esas fuentes base; usar vía UI_STYLE para que todo
+-- el addon quede consistente (botones, inputs y jerarquía de títulos).
+-- ============================================================
+local UI_STYLE = {
+    -- Inputs de texto (EditBox con InputBoxTemplate): 15px legible + insets
+    input = { height = 24, textSize = 15, inset = 4 },
+    -- Jerarquía de títulos (de mayor a menor)
+    fonts = {
+        windowTitle  = { template = "GameFontNormalLarge", scale = 1.25 },  -- ~19px  · título de ventana
+        tab          = { template = "GameFontNormalSmall", scale = 1.25 },  -- ~13px  · pestañas
+        sectionTitle = { template = "GameFontNormalSmall", scale = 1.5 },   -- ~15px  · sección (dorado)
+        fieldLabel   = { template = "GameFontNormal",      scale = 1.25 },  -- ~15px  · etiqueta de campo
+        contentText  = { template = "GameFontNormalSmall", scale = 1.25 },  -- ~13px  · cuerpo/texto
+    },
+}
+
+-- Aplica la convención de input: alto estándar, insets interiores y fuente 15px.
+function UIUtils.StyleInput(editBox)
+    if not editBox or not editBox.SetTextInsets then return end
+    editBox:SetHeight(UI_STYLE.input.height)
+    editBox:SetTextInsets(UI_STYLE.input.inset, UI_STYLE.input.inset, UI_STYLE.input.inset, UI_STYLE.input.inset)
+    if editBox.SetFont then
+        local font = editBox:GetFont()
+        editBox:SetFont(font, UI_STYLE.input.textSize)
+    end
+end
+
+-- Crea un botón "chip": fondo oscuro translúcido, borde dorado suave, texto
+-- dorado centrado y un highlight en hover (estética de los spammers). Usado
+-- para pestañas, botones de salida puntual y, de forma general, todos los
+-- botones con label de las ventanas/modales. El texto queda en `btn.rdText`
+-- y se registra como el FontString del botón para que SetText()/GetText()/
+-- GetFontString() funcionen igual que en un UIPanelButtonTemplate. El estado
+-- deshabilitado (Enable/Disable) atenúa el texto, ya que un Button plano sin
+-- template no lo atenúa solo.
+function UIUtils.MakeChipButton(parent, name, w, h)
+    local btn = CreateFrame("Button", name, parent)
+    btn:SetSize(w, h)
+    btn:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 12, insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+    btn:SetBackdropColor(0.1, 0.1, 0.1, 0.75)
+    btn:SetBackdropBorderColor(1, 0.82, 0, 0.4)
+    local text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    text:SetPoint("LEFT", btn, "LEFT", 0, 0)
+    text:SetPoint("RIGHT", btn, "RIGHT", 0, 0)
+    text:SetJustifyH("CENTER")
+    text:SetTextColor(1, 0.82, 0)
+    UIUtils.ScaleFont(text, 1.25)
+    btn:SetFontString(text)
+    btn.rdText = text
+    btn:SetScript("OnDisable", function() text:SetTextColor(0.55, 0.55, 0.55) end)
+    btn:SetScript("OnEnable", function() text:SetTextColor(1, 0.82, 0) end)
+    local hl = btn:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetTexture("Interface\\Buttons\\UI-Listbox-Highlight2")
+    hl:SetBlendMode("ADD")
+    hl:SetAlpha(0.35)
+    hl:Hide()
+    btn.rdHl = hl
+    btn:SetScript("OnEnter", function() hl:Show() end)
+    btn:SetScript("OnLeave", function() hl:Hide() end)
+    return btn
+end
+
+-- Pintado de estado de un botón "chip" con borde dorado (ver MakeChipButton):
+-- la pestaña activa se resalta con borde y fondo dorados, la inactiva queda tenue.
+function UIUtils.PaintTabButton(btn, active)
+    if not btn or not btn.SetBackdropBorderColor then return end
+    if active then
+        btn:SetBackdropBorderColor(1, 0.82, 0, 0.9)
+        btn:SetBackdropColor(0.18, 0.14, 0.05, 0.85)
+    else
+        btn:SetBackdropBorderColor(1, 0.82, 0, 0.3)
+        btn:SetBackdropColor(0.1, 0.1, 0.1, 0.6)
+    end
+end
+
+--[[
+    Habilita la navegación con Tab/Shift+Tab entre EditBoxes (convención de los
+    spammer). 3.3.5a solo expone OnTabPressed (no hay OnShiftTabPressed ni
+    SetTabInserting), así que Shift se detecta con IsShiftKeyDown() y OnTabPressed
+    reemplaza el comportamiento por defecto del EditBox. `boxes` es una lista
+    ORDENADA de EditBoxes: Tab avanza, Shift+Tab retrocede, con salto circular
+    (el último vuelve al primero y viceversa).
+]]
+function UIUtils.EnableTabNavigation(boxes)
+    if type(boxes) ~= "table" then return end
+    -- Filtra entradas nil (ipairs corta en el primer hueco): el recorrido queda
+    -- contiguo, en el orden dado.
+    local list = {}
+    for i = 1, #boxes do
+        if boxes[i] and boxes[i].SetScript then
+            list[#list + 1] = boxes[i]
+        end
+    end
+    for i, box in ipairs(list) do
+        box:SetScript("OnTabPressed", function()
+            local target
+            if IsShiftKeyDown() then
+                target = list[i - 1] or list[#list]
             else
-                message = string.format("Aura: %s - Tiempo restante: %d:%02d", name, minutes, seconds)
+                target = list[i + 1] or list[1]
+            end
+            if target and target.SetFocus then target:SetFocus() end
+        end)
+    end
+end
+
+--[[
+    CheckButton con label clicable (los FontString no reciben OnClick en 3.3.5a).
+    Convención de los spammer y del widget central (RD_UI_Widgets:CreateCheckbox):
+    el cuadrado del check + un botón transparente que cubre el texto alternan el
+    estado y disparan el mismo handler que el check. Se limpia el texto del
+    template "$parentText" para que no quede un label fantasma.
+    Devuelve { check, labelButton }.
+]]
+function UIUtils.CreateToggleCheck(parent, text, onClick, opts)
+    opts = opts or {}
+    local check = CreateFrame("CheckButton", UIUtils.UniqueName("Ck"), parent, "UICheckButtonTemplate")
+    local size = opts.size or 20
+    check:SetSize(size, size)
+
+    local templateText = getglobal(check:GetName() .. "Text")
+    if templateText then
+        templateText:SetText("")
+    end
+
+    local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetText(text or "")
+    label:SetJustifyH("LEFT")
+    label:SetTextColor(0.8, 0.8, 0.8)
+
+    -- Botón transparente sobre el label para alternar (mismo handler que el check)
+    local labelButton = CreateFrame("Button", nil, parent)
+    labelButton:SetHeight(math.max(20, size))
+    labelButton:SetScript("OnClick", function(self)
+        check:SetChecked(not check:GetChecked())
+        if onClick then onClick(check) end
+    end)
+
+    -- El check dispara el mismo handler (normaliza 1/nil legacy de 3.3.5a)
+    check:SetScript("OnClick", function(self)
+        if onClick then onClick(self) end
+    end)
+
+    return check, labelButton, label
+end
+
+-- Aplica un estilo de mayor legibilidad al dropdown usado como TÍTULO de una
+-- ventana (selector de banda/regla en los spammers): alto mayor, texto más
+-- grande y con más aire. Recibe el dropdown de CreateOptionsDropdown.
+function UIUtils.StyleTitleDropdown(dropdown)
+    if not dropdown or not dropdown.button then return end
+    local btn = dropdown.button
+    btn:SetHeight(24)
+    local text = dropdown.text
+    if text then
+        text:SetJustifyH("LEFT")
+        text:SetPoint("LEFT", btn, "LEFT", 6, 0)
+        text:SetPoint("RIGHT", btn, "RIGHT", -18, 0)
+        if text.GetFont then
+            local font, size = text:GetFont()
+            if font and size then
+                text:SetFont(font, math.max(8, math.floor(size * 1.4)))
             end
         end
     end
-    
-    -- Get the default channel from MessageManager
-    local msgManager = RaidDominion and RaidDominion.modules and RaidDominion.modules.messageManager
-    if msgManager then
-        local _, defaultChannel = msgManager:GetDefaultChannel()
-        SendDelayedMessages({message}, defaultChannel)
-    end
 end
 
--- Hook a los botones de auras
-local function HookAuraButtons(unit)
-    local buffPrefix = (unit == "player") and "BuffButton" or "TargetFrameBuff"
-    local debuffPrefix = (unit == "player") and "DebuffButton" or "TargetFrameDebuff"
-    local maxAuras = 40
-
-    for i = 1, maxAuras do
-        local buff = _G[buffPrefix .. i]
-        local debuff = _G[debuffPrefix .. i]
-
-        -- Hook para buffs
-        if buff and not buff.hooked then
-            buff:EnableMouse(true)
-            buff:SetScript("OnMouseUp", function(self, button)
-                if button == "LeftButton" then
-                    local idx = self:GetID()
-                    local name, _, _, _, _, duration, expirationTime = UnitBuff(unit, idx)
-                    if name then
-                        SendAuraMessage(name, duration, expirationTime)
-                    end
-                end
-            end)
-            buff.hooked = true
-        end
-
-        -- Hook para debuffs
-        if debuff and not debuff.hooked then
-            debuff:EnableMouse(true)
-            debuff:SetScript("OnMouseUp", function(self, button)
-                if button == "LeftButton" then
-                    local idx = self:GetID()
-                    local name, _, _, _, _, duration, expirationTime = UnitDebuff(unit, idx)
-                    if name then
-                        SendAuraMessage(name, duration, expirationTime)
-                    end
-                end
-            end)
-            debuff.hooked = true
-        end
-    end
-end
-
--- =============================================
--- SISTEMA DE SEGUIMIENTO DE ENCANTAMIENTOS DE ARMAS
--- =============================================
-
--- Constantes para las ranuras de equipo
-local SLOT_MAIN = 16   -- Main Hand
-local SLOT_OFF = 17    -- Off Hand
-local SLOT_RANGED = 18 -- Ranged
-
--- Función para enviar mensajes de encantamiento de armas
-local function SendWeaponMessage(slotName, slotId, ms)
-    if ms == 0 then return end
-    
-    local itemLink = GetInventoryItemLink("player", slotId)
-    local itemName = itemLink and GetItemInfo(itemLink) or "Arma"
-    local minutes = math.floor(ms / 60000)
-    local seconds = math.floor((ms % 60000) / 1000)
-    local timeText = string.format("%d:%02d", minutes, seconds)
-    
-    local message = string.format("%s (%s) - Tiempo restante: %s", 
-        itemName, slotName, timeText)
-    
-    -- Get the default channel from MessageManager
-    local msgManager = RaidDominion and RaidDominion.modules and RaidDominion.modules.messageManager
-    if msgManager then
-        local _, defaultChannel = msgManager:GetDefaultChannel()
-        SendDelayedMessages({message}, defaultChannel)
-    end
-end
-
--- Hook para los botones de encantamiento temporal
-local function HookWeaponEnchantButtons()
-    for i = 1, 3 do  -- TempEnchant1, TempEnchant2, TempEnchant3
-        local btn = _G["TempEnchant" .. i]
-        
-        if btn and not btn.hooked then
-            btn:EnableMouse(true)
-            btn:SetScript("OnMouseUp", function(self, button)
-                if button == "LeftButton" then
-                    local hasMain, mainExp, _, _, _, _, hasOff, offExp, _, _, hasRanged, rangedExp = GetWeaponEnchantInfo()
-                    
-                    -- TempEnchant1 → puede ser OFFHAND si existe, sino MAIN
-                    -- TempEnchant2 → MAIN si hay OFFHAND
-                    -- TempEnchant3 → RANGED (incluye piedras de brujo)
-                    if i == 1 then
-                        if hasOff then
-                            SendWeaponMessage("Off Hand", SLOT_OFF, offExp)
-                        elseif hasMain then
-                            SendWeaponMessage("Main Hand", SLOT_MAIN, mainExp)
-                        end
-                    elseif i == 2 and hasMain then
-                        SendWeaponMessage("Main Hand", SLOT_MAIN, mainExp)
-                    elseif i == 3 and hasRanged then
-                        SendWeaponMessage("Ranged", SLOT_RANGED, rangedExp)
-                    end
-                end
-            end)
-            btn.hooked = true
-        end
-    end
-end
-
--- =============================================
--- INICIALIZACIÓN DEL SISTEMA DE AURAS Y ENCANTAMIENTOS
--- =============================================
-
-local auraSystemInitialized = false
-
-function UIUtils.InitializeAuraSystem()
-    if auraSystemInitialized then return end
-    
-    -- Frame para manejar eventos
-    local eventFrame = CreateFrame("Frame", "RDAuraSystemFrame", UIParent)
-    
-    -- Registrar eventos
-    eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
-    eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-    eventFrame:RegisterEvent("UNIT_AURA")
-    eventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
-    eventFrame:RegisterEvent("PLAYER_LOGIN")
-    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    
-    -- Manejador de eventos
-    eventFrame:SetScript("OnEvent", function(self, event, unit, ...)
-        -- Actualizar hooks cuando:
-        -- - Cambia el objetivo
-        -- - Cambia la composición del grupo
-        -- - Se actualizan las auras del jugador/objetivo
-        -- - Cambia el equipo del jugador
-        if event == "PLAYER_TARGET_CHANGED" 
-            or event == "GROUP_ROSTER_UPDATE"
-            or (event == "UNIT_AURA" and (unit == "player" or unit == "target"))
-            or (event == "UNIT_INVENTORY_CHANGED" and unit == "player")
-            or event == "PLAYER_LOGIN"
-            or event == "PLAYER_ENTERING_WORLD"
-        then
-            HookAuraButtons("player")
-            HookAuraButtons("target")
-            HookWeaponEnchantButtons()
-        end
-    end)
-    
-    -- Ejecutar hooks iniciales
-    if IsLoggedIn() then
-        HookAuraButtons("player")
-        HookAuraButtons("target")
-        HookWeaponEnchantButtons()
-    end
-    
-    auraSystemInitialized = true
-end
-
--- Register the module
-RaidDominion.UIUtils = UIUtils
-
--- Inicializar el sistema de auras cuando el addon esté listo
-if IsLoggedIn() then
-    UIUtils.InitializeAuraSystem()
-else
-    local f = CreateFrame("Frame")
-    f:RegisterEvent("PLAYER_LOGIN")
-    f:SetScript("OnEvent", function() UIUtils.InitializeAuraSystem() end)
-end
+RD.UIUtils = UIUtils
+RD.ui = RD.ui or {}
+RD.ui.style = UI_STYLE
 return UIUtils

@@ -1,417 +1,409 @@
 --[[
     RD_UI_MenuFactory.lua
-    PROPÓSITO: Maneja la creación de menús siguiendo el patrón de fábrica.
-    DEPENDENCIAS: RD_Constants.lua, RD_Menu.lua
+    PROPÓSITO: Fábrica de menús. Renderiza submenús a partir de definiciones de datos
+              (RD.constants.MENU_DEFINITIONS) con layout escalable por columnas
+              (grid 4px, anclas relativas, offsets enteros).
     API PÚBLICA:
-        - RD.UI.MenuFactory:CreateMenu(items, columns, assignable, roleType, barItems, onClick)
-        - RD.UI.MenuFactory:RenderBar(buttonBar, barItems)
+        - RD.ui.menuFactory:BuildMenu(definitions, opts)
+        - RD.ui.menuFactory:RenderBar(buttonBar, barItems)
+    EVENTOS: Ninguno (los botones disparan acciones vía RD.MenuActions)
 ]]
 
 local addonName, private = ...
-local RD = _G["RaidDominion"] or {}
-_G["RaidDominion"] = RD
-
--- Obtener constantes
-local CONSTANTS = RD.constants or {}
-local MENU_CONSTANTS = CONSTANTS.SIZES and CONSTANTS.SIZES.MENU or {}
-local COLORS = CONSTANTS.COLORS or {}
-local BACKDROP = CONSTANTS.BACKDROP or {}
-local UI = CONSTANTS.UI or {}
+local RD = _G.RaidDominion or {}
+_G.RaidDominion = RD
 
 local MenuFactory = {}
 
--- Constantes locales
-local LABEL_WIDTH = MENU_CONSTANTS.LABEL_WIDTH or 185
-local LABEL_HEIGHT = MENU_CONSTANTS.LABEL_HEIGHT or 22
-local BUTTON_SIZE = MENU_CONSTANTS.BUTTON_SIZE or 20
-local BUTTON_MARGIN = MENU_CONSTANTS.BUTTON_MARGIN or 1
-local COLUMN_SPACING = MENU_CONSTANTS.COLUMN_SPACING or 20
-local MAX_COLUMNS = MENU_CONSTANTS.MAX_COLUMNS or 2
+-- Constantes de grid (deben coincidir con RD.constants.GRID)
+local GRID = (RD.constants and RD.constants.GRID) or {}
+local MAX_ITEMS_PER_COLUMN = GRID.MAX_ITEMS_PER_COLUMN or 9
+local MAX_COLUMNS = GRID.MAX_COLUMNS or 2
+local LABEL_WIDTH = GRID.LABEL_WIDTH or 184
+local MENU_ITEM_HEIGHT = GRID.MENU_ITEM_HEIGHT or 22
+local MENU_ITEM_GAP = GRID.MENU_ITEM_GAP or 2
+local COLUMN_SPACING = GRID.COLUMN_SPACING or 16
+local BUTTON_SIZE = GRID.BUTTON_SIZE or 20
+local GUTTER = GRID.GUTTER or 4
 
--- =============================================
--- AYUDANTES DE CREACIÓN DE ELEMENTOS UI
--- =============================================
-
---- Crea un frame básico
-function MenuFactory:CreateFrame(name, parent, template, width, height)
-    local frame = CreateFrame("Frame", name, parent, template)
-    frame:SetSize(width or 100, height or 100)
-    return frame
-end
-
---- Crea un botón estándar
-function MenuFactory:CreateButton(name, parent, text, width, height, onClick)
-    local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
-    button:SetSize(width or 100, height or 24)
-    button:SetText(text or "Button")
-    if onClick then
-        button:SetScript("OnClick", onClick)
-    end
-    return button
-end
-
---- Crea una etiqueta (fontstring)
-function MenuFactory:CreateLabel(parent, text, font)
-    local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
-    label:SetText(text or "")
-    return label
-end
-
---- Crea un cuadro de edición (EditBox)
-function MenuFactory:CreateEditBox(name, parent, width, height, numeric)
-    local eb = CreateFrame("EditBox", name, parent, "InputBoxTemplate")
-    eb:SetSize(width or 100, height or 25)
-    eb:SetAutoFocus(false)
-    if numeric then eb:SetNumeric(true) end
-    return eb
-end
-
---- Crea un botón con estilo personalizado e icono
-function MenuFactory:CreateStyledButton(name, parent, width, height, text, icon, tooltip)
-    local btn = CreateFrame("Button", name, parent)
-    btn:SetSize(width or 30, height or 30)
-    
-    if icon then
-        local tex = btn:CreateTexture(nil, "ARTWORK")
-        tex:SetAllPoints()
-        tex:SetTexture(icon)
-        btn.icon = tex
-    end
-
-    local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
-    highlight:SetAllPoints()
-    highlight:SetTexture("Interface/Buttons/ButtonHilight-Square")
-    highlight:SetBlendMode("ADD")
-    
-    if text then
-        local label = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        label:SetPoint("BOTTOM", 0, -12)
-        label:SetText(text)
-    end
-    
-    if tooltip then
-        btn:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:SetText(tooltip, 1, 1, 1, 1, true)
-            GameTooltip:Show()
-        end)
-        btn:SetScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-    end
-    
-    return btn
-end
-
---- Crea una sección de ayuda con título y contenido
-function MenuFactory:CreateHelpSection(parent, title, content, yOffset)
-    local section = CreateFrame("Frame", nil, parent)
-    section:SetPoint("TOPLEFT", 10, yOffset)
-    section:SetPoint("RIGHT", -10, 0)
-    section:SetHeight(1)
-    
-    local titleText = section:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    titleText:SetPoint("TOPLEFT")
-    titleText:SetText(title)
-    titleText:SetTextColor(1, 0.82, 0)
-    
-    local contentFrame = CreateFrame("Frame", nil, section)
-    contentFrame:SetPoint("TOPLEFT", titleText, "BOTTOMLEFT", 0, -5)
-    contentFrame:SetPoint("RIGHT", section, "RIGHT", -10, 0)
-    
-    local contentText = contentFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    contentText:SetPoint("TOPLEFT")
-    contentText:SetPoint("RIGHT")
-    contentText:SetJustifyH("LEFT")
-    contentText:SetJustifyV("TOP")
-    contentText:SetWordWrap(true)
-    contentText:SetText(content)
-    
-    local function UpdateSizes()
-        contentText:SetHeight(0)
-        local textWidth = contentFrame:GetWidth()
-        contentText:SetWidth(textWidth)
-        local contentHeight = contentText:GetStringHeight()
-        contentFrame:SetHeight(contentHeight)
-        local _, titleHeight = titleText:GetFont()
-        section:SetHeight(titleHeight + contentHeight + 15)
-        return section:GetHeight()
-    end
-    
-    contentFrame:SetScript("OnSizeChanged", UpdateSizes)
-    UpdateSizes()
-    return section:GetHeight() + 10, section
-end
-
---- Crea un checkbox
-function MenuFactory:CreateCheckbox(name, parent, label, onClick)
-    local check = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-    if _G[check:GetName().."Text"] then
-        _G[check:GetName().."Text"]:SetText(label or "")
-    end
-    if onClick then
-        check:SetScript("OnClick", function(self) onClick(self:GetChecked()) end)
-    end
-    return check
-end
-
---- Crea un scroll frame
-function MenuFactory:CreateScrollFrame(name, parent, width, height)
-    local scrollFrame = CreateFrame("ScrollFrame", name, parent, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetSize(width or 200, height or 200)
-    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollFrame:SetScrollChild(scrollChild)
-    scrollChild:SetWidth(width or 200)
-    scrollChild:SetHeight(1)
-    local scrollBar = _G[name.."ScrollBar"]
-    if scrollBar then scrollBar:SetValue(0) end
-    return scrollFrame, scrollChild
-end
+-- Color dorado de acento (1, 0.82, 0)
+local GOLD_R, GOLD_G, GOLD_B = unpack((RD.constants and RD.constants.COLORS and RD.constants.COLORS.GOLD) or { 1, 0.82, 0 })
 
 --[[
-    Crea un menú con el diseño especificado
-    @param parent Marco padre del menú
-    @param items Tabla con los elementos del menú
-    @param yOffset Desplazamiento vertical inicial
-    @param onClick Función a ejecutar al hacer clic
-    @param assignable Indica si los elementos son asignables
-    @param roleType Tipo de rol para elementos asignables
-    @param barItems Elementos de la barra inferior (opcional)
-    @return Frame del menú, ancho y alto
+    Construye un frame de menú a partir de una lista de definiciones.
+    opts: parent, yOffset, columns (máximo de columnas), itemsPerColumn
+          (elementos por columna), onClick(item, button), onRightClick(item, button),
+          onIconClick(item, iconButton), noBackdrop (default true), centerLabels,
+          movable, barItems, tooltipEnabled.
+    Los ítems con `assignable` muestran "<asignado> [<ítem>]" en el label y un
+    botón-icono a la derecha que invoca opts.onIconClick.
+    Devuelve menu, width, height (sizes en enteros).
 ]]
-function MenuFactory:CreateMenu(parent, items, yOffset, onClick, assignable, roleType, barItems, onRightClick, noBackdrop, centerLabels, movable)
+function MenuFactory:BuildMenu(definitions, opts)
+    opts = opts or {}
+    local parent = opts.parent or UIParent
+    local yOffset = opts.yOffset or 0
+
     local menu = CreateFrame("Frame", nil, parent)
-    
-    -- Configuración básica del menú
-    menu:SetFrameStrata("MEDIUM")
-    menu:SetClampedToScreen(true)
-    menu:SetMovable(movable and true or false)
-    menu:EnableMouse(true)
-    if movable then
-        menu:RegisterForDrag("LeftButton")
-        menu:SetScript("OnDragStart", menu.StartMoving)
-        menu:SetScript("OnDragStop", menu.StopMovingOrSizing)
-    else
-        menu:SetScript("OnDragStart", nil)
-        menu:SetScript("OnDragStop", nil)
-    end
-    
-    -- Configurar el fondo
-    if not noBackdrop then
+    menu:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -yOffset)
+
+    -- Backdrop solo si el frame flotante no lo aporta (noBackdrop default true)
+    if opts.noBackdrop == false then
         menu:SetBackdrop({
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            tile = false,
-            edgeSize = 16,
-            insets = { left = 5, right = 5, top = 5, bottom = 5 }
+            bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 12,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 },
         })
+        menu:SetBackdropColor(0, 0, 0, 0.9)
+        menu:SetBackdropBorderColor(1, 1, 1, 0.5)
     end
-    
-    -- Calcular columnas
-    local overrideColumns = (type(yOffset) == "number" and yOffset > 0) and yOffset or nil
-    
-    -- Configuración de columnas
-    local maxItemsPerColumn = 7  -- Máximo de elementos por columna
-    local columns = 1
-    
-    -- Si hay más elementos que el máximo por columna, calcular columnas necesarias
-    if #items > maxItemsPerColumn then
-        columns = math.ceil(#items / maxItemsPerColumn)
-    end
-    
-    -- Usar el valor de overrideColumns si está definido
-    if overrideColumns then
-        columns = overrideColumns
-    end
-    
-    -- Asegurarse de no exceder el número máximo de columnas
-    columns = math.min(MAX_COLUMNS, columns)
-    
-    -- Calcular el número real de filas necesarias
-    local rows = math.ceil(#items / columns)
-    
-    -- Asegurarse de que no haya más de maxItemsPerColumn filas por columna
-    if rows > maxItemsPerColumn then
-        rows = maxItemsPerColumn
-        columns = math.ceil(#items / rows)
-    end
-    
-    local menuWidth = (LABEL_WIDTH * columns) + (COLUMN_SPACING * (columns - 1))
-    local menuHeight = math.max(0, (rows * LABEL_HEIGHT))
-    
-    -- Ajustar para la barra de botones si existe
-    if barItems and #barItems > 0 then
-        menuHeight = menuHeight + BUTTON_SIZE
-    end
-    
-    menu:SetSize(menuWidth, menuHeight)
-    
-    -- Crear botones del menú
-    for i, item in ipairs(items) do
-        local col = (i - 1) % columns
-        local row = math.floor((i - 1) / columns)
-        
-        local button = CreateFrame("Button", nil, menu, "UIPanelButtonTemplate")
-        button:SetSize(LABEL_WIDTH, LABEL_HEIGHT)
-        button:SetPoint("TOPLEFT", col * (LABEL_WIDTH + COLUMN_SPACING), -row * LABEL_HEIGHT)
-        
-        -- Configurar texto del botón
-        local fontString = button:GetFontString()
-        if fontString then
-            fontString:SetFontObject("GameFontHighlight")
-            fontString:ClearAllPoints()
-            if centerLabels then
-                fontString:SetJustifyH("CENTER")
-                fontString:SetPoint("CENTER", 0, 0)
-            else
-                fontString:SetJustifyH("LEFT")
-                fontString:SetPoint("LEFT", 5, 0)
-                fontString:SetPoint("RIGHT", -5, 0)
+
+    -- Filtrar ítems deshabilitados (sin huecos) y ordenar por item.order
+    local visible = {}
+    if definitions then
+        for _, item in ipairs(definitions) do
+            local enabled = true
+            if type(item.enabled) == "function" then
+                enabled = item.enabled()
             end
-            fontString:SetWordWrap(false)
+            if enabled then
+                table.insert(visible, item)
+            end
         end
-        
-        button:SetText(item.name or item)
-        
-        -- Estilo de texto simple (usar texturas vacías o transparentes)
-        local emptyTexture = "Interface\\Buttons\\UI-Slot-Background"
-        button:SetNormalTexture(nil)
-        button:SetPushedTexture(nil)
-        button:SetDisabledTexture(nil)
+    end
+
+    -- Orden estable por order (los ítems sin order conservan su posición relativa)
+    for i = 2, #visible do
+        local key = visible[i]
+        local keyOrder = key.order or 0
+        local j = i - 1
+        while j >= 1 and (visible[j].order or 0) > keyOrder do
+            visible[j + 1] = visible[j]
+            j = j - 1
+        end
+        visible[j + 1] = key
+    end
+
+    -- Menú vacío: frame con tamaño mínimo
+    if #visible == 0 then
+        menu:SetSize(LABEL_WIDTH, MENU_ITEM_HEIGHT)
+        return menu, LABEL_WIDTH, MENU_ITEM_HEIGHT
+    end
+
+    -- Cálculo de columnas DETERMINISTA: solo depende del número de ítems y de
+    -- `opts.itemsPerColumn` (elementos por columna). columnas = clamp(ceil(n /
+    -- itemsPerColumn), 2, MAX_COLUMNS). Mínimo 2 columnas (como la base v2);
+    -- tope duro global MAX_COLUMNS. Así el único control de la config (General)
+    -- tiene efecto visible y predecible en vivo.
+    local itemsPerColumn = opts.itemsPerColumn and opts.itemsPerColumn > 0 and math.floor(opts.itemsPerColumn) or MAX_ITEMS_PER_COLUMN
+    local numColumns = math.max(2, math.min(MAX_COLUMNS, math.ceil(#visible / itemsPerColumn)))
+    local rows = math.ceil(#visible / numColumns)
+
+    local barItems = opts.barItems
+    for i = 1, #visible do
+        local item = visible[i]
+        local col = (i - 1) % numColumns
+        local row = math.floor((i - 1) / numColumns)
+        local x = col * (LABEL_WIDTH + COLUMN_SPACING)
+        local y = -row * (MENU_ITEM_HEIGHT + MENU_ITEM_GAP)
+
+        local button = CreateFrame("Button", nil, menu)
+        button:SetSize(LABEL_WIDTH, MENU_ITEM_HEIGHT)
+        button:SetPoint("TOPLEFT", menu, "TOPLEFT", x, y)
+        -- Clic izq = ingresar (submenú/acción); clic der = regresar al menú previo.
+        -- Por defecto un Button plano solo registra clic izquierdo.
+        button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         button:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-        
-        -- Si estamos en combate, forzar la eliminación de texturas de plantilla
-        if InCombatLockdown() then
-            local n = button:GetNormalTexture()
-            if n then n:SetAlpha(0) end
-            local p = button:GetPushedTexture()
-            if p then p:SetAlpha(0) end
-            local d = button:GetDisabledTexture()
-            if d then d:SetAlpha(0) end
+
+        -- Texto del ítem. Para los asignables se muestra "<jugador> [<ítem>]"
+        -- cuando hay asignación, y se reserva espacio a la derecha para el
+        -- botón-icono de asignar/desasignar (como el addon base).
+        local text = button:GetFontString()
+        if not text then
+            text = button:CreateFontString(nil, "OVERLAY")
+            button:SetFontString(text)
         end
-        if button:GetFontString() then
-            button:GetFontString():SetTextColor(1, 1, 1, 1)
+        text:SetFontObject("GameFontHighlight")
+        local display = item.name or ""
+        if item.assignable and item.assigned then
+            display = item.assigned .. " [" .. display .. "]"
         end
-        button:SetScript("OnEnter", function(self)
-            local fs = self:GetFontString()
-            if fs then fs:SetTextColor(1, 0.82, 0) end
-        end)
-        button:SetScript("OnLeave", function(self)
-            local fs = self:GetFontString()
-            if fs then fs:SetTextColor(1, 1, 1, 1) end
-        end)
-        
-        -- Configurar acciones del botón
-        button:SetScript("OnClick", function(self, btn)
-            if btn == "LeftButton" then
-                if onClick then
-                    onClick(item.name or item, self)
-                end
-            elseif btn == "RightButton" then
-                if onRightClick then
-                    onRightClick(item, self)
-                else
-                    if RD.ui and RD.ui.menu and RD.ui.menu.NavigateTo then
-                        RD.ui.menu:NavigateTo("Main")
-                    end
-                end
+        text:SetText(display)
+        local textLeft = 5
+        local textRight = item.submenu and -20 or -5
+
+        if item.assignable then
+            -- Fondo indicador de asignación: verde si está asignado, oscuro si no
+            local bg = button:CreateTexture(nil, "BACKGROUND")
+            bg:SetAllPoints()
+            if item.assigned then
+                bg:SetTexture(0.15, 0.45, 0.15, 0.6)
+            else
+                bg:SetTexture(0.15, 0.15, 0.15, 0.4)
             end
-        end)
-        
-        -- Configurar tooltip
-        if item.tooltip then
-            button:SetScript("OnEnter", function(self)
-                local fs = self:GetFontString()
-                if fs then fs:SetTextColor(1, 0.82, 0) end
-                
-                if RD.config and RD.config.Get and not RD.config:Get("ui.showTooltips", true) then
+            button.bg = bg
+
+            -- Botón-icono a la derecha (asignar/desasignar). Solo clic izquierdo:
+            -- el clic derecho del menú es para "volver", no para asignar.
+            local iconBtn = CreateFrame("Button", nil, button)
+            iconBtn:SetSize(18, 18)
+            iconBtn:SetPoint("RIGHT", button, "RIGHT", -4, 0)
+            iconBtn:RegisterForClicks("LeftButtonUp")
+            local iconTex = iconBtn:CreateTexture(nil, "ARTWORK")
+            iconTex:SetAllPoints()
+            iconTex:SetTexture(item.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+            iconBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+            iconBtn:SetScript("OnClick", function(self, btn)
+                if opts.onIconClick then
+                    opts.onIconClick(item, self, btn)
+                end
+            end)
+            iconBtn:SetScript("OnEnter", function(self)
+                local tooltipEnabled = true
+                if type(opts.tooltipEnabled) == "function" then
+                    tooltipEnabled = opts.tooltipEnabled()
+                end
+                if not tooltipEnabled then
+                    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
                     return
                 end
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:SetText(item.name or "", 1, 1, 1, 1, true)
-                GameTooltip:AddLine(item.tooltip, 1, 0.82, 0, true)
+                if item.isBand then
+                    GameTooltip:SetText("Banda", 1, 1, 1, 1, true)
+                    GameTooltip:AddLine("Clic: Abrir el gestor de jugadores de la banda", 1, 0.82, 0, true)
+                else
+                    GameTooltip:SetText("Asignación rápida", 1, 1, 1, 1, true)
+                    if item.assigned then
+                        GameTooltip:AddLine("Clic: Desasignar", 1, 0.82, 0, true)
+                    else
+                        GameTooltip:AddLine("Clic: Asignar al objetivo seleccionado", 1, 0.82, 0, true)
+                    end
+                end
                 GameTooltip:Show()
             end)
-            
-            button:SetScript("OnLeave", function(self)
-                local fs = self:GetFontString()
-                if fs then fs:SetTextColor(1, 1, 1, 1) end
+            iconBtn:SetScript("OnLeave", function()
                 GameTooltip:Hide()
             end)
+            textRight = -26
+        elseif item.icon then
+            -- Icono inline a la izquierda (ítems no asignables)
+            local icon = button:CreateTexture(nil, "ARTWORK")
+            icon:SetSize(16, 16)
+            icon:SetPoint("LEFT", button, "LEFT", 4, 0)
+            icon:SetTexture(item.icon)
+            icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+            textLeft = 24
         end
-        
-        -- Botón de asignación si es necesario
-        if assignable and roleType then
-            local assignButton = CreateFrame("Button", nil, menu, "UIPanelButtonTemplate")
-            assignButton:SetSize(BUTTON_SIZE, BUTTON_SIZE)
-            assignButton:SetPoint("LEFT", button, "RIGHT", 2, 0)
-            
-            if item.icon then
-                local texture = assignButton:CreateTexture(nil, "OVERLAY")
-                texture:SetAllPoints(assignButton)
-                texture:SetTexture(item.icon)
-                texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-                assignButton.icon = texture
+
+        -- Elemento ACTIVO (banda en spam o regla seleccionada): fondo dorado
+        -- PULSANTE + punto dorado a la izquierda del texto (sin glifos de
+        -- flecha, que no existen en la fuente de 3.3.5a). Aplica a ítems
+        -- asignables (bandas) y NO asignables (reglas). El OnUpdate solo corre
+        -- mientras el menú está visible y hay un elemento activo; se apaga al
+        -- ocultarse el menú.
+        local isActive = item.spamming or item.active
+        if isActive then
+            local bg = button.bg
+            if not bg then
+                bg = button:CreateTexture(nil, "BACKGROUND")
+                bg:SetAllPoints()
+                button.bg = bg
             end
-            
-            assignButton:SetScript("OnClick", function()
-                -- Implementar lógica de asignación
-                if RD.MenuActions and RD.MenuActions.Execute then
-                    RD.MenuActions:Execute("ResetRoleAssignment", {role = item.name, button = button})
-                end
-            end)
-            
-            -- Ajustar ancho del botón principal
-            button:SetWidth(LABEL_WIDTH - BUTTON_SIZE - 5)
+            bg:SetTexture(GOLD_R, GOLD_G, GOLD_B, 0.5)
+            bg:SetVertexColor(1, 1, 1, 1)
+            -- El punto se coloca después del icono inline cuando lo hay (no asignable)
+            local hasInlineIcon = (not item.assignable) and item.icon ~= nil
+            local dot = button:CreateTexture(nil, "OVERLAY")
+            dot:SetSize(6, 6)
+            dot:SetPoint("LEFT", button, "LEFT", hasInlineIcon and 26 or 6, 0)
+            dot:SetTexture(GOLD_R, GOLD_G, GOLD_B, 1)
+            button.rdDot = dot
+            textLeft = hasInlineIcon and 34 or 18
+            if not menu.rdSpamPulse then
+                menu.rdSpamPulse = 0
+                menu.rdSpamButtons = {}
+                menu:SetScript("OnUpdate", function(self, elapsed)
+                    if not self:IsShown() then return end
+                    self.rdSpamPulse = (self.rdSpamPulse or 0) + elapsed
+                    local a = 0.45 + 0.3 * (0.5 + 0.5 * math.sin(self.rdSpamPulse * 4))
+                    for _, b in ipairs(self.rdSpamButtons or {}) do
+                        if b.bg and b.bg.SetAlpha then b.bg:SetAlpha(a) end
+                        if b.rdDot and b.rdDot.SetAlpha then b.rdDot:SetAlpha(a) end
+                    end
+                end)
+            end
+            table.insert(menu.rdSpamButtons, button)
         end
+
+        if opts.centerLabels then
+            text:SetJustifyH("CENTER")
+            text:SetPoint("LEFT", button, "LEFT", 0, 0)
+            text:SetPoint("RIGHT", button, "RIGHT", 0, 0)
+        else
+            text:SetJustifyH("LEFT")
+            text:SetPoint("LEFT", button, "LEFT", textLeft, 0)
+            text:SetPoint("RIGHT", button, "RIGHT", textRight, 0)
+        end
+        if item.isHint then
+            text:SetTextColor(0.6, 0.6, 0.6)
+        elseif (item.spamming or item.active) then
+            text:SetTextColor(GOLD_R, GOLD_G, GOLD_B)
+        else
+            text:SetTextColor(1, 1, 1)
+        end
+
+        -- Indicador de submenú "»" en el borde derecho
+        if item.submenu then
+            local indicator = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            indicator:SetText("»")
+            indicator:SetTextColor(GOLD_R, GOLD_G, GOLD_B)
+            indicator:SetPoint("RIGHT", button, "RIGHT", -6, 0)
+        end
+
+        -- OnEnter/OnLeave: color dorado + tooltip
+        button:SetScript("OnEnter", function(self)
+            if not item.isHint then text:SetTextColor(GOLD_R, GOLD_G, GOLD_B) end
+            local tooltipEnabled = true
+            if type(opts.tooltipEnabled) == "function" then
+                tooltipEnabled = opts.tooltipEnabled()
+            end
+            if tooltipEnabled and item.tooltip then
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:SetText(item.name or "", 1, 1, 1, 1, true)
+                GameTooltip:AddLine(item.tooltip, GOLD_R, GOLD_G, GOLD_B, true)
+                GameTooltip:Show()
+            end
+        end)
+        button:SetScript("OnLeave", function(self)
+            if item.isHint then
+                text:SetTextColor(0.6, 0.6, 0.6)
+            elseif (item.spamming or item.active) then
+                text:SetTextColor(GOLD_R, GOLD_G, GOLD_B)
+            else
+                text:SetTextColor(1, 1, 1)
+            end
+            if GameTooltip:IsOwned(self) then
+                GameTooltip:Hide()
+            end
+        end)
+
+        -- OnClick: izquierdo ejecuta la acción, derecho el callback alternativo
+        button:SetScript("OnClick", function(self, btn)
+            if btn == "LeftButton" then
+                -- Los hints son informativos: el clic izquierdo no hace nada
+                if item.isHint then return end
+                if opts.onClick then
+                    opts.onClick(item, self)
+                end
+            elseif btn == "RightButton" then
+                -- El clic derecho SIEMPRE vuelve al menú anterior (incluidos hints)
+                if opts.onRightClick then
+                    opts.onRightClick(item, self)
+                end
+            end
+        end)
     end
-    
-    -- Crear barra de botones si se especifica
+
+    -- Barra inferior de botones-icono
     if barItems and #barItems > 0 then
-        local buttonBar = CreateFrame("Frame", nil, menu)
-        local totalWidth = (#barItems * BUTTON_SIZE) + ((#barItems - 1) * BUTTON_MARGIN)
-        buttonBar:SetPoint("BOTTOM", 0, 0)
-        buttonBar:SetSize(totalWidth, BUTTON_SIZE)
-        
-        for i, barItem in ipairs(barItems) do
-            local button = CreateFrame("Button", nil, buttonBar, "UIPanelButtonTemplate")
-            button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
-            button:SetPoint("LEFT", (i - 1) * (BUTTON_SIZE + BUTTON_MARGIN), 0)
-            
-            if barItem.icon then
-                local texture = button:CreateTexture(nil, "OVERLAY")
-                texture:SetAllPoints(button)
-                texture:SetTexture(barItem.icon)
-                texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-                button.icon = texture
-            end
-            
-            button:SetScript("OnClick", function(self, btn)
-                if RD.MenuActions and RD.MenuActions.Execute then
-                    RD.MenuActions:Execute(barItem.action or "DefaultAction", {button = btn, item = barItem})
-                end
-            end)
-            
-            -- Tooltip para botones de la barra
-            if barItem.tooltip then
-                button:SetScript("OnEnter", function(self)
-                    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                    GameTooltip:SetText(barItem.tooltip, 1, 1, 1, 1, true)
-                    GameTooltip:Show()
-                end)
-                
-                button:SetScript("OnLeave", function()
-                    GameTooltip:Hide()
-                end)
-            end
-        end
+        local bar = CreateFrame("Frame", nil, menu)
+        bar:SetPoint("BOTTOMLEFT", menu, "BOTTOMLEFT", 0, 0)
+        bar:SetPoint("BOTTOMRIGHT", menu, "BOTTOMRIGHT", 0, 0)
+        bar:SetHeight(BUTTON_SIZE)
+        self:RenderBar(bar, barItems, opts)
     end
-    
-    return menu, menuWidth, menuHeight
+
+    -- Dimensiones finales (enteros)
+    local width = numColumns * LABEL_WIDTH + (numColumns - 1) * COLUMN_SPACING
+    local height = rows * MENU_ITEM_HEIGHT + (rows - 1) * MENU_ITEM_GAP
+    if barItems and #barItems > 0 then
+        height = height + BUTTON_SIZE + GUTTER
+    end
+
+    menu:SetSize(width, height)
+
+    -- Arrastre opcional (el frame flotante principal suele gestionarlo él mismo)
+    if opts.movable then
+        menu:SetMovable(true)
+        menu:RegisterForDrag("LeftButton")
+        menu:SetScript("OnDragStart", function(self)
+            self:StartMoving()
+        end)
+        menu:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+        end)
+    end
+
+    return menu, width, height
 end
 
--- Registrar el módulo
-RD.UI = RD.UI or {}
-RD.UI.MenuFactory = MenuFactory
+--[[
+    Barra inferior de botones-icono, estilo base v2:
+    - Botones planos de (BUTTON_SIZE - 3)px cuyo icono es la textura a pantalla
+      completa (sin template que lo tape).
+    - Highlight "UI-Panel-Button-Highlight" (brillo dorado) en ADD al pasar.
+    - Posicionados con (i-1)*(BUTTON_SIZE+BUTTON_PADDING) y offset y = -1.
+    Cada barItem: { icon, action, actionRight, tooltip }.
+]]
+function MenuFactory:RenderBar(buttonBar, barItems, opts)
+    if not buttonBar or not barItems then return end
+    opts = opts or {}
 
+    local AB = (RD.constants and RD.constants.ACTION_BAR) or {}
+    local buttonSize = AB.BUTTON_SIZE or 27
+    local padding = AB.BUTTON_PADDING or 2
+    local btnSize = math.max(1, buttonSize - 3)
+
+    for i, barItem in ipairs(barItems) do
+        -- Botón plano: el icono es el fondo, sin plantilla que lo oculte
+        local button = CreateFrame("Button", nil, buttonBar)
+        button:SetSize(btnSize, btnSize)
+        button:RegisterForClicks("AnyUp")
+        button:SetPoint("LEFT", buttonBar, "LEFT", (i - 1) * (buttonSize + padding), -1)
+        button:SetHighlightTexture("Interface\\Buttons\\UI-Panel-Button-Highlight", "ADD")
+
+        if barItem.icon then
+            local icon = button:CreateTexture(nil, "ARTWORK")
+            icon:SetAllPoints()
+            icon:SetTexture(barItem.icon)
+            button.icon = icon
+        end
+
+        button:SetScript("OnClick", function(self, btn)
+            -- Clic izquierdo ejecuta `action`; clic derecho ejecuta `actionRight`
+            local actionId = (btn == "RightButton") and barItem.actionRight or barItem.action
+            if actionId then
+                pcall(function()
+                    if RD.MenuActions and RD.MenuActions.Execute then
+                        RD.MenuActions:Execute(actionId, { button = self, item = barItem, buttonName = btn })
+                    end
+                end)
+            end
+        end)
+
+        button:SetScript("OnEnter", function(self)
+            local tooltipEnabled = true
+            if type(opts.tooltipEnabled) == "function" then
+                tooltipEnabled = opts.tooltipEnabled()
+            end
+            if not tooltipEnabled or not barItem.tooltip then return end
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText(barItem.name or "", 1, 1, 1, 1, true)
+            local lines = { strsplit("\n", barItem.tooltip) }
+            for _, line in ipairs(lines) do
+                if line ~= "" and line ~= (barItem.name or "") then
+                    GameTooltip:AddLine(line, 1, 0.82, 0, true)
+                end
+            end
+            GameTooltip:Show()
+        end)
+        button:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+    end
+end
+
+RD.ui = RD.ui or {}
+RD.ui.menuFactory = MenuFactory
 return MenuFactory

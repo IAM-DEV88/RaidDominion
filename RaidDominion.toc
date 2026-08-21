@@ -1,0 +1,72 @@
+## Interface: 30300
+## Title: RaidDominion
+## Notes: Facilita la gestión de la raid, la asignación de responsabilidades en la banda.
+## Author: Andres Muñoz - https://colmillo.netlify.app/
+## Version: 3.0.0
+## SavedVariables: RaidDominionDB
+## DefaultState: enabled
+## X-Category: Raid
+## X-License: All Rights Reserved
+## X-Website: https://colmillo.netlify.app/
+## X-Credits: Andres Muñoz
+## X-Localizations: esMX
+
+# Core Files (Load First)
+RD_Events.lua
+RD_Constants.lua
+RD_Config.lua
+RD_Init.lua
+
+# UI Framework
+RD_UI_Utils.lua
+RD_UI_Layout.lua
+RD_UI_Widgets.lua
+RD_UI_Widgets_Color.lua
+RD_UI_Widgets_List.lua
+RD_UI_Widgets_ContentList.lua
+RD_UI_Widgets_Bands.lua
+RD_UI_Widgets_Help.lua
+RD_UI_MenuFactory.lua
+RD_UI_MenuFrame.lua
+RD_UI_MenuFrame_Announce.lua
+RD_UI_ConfigWindow.lua
+RD_UI_ConfigWindow_Render.lua
+RD_UI_Dialogs.lua
+RD_UI_MinimapButton.lua
+RD_UI_BandsWindow.lua
+RD_UI_BandsList.lua
+RD_UI_BandsStatus.lua
+RD_UI_BandsPlayerEditor.lua
+RD_UI_SpammerWindow.lua
+RD_UI_SpammerWindow_Control.lua
+RD_UI_RulesSpammerWindow.lua
+RD_UI_LootWindow.lua
+RD_UI_LootWindow_History.lua
+
+# Módulos funcionales
+RD_Module_MessageManager.lua
+RD_Module_Communication.lua
+RD_Module_ReadyCheck.lua
+RD_Module_AuraClick.lua
+RD_Module_RosterWatch.lua
+RD_Utils_Assignments.lua
+RD_Utils_Migrations.lua
+RD_Utils_Bands.lua
+RD_Module_Spammer.lua
+RD_Module_RulesSpammer.lua
+RD_Module_Loot.lua
+
+# Menu Actions (después de la UI)
+RD_MenuActions.lua
+RD_Module_ActionBar.lua
+
+# TODO v3: Módulos funcionales (se portan de la v2 en iteraciones posteriores)
+# RD_Module_RoleManager.lua
+# RD_Module_Minigame.lua
+
+# TODO v3: Utilidades de dominio (se portan de la v2)
+# RD_Utils_Group.lua
+# RD_Utils_CoreBands.lua
+# RD_Utils_Recognition.lua
+# RD_Utils_Gearscore.lua
+# RD_Utils_GuildBank.lua

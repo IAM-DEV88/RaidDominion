@@ -1,83 +1,38 @@
 --[[
     RD_Config.lua
-    PROPÓSITO: Maneja la configuración guardada y las preferencias del usuario.
-    DEPENDENCIAS: RD_Constants.lua
-    API PÚBLICA: RaidDominion.config:Load(), RaidDominion.config:Get(), RaidDominion.config:Set()
-    EVENTOS: CONFIG_LOADED, CONFIG_CHANGED, CONFIG_RESET
-    INTERACCIONES: Todos los módulos que necesiten acceder a la configuración
+    PROPÓSITO: Persistencia (SavedVariables) y acceso por path a la configuración.
+    API PÚBLICA:
+        - RD.config:Load(), RD.config:Save(), RD.config:ResetToDefaults()
+        - RD.config:Get(key, default), RD.config:Set(key, value)
+    EVENTOS: CONFIG_LOADED, CONFIG_CHANGED(key, value), CONFIG_RESET
 ]]
 
 local addonName, private = ...
-local RD = _G.RaidDominion
-local constants = RD.constants
+local RD = _G.RaidDominion or {}
+_G.RaidDominion = RD
 
--- Configuración por defecto
-local defaultConfig = {
-    general = {
-        minimap = {
-            hide = false,
-            angle = 45,
-            radius = 80
-        },
-        debug = false,
-        scale = 1.0,
-        locked = false
-    },
-    modules = {
-        messageManager = {
-            enabled = true,
-            channel = "RAID",
-            announceEvents = true
-        },
-        roleManager = {
-            enabled = true,
-            autoPromote = false
-        }
-    },
-    ui = {
-        showMechanicsMenu = true,
-        showGuildMenu = true,
-        showMainMenuOnStart = true
-    },
-    Core = {}
-}
+local Config = {}
 
--- Variables privadas
-local config = {}
-local db -- Referencia a la tabla global de SavedVariables
+local db          -- Referencia a RaidDominionDB
+local DEFAULTS    -- Referencia a RD.constants.DEFAULT_CONFIG
+local loaded = false  -- Load() es idempotente (una sola vez por sesión)
 
---[[
-    Copia profunda de una tabla
-    @param orig Tabla original
-    @return Copia de la tabla
-]]
+-- Copia profunda de una tabla
 local function DeepCopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[DeepCopy(orig_key)] = DeepCopy(orig_value)
-        end
-        setmetatable(copy, DeepCopy(getmetatable(orig)))
-    else -- number, string, boolean, etc
-        copy = orig
+    local origType = type(orig)
+    if origType ~= "table" then return orig end
+    local copy = {}
+    for k, v in next, orig, nil do
+        copy[DeepCopy(k)] = DeepCopy(v)
     end
-    return copy
+    return setmetatable(copy, DeepCopy(getmetatable(orig)))
 end
 
---[[
-    Fusiona dos tablas recursivamente (src dentro de dest)
-    Preserva valores existentes en dest, añade nuevos de src
-    @param dest Tabla destino
-    @param src Tabla fuente
-]]
+-- Merge profundo: src dentro de dest, preservando valores existentes en dest
 local function MergeTable(dest, src)
     for k, v in pairs(src) do
         if type(v) == "table" then
-            if type(dest[k]) ~= "table" then
-                dest[k] = {}
-            end
+            if type(dest[k]) ~= "table" then dest[k] = {} end
             MergeTable(dest[k], v)
         else
             if dest[k] == nil then
@@ -87,98 +42,88 @@ local function MergeTable(dest, src)
     end
 end
 
---[[
-    Inicializa el sistema de configuración (Setup básico)
-]]
-function config:Initialize()
-    -- Placeholder por si se necesita lógica de inicialización previa a la carga
+-- Limpia/actualiza la DB con las migraciones de dominio (viven en
+-- RD_Utils_Migrations.lua para que la capa de persistencia no conozca reglas
+-- de negocio): canal legacy, siembra de listas, booleanos 1/0, dedup de
+-- reglas, sanciones legacy y asignaciones huérfanas.
+local function RunMigrations(db, defaults)
+    if RD.utils and RD.utils.migrations and RD.utils.migrations.Run then
+        RD.utils.migrations:Run(db, defaults)
+    end
 end
 
---[[
-    Carga la configuración guardada y fusiona con los valores por defecto
-]]
-function config:Load()
-    -- Inicializar DB global si no existe
+-- Carga la DB y fusiona con los valores por defecto. Idempotente: las
+-- migraciones solo corren una vez por sesión (RD_Init la invoca en ADDON_LOADED
+-- y de nuevo en PLAYER_LOGIN; la segunda llamada es un no-op).
+function Config:Load()
+    if loaded then return end
+
+    DEFAULTS = (RD.constants and RD.constants.DEFAULT_CONFIG) or {}
+
     if not RaidDominionDB then
-        RaidDominionDB = DeepCopy(defaultConfig)
+        RaidDominionDB = DeepCopy(DEFAULTS)
     else
-        -- Fusionar nuevos valores por defecto en la DB existente
-        MergeTable(RaidDominionDB, defaultConfig)
-    end
-    
-    -- Asegurar que la estructura de asignaciones exista y tenga el formato correcto
-    RaidDominionDB.assignments = RaidDominionDB.assignments or {}
-    
-    -- Inicializar sub-tablas necesarias si no existen
-    RaidDominionDB.assignments.roles = RaidDominionDB.assignments.roles or {}
-    RaidDominionDB.assignments.buffs = RaidDominionDB.assignments.buffs or {}
-    RaidDominionDB.assignments.auras = RaidDominionDB.assignments.auras or {}
-    RaidDominionDB.assignments.abilities = RaidDominionDB.assignments.abilities or {}
-
-    -- Inicializar DB por personaje si no existe (para uso futuro)
-    if not RaidDominionDBPC then
-        RaidDominionDBPC = {}
+        MergeTable(RaidDominionDB, DEFAULTS)
+        RunMigrations(RaidDominionDB, DEFAULTS)
     end
 
-    -- Establecer referencia local
     db = RaidDominionDB
+    loaded = true
 
     if RD.events and RD.events.Publish then
         RD.events:Publish("CONFIG_LOADED", db)
     end
 end
 
---[[
-    Obtiene un valor de configuración
-    @param key Clave de configuración (ej: "general.minimap.hide")
-    @param default Valor por defecto si no existe (opcional)
-    @return Valor de configuración o valor por defecto
-]]
-function config:Get(key, default)
-    if not db then 
-        return default 
+-- Divide una clave por path ("ui.menu.scale") en sus nodos. Robusto y sin
+-- depender de strsplit (que en 3.3.5a trata "." como patrón de Lua): el patrón
+-- [^.]+ separa por puntos literales. Devuelve una lista de strings.
+local function SplitPath(key)
+    local parts = {}
+    if not key or key == "" then return parts end
+    for node in string.gmatch(key, "[^.]+") do
+        parts[#parts + 1] = node
     end
-    if not key then 
-        return db 
-    end
+    return parts
+end
 
-    local path = {strsplit(".", key)}
-    local current = db
-
+-- Tipo del nodo hoja en DEFAULT_CONFIG para una clave por path. Sirve para
+-- normalizar el tipo del valor al leer/escribir (p.ej. booleanos 1/0 legacy).
+local function DefaultNodeType(key)
+    local path = SplitPath(key)
+    local cur = DEFAULTS
     for _, node in ipairs(path) do
-        if type(current) ~= "table" then 
-            return default 
-        end
+        if type(cur) ~= "table" then return nil end
+        cur = cur[node]
+    end
+    return type(cur)
+end
+
+-- Obtiene un valor por path ("ui.menu.scale")
+function Config:Get(key, default)
+    if not db then return default end
+    if not key then return db end
+
+    local path = SplitPath(key)
+    local current = db
+    for _, node in ipairs(path) do
+        if type(current) ~= "table" then return default end
         current = current[node]
     end
-
-    -- If the value is nil, return the default
-    if current == nil then 
-        return default 
+    if current == nil then return default end
+    -- Normaliza legacy 1/0 a booleano nativo cuando el default es booleano
+    if type(current) == "number" and DefaultNodeType(key) == "boolean" then
+        return current ~= 0
     end
-    
-    -- Convert number (1/0) back to boolean if needed
-    if type(current) == "number" and (current == 1 or current == 0) then
-        return current == 1
-    end
-    
     return current
 end
 
---[[
-    Establece un valor de configuración
-    @param key Clave de configuración (ej: "general.minimap.hide")
-    @param value Valor a establecer
-]]
-function config:Set(key, value)
-    if not db then 
-        return 
-    end
+-- Establece un valor por path ("ui.menu.scale")
+function Config:Set(key, value)
+    if not db or not key then return end
 
-    local path = {strsplit(".", key)}
+    local path = SplitPath(key)
     local current = db
-    
-    -- Navegar hasta el penúltimo nodo, creando tablas si es necesario
     for i = 1, #path - 1 do
         local node = path[i]
         if type(current[node]) ~= "table" then
@@ -188,61 +133,38 @@ function config:Set(key, value)
     end
 
     local lastNode = path[#path]
-    
-    -- Convert boolean values to numbers (1/0) for consistency
-    local valueToSet = value
-    if value == nil then
-        valueToSet = 0
-    elseif type(value) == "boolean" then
-        valueToSet = value and 1 or 0
+
+    -- Normaliza el valor cuando la hoja es booleana: guarda SIEMPRE true/false
+    -- (nunca 1/0 ni nil) para que el desmarque no borre la clave y MergeTable
+    -- no la re-siembre con el default.
+    if DefaultNodeType(key) == "boolean" then
+        if value == nil then value = false end
+        if type(value) == "number" then value = value ~= 0 end
+        value = value and true or false
     end
-    
-    -- Only update and notify if the value changes
-    if current[lastNode] ~= valueToSet then
-        current[lastNode] = valueToSet
-        
-        -- Save the changes to disk
-        self:Save()
-        
-        if RD.events and RD.events.Publish then
-            RD.events:Publish("CONFIG_CHANGED", key, valueToSet)
-        end
+
+    if current[lastNode] == value then return end
+
+    current[lastNode] = value
+    self:Save()
+
+    if RD.events and RD.events.Publish then
+        RD.events:Publish("CONFIG_CHANGED", key, value)
     end
 end
 
---[[
-    Restaura la configuración por defecto
-]]
-function config:ResetToDefaults()
-    RaidDominionDB = DeepCopy(defaultConfig)
+-- Restaura los valores por defecto
+function Config:ResetToDefaults()
+    RaidDominionDB = DeepCopy(DEFAULTS)
     db = RaidDominionDB
-    
     if RD.events and RD.events.Publish then
         RD.events:Publish("CONFIG_RESET")
     end
 end
 
---[[
-    Guarda la configuración (Sincronización manual si fuera necesaria)
-    Nota: WoW guarda automáticamente RaidDominionDB al salir/recargar.
-]]
-function config:Save()
-    -- Ensure all boolean values in the config are saved as numbers
-    local function normalizeBooleans(tbl)
-        for k, v in pairs(tbl) do
-            if type(v) == "table" then
-                normalizeBooleans(v)
-            elseif type(v) == "boolean" then
-                tbl[k] = v and 1 or 0
-            end
-        end
-    end
-    
-    -- Normalize boolean values before saving
-    if RaidDominionDB then
-        normalizeBooleans(RaidDominionDB)
-    end
+-- Guarda (WoW guarda las SavedVariables automáticamente al salir/recargar)
+function Config:Save()
 end
 
--- Asignar al namespace global del addon
-RD.config = config
+RD.config = Config
+return Config
