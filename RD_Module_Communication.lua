@@ -207,6 +207,21 @@ function Comm:HandleIncoming(message, sender)
     end
 end
 
+-- Clave de identidad de una banda para el dedup de "Obtener". Las bandas NO son
+-- únicas por nombre: dos bandas pueden llamarse igual y distinguirse por GS y
+-- horario (p.ej. "Núcleo 25" 5400 Día / "Núcleo 25" 5200 Sábado). Si se deduplica
+-- solo por nombre, al obtener se perderían todas menos la primera del mismo
+-- nombre. La clave compone los campos escalares de la banda (los jugadores NO
+-- forman parte de la identidad: mismo nombre+GS+horario+icono = misma banda).
+local function BandKey(name, minGS, schedule, icon)
+    return table.concat({
+        CleanName(name or ""),
+        tostring(tonumber(minGS) or 0),
+        tostring(schedule or ""),
+        tostring(icon or ""),
+    }, "\1")
+end
+
 -- Aplica los datos recibidos a la configuración local. Las listas se FUSIONAN de
 -- forma NO destructiva: se conservan los elementos locales y se añaden solo los
 -- recibidos que no existan (sin duplicados). Nunca se borra nada local.
@@ -293,14 +308,17 @@ function Comm:ProcessIncoming()
             if bands then
                 local existing = {}
                 for _, b in ipairs(bands:GetBands()) do
-                    existing[CleanName(b.name)] = true
+                    existing[BandKey(b.name, b.minGS, b.schedule, b.icon)] = true
                 end
                 local added = 0
                 for _, item in ipairs(SplitFields(content, "\2")) do
                     local fields = SplitFields(item, "\1")
                     local bname = fields[1] or ""
-                    if bname ~= "" and not existing[CleanName(bname)] then
-                        existing[CleanName(bname)] = true
+                    -- Dedup por identidad completa (no solo nombre): bandas con el
+                    -- mismo nombre pero distinto GS/horario son bandas distintas.
+                    local key = bname ~= "" and BandKey(fields[1], fields[2], fields[3], fields[4]) or nil
+                    if key and not existing[key] then
+                        existing[key] = true
                         -- Lista de jugadores compartida: campo 5 (separadores \4 / \3)
                         local players = {}
                         local playersRaw = fields[5]
