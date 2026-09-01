@@ -156,6 +156,56 @@ function UIUtils.ScaleFont(fs, pct)
     end
 end
 
+-- =============================================
+-- ESCALA GLOBAL (general.scale)
+-- =============================================
+
+-- Registro central de ventanas raíz que siguen la escala global. Cada ventana
+-- llama a TrackScale al crear su frame; un único suscriptor de CONFIG_CHANGED
+-- re-aplica la escala en vivo a todas (incluso las ocultas).
+local scaledFrames = {}
+
+-- Aplica la escala global (general.scale) a un frame raíz. Es el ÚNICO lugar
+-- permitido para SetScale (AGENTS.md §6.3: solo en el frame raíz, nunca en hijos).
+function UIUtils.ApplyScale(frame)
+    if not frame or not frame.SetScale then return end
+    local scale = 1.0
+    if RD.config and RD.config.Get then
+        local value = RD.config:Get("general.scale", 1.0)
+        if type(value) == "number" and value > 0 then
+            scale = value
+        end
+    end
+    pcall(function()
+        frame:SetScale(scale)
+    end)
+end
+
+-- Registra una ventana raíz para que siga la escala global (la aplica al
+-- instante y la mantiene actualizada ante cambios de general.scale).
+function UIUtils.TrackScale(frame)
+    if not frame then return end
+    scaledFrames[frame] = true
+    UIUtils.ApplyScale(frame)
+end
+
+-- Re-aplica la escala a todas las ventanas registradas.
+local function ApplyAllScales()
+    for frame in pairs(scaledFrames) do
+        UIUtils.ApplyScale(frame)
+    end
+end
+
+-- Suscripción central (única): cualquier cambio de general.scale re-escala en
+-- vivo todas las ventanas del addon registradas.
+if RD.events and RD.events.Subscribe then
+    RD.events:Subscribe("CONFIG_CHANGED", function(key)
+        if key == "general.scale" then
+            ApplyAllScales()
+        end
+    end)
+end
+
 -- Limita el alto de un modal a la pantalla disponible (alto máximo). Si el alto
 -- natural del modal supera el máximo, se reduce el `flexBox` (área que scrollea
 -- internamente: EditBox multilínea o scroll frame) para que el modal quepa

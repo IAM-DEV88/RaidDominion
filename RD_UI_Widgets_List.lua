@@ -264,6 +264,7 @@ local function OpenIconPicker(anchor, callback, current)
         pickerFrame:SetBackdropColor(0, 0, 0, 0.95)
         pickerFrame:SetBackdropBorderColor(1, 1, 1, 0.5)
         pickerFrame.buttons = {}
+        if RD.UIUtils and RD.UIUtils.TrackScale then RD.UIUtils.TrackScale(pickerFrame) end
 
         -- Fondo modal: clic fuera cierra el selector
         local catcher = CreateFrame("Frame", nil, UIParent)

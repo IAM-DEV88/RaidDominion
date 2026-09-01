@@ -359,6 +359,7 @@ function Win:Create()
     frame:SetBackdropBorderColor(1, 1, 1, 0.5)
     table.insert(UISpecialFrames, "RaidDominionRulesSpammer")
     self.frame = frame
+    if RD.UIUtils and RD.UIUtils.TrackScale then RD.UIUtils.TrackScale(frame) end
 
     -- Selector de regla (título de la ventana): etiqueta + dropdown que lista
     -- las reglas y permite cambiar entre ellas (widget estándar del addon, mismo

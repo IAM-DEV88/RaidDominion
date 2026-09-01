@@ -301,7 +301,8 @@ end
 
 function SpammerWindow:BuildMessageField(frame)
     if not frame then return end
-    local msgW = INNER
+    -- Campo 20px más angosto que el ancho interior de la ventana.
+    local msgW = INNER - 20
 
     -- Alto fijo: desde Y.msg hasta justo antes de las pestañas de canales (Y.tabs).
     local msgH = Y.msg - (Y.tabs + 6)
@@ -309,7 +310,7 @@ function SpammerWindow:BuildMessageField(frame)
 
     local msgScroll = CreateScrollFrame(frame, msgW, msgH, PAD, Y.msg)
     msgScroll:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, Y.msg)
-    msgScroll:SetPoint("RIGHT", frame, "RIGHT", -PAD, 0)
+    msgScroll:SetPoint("RIGHT", frame, "RIGHT", -(PAD + 20), 0)
     msgScroll:SetHeight(msgH)
 
     -- EditBox multilínea SIN template (paridad con el campo Notas): el dibujado lo aporta el SetBackdrop.
@@ -381,6 +382,7 @@ function SpammerWindow:Create()
     frame:SetBackdropBorderColor(1, 1, 1, 0.5)
     table.insert(UISpecialFrames, "RaidDominionSpammer")
     self.frame = frame
+    if RD.UIUtils and RD.UIUtils.TrackScale then RD.UIUtils.TrackScale(frame) end
 
     -- Título de la ventana: etiqueta + dropdown de bandas.
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")

@@ -129,6 +129,7 @@ function BandsWindow:Create()
     frame:SetBackdropBorderColor(1, 1, 1, 0.5)
     table.insert(UISpecialFrames, "RaidDominionBands")
     self.frame = frame
+    if RD.UIUtils and RD.UIUtils.TrackScale then RD.UIUtils.TrackScale(frame) end
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     title:SetText("Banda:")

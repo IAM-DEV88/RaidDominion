@@ -174,6 +174,20 @@ local function HandleCollectLoot()
     loot:CollectItems()
 end
 
+-- Genera y guarda el registro detallado del PERSONAJE ACTUAL en las
+-- SavedVariables (clave "registry.Nombre-Reino", una entrada por personaje de
+-- la cuenta): clase, equipo, asignaciones, bandas, spammers y hermandad
+-- (roster completo solo si el jugador es GM). Los registros de los demás
+-- personajes se preservan.
+local function HandleRegisterPlayer()
+    local reg = RD.utils and RD.utils.registry
+    if reg and reg.Capture then
+        reg:Capture()
+    else
+        Log("|cffff0000[RaidDominion]|r El registro no está disponible (falta RD_Utils_Registry.lua).")
+    end
+end
+
 -- Abre el spammer de banda en blanco (sin banda seleccionada ni campos
 -- precargados). Acción del submenú Bandas del menú flotante.
 local function HandleOpenSpammerEmpty()
@@ -210,6 +224,7 @@ function MenuActions:RegisterDefaultActions()
         SpamLoot = HandleSpamLoot,
         CollectLoot = HandleCollectLoot,
         OpenSpammerEmpty = HandleOpenSpammerEmpty,
+        RegisterPlayer = HandleRegisterPlayer,
     }
 
     local registered = {}

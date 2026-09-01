@@ -38,20 +38,13 @@ local BAR_HEIGHT = 30       -- alto de la barra inferior (como la base v2)
 local BAR_BOTTOM = 4        -- margen inferior: la barra queda DENTRO del marco
 local BAR_BOTTOM_PAD = 6    -- espacio entre el contenido y la barra
 
--- Aplica la escala de la interfaz (general.scale) al frame raíz (único lugar
--- permitido por AGENTS.md §6.3 para usar SetScale)
+-- Aplica la escala de la interfaz (general.scale) al frame raíz. Delega en el
+-- helper compartido de RD.UIUtils (único lugar permitido por AGENTS.md §6.3
+-- para usar SetScale).
 function MenuFrame:ApplyScale()
-    if not self.frame then return end
-    local scale = 1.0
-    if RD.config and RD.config.Get then
-        local value = RD.config:Get("general.scale", 1.0)
-        if type(value) == "number" and value > 0 then
-            scale = value
-        end
+    if RD.UIUtils and RD.UIUtils.ApplyScale then
+        RD.UIUtils.ApplyScale(self.frame)
     end
-    pcall(function()
-        self.frame:SetScale(scale)
-    end)
 end
 
 -- Aplica la movilidad del frame según ui.menu.lockPosition
@@ -104,6 +97,12 @@ function MenuFrame:Create()
     end)
     self:ApplyMovable()
     self:ApplyScale()
+    -- Registra el frame en la escala global central: así también se re-escala en
+    -- vivo cuando general.scale cambia con el menú oculto (TrackScale lo aplica
+    -- al instante y el suscriptor central cubre cambios posteriores).
+    if RD.UIUtils and RD.UIUtils.TrackScale then
+        RD.UIUtils.TrackScale(frame)
+    end
 
     -- Clic sobre el fondo del menú lo sube al frente (ventanas del addon)
     if RD.UIUtils and RD.UIUtils.MakeClickToTop then

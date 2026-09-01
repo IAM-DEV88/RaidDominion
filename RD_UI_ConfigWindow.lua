@@ -153,9 +153,13 @@ function ConfigWindow:Create()
     end
 
     -- Escala de la interfaz (general.scale) aplicada al frame raíz
-    local scaleValue = RD.config and RD.config.Get and RD.config:Get("general.scale", 1.0) or 1.0
-    if type(scaleValue) == "number" and scaleValue > 0 then
-        frame:SetScale(scaleValue)
+    if RD.UIUtils and RD.UIUtils.TrackScale then
+        RD.UIUtils.TrackScale(frame)
+    else
+        local scaleValue = RD.config and RD.config.Get and RD.config:Get("general.scale", 1.0) or 1.0
+        if type(scaleValue) == "number" and scaleValue > 0 then
+            frame:SetScale(scaleValue)
+        end
     end
 
     -- Backdrop estilo dialog coherente con el menú flotante
@@ -339,9 +343,8 @@ function ConfigWindow:Show()
     if not self.frame then return end
 
     -- Re-aplica la escala de la interfaz por si cambió mientras estaba cerrada
-    local scaleValue = RD.config and RD.config.Get and RD.config:Get("general.scale", 1.0) or 1.0
-    if type(scaleValue) == "number" and scaleValue > 0 then
-        self.frame:SetScale(scaleValue)
+    if RD.UIUtils and RD.UIUtils.ApplyScale then
+        RD.UIUtils.ApplyScale(self.frame)
     end
 
     -- Posición: "menu" ancla la ventana junto al menú flotante; "screen" centra

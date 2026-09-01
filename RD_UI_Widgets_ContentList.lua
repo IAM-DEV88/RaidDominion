@@ -57,6 +57,7 @@ local function EnsureContentEditor()
     -- Permite cerrar con Escape (segundo toque, sin campo enfocado) vía
     -- UISpecialFrames; el primer Escape libera el foco del campo activo.
     table.insert(UISpecialFrames, "RDContentEditor")
+    if RD.UIUtils and RD.UIUtils.TrackScale then RD.UIUtils.TrackScale(contentEditor) end
 
     -- Arrastrable desde cualquier zona no interactiva (título/fondo/espacio
     -- vacío); los campos y botones capturan su propio clic.

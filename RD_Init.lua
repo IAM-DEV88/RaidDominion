@@ -99,6 +99,12 @@ local function InitializeAddon()
         RD.config:Load()
     end
 
+    -- Detectar/actualizar al personaje actual en la lista de personajes de la
+    -- cuenta (todos comparten la misma DB account-wide).
+    if RD.utils and RD.utils.characters and RD.utils.characters.RegisterCurrent then
+        pcall(RD.utils.characters.RegisterCurrent, RD.utils.characters)
+    end
+
     -- Construir UI (solo en PLAYER_LOGIN, ya garantizado por el flujo)
     if RD.ui and RD.ui.menuFrame and RD.ui.menuFrame.Create then
         RD.ui.menuFrame:Create()

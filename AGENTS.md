@@ -230,13 +230,17 @@ RD_MenuActions.lua
 
 ## 12. Verificación antes de dar por terminado un cambio
 
-0. **Harness del repo**: ejecutar `python3 harness/verify.py` y confirmar `RESULTADO: OK` (balance Lua 5.1, sin APIs post-3.3.5a, sin librerías externas). Ver `harness/README.md`.
+0. **Gate del repo**: `python3 harness/verify.py` (estático + luac si está instalado) y `python3 harness/run_tests.py` (tests lógicos con mocks). Ambos deben terminar en `RESULTADO: OK`. Ver `harness/README.md`. El hook pre-commit (`git config core.hooksPath harness/git-hooks`) ejecuta ambos en cada commit.
 
-1. **Sintaxis Lua**: ejecutar `luacheck` si está disponible, o al menos una verificación con `luac -p <archivo>` (compila sin ejecutar). El repo tiene wrappers si se instalan.
-2. **Compatibilidad 3.3.5a**: revisar cada llamada global: si la función no existía en 3.3.5a, es un error. La lista de APIs a evitar (C_Timer, ScrollBox, TextureKit, SetFramePools, table.unpack/move, goto, `//`, utf8, UnitAura) está centralizada en el harness `harness/verify.py` y en la skill `.opencode/skills/verify-335a/SKILL.md`.
+1. **Sintaxis Lua**: verify.py ya corre `luac -p` cuando el binario está disponible (`harness/install_luac.sh` lo instala localmente); si no, nota de revisión manual.
+2. **Compatibilidad 3.3.5a**: la lista de APIs prohibidas vive SOLO en `harness/rules.json` (fuente única; verify.py la aplica). Lo no automatizable (global `ClearAllRaidIcons`, pipes sueltos en chat) está en rules.json -> "manual_only" y lo revisa qa-335a.
 3. **Alineación**: aplicar las reglas de la sección 6. Verificar parents y sizes enteros.
-4. **Comando de test**: `/rd`, `/rdc` deben funcionar sin errores en chat.
-5. **Sin librerías externas**: grepear `Ace`, `LibStub`, `LibSharedMedia` y confirmar cero referencias.
+4. **Contrato SV con el portal**: si el cambio toca `RD_Utils_Registry.lua`,
+   `RD_Utils_Characters.lua` o claves persistidas de `RD.config` consumidas
+   por el portal web, verificar compatibilidad según la sección 14
+   (custodiado también por qa-335a vía rules.json -> "manual_only").
+5. **Comando de test**: `/rd`, `/rdc` deben funcionar sin errores en chat.
+6. **Sin librerías externas**: cubierto por verify.py (reglas en rules.json); cualquier duda se grepea igual.
 
 ## 13. Equipo de agentes especializados
 
@@ -255,21 +259,40 @@ Cada agente debe ser invocado para su especialidad; consultar el archivo corresp
 
 ### 13.1 Gate de verificación reutilizable (skill)
 
-La skill `.opencode/skills/verify-335a/SKILL.md` centraliza el gate completo de QA (harness, `luac -p`, lista de APIs prohibidas, checks de alineación, pipes/códigos de color en chat, convenciones, paridad con la v2). Cárgala (vía la herramienta `skill`) siempre que se pida "verificar", "QA", "ronda", o antes de dar por terminado un cambio.
+La skill `.opencode/skills/verify-335a/SKILL.md` centraliza el gate completo de QA (harness, `luac -p`, lista de APIs prohibidas, checks de alineación, pipes/códigos de color en chat, convenciones, paridad con la v2). Cárgala (vía la herramienta `skill`) siempre que se pida "verifica",
+"verificar", "QA", "ronda", o antes de dar por terminado un cambio.
 
 ### 13.2 Comandos de opencode
 
-- **`/ronda N`** — ejecuta N rondas de mejora continua (evaluar → corregir → re-verificar), variando el foco de cada ronda (APIs, alineación, rendimiento, datos, protocolo, docs) y usando `qa-335a` para revisiones profundas. Termina con veredicto + resumen de commit.
-- **`/verificar`** — corre el gate completo (harness + luac + greps) en modo solo lectura y reporta el veredicto.
+- **`/verifica [N] "objetivo"`** — ejecuta N rondas de implementación
+  personalizada recorriendo los agentes del proyecto por especialidad
+  (diseño → generación → refactor → QA), validando con el gate
+  (`harness/verify.py` + `run_tests.py`) en cada paso. La revisión puntual
+  del gate en solo lectura la cubren la skill `verify-335a` y el agente
+  `qa-335a`.
 
-## 14. Rastreo de sesión de OpenCode (sesion.txt)
+## 14. Producto compañero: Portal web RaidDominion (contrato SV)
 
-El archivo `sesion.txt` es el **único** lugar donde se registra el rastreo de sesión de opencode. Esta labor es exclusiva de ese archivo: no documentar sesiones en ningún otro lugar.
+El portal comunitario (`D:\_DEV\raid-dominion-guild`, Astro + Supabase, con
+sus propios agentes) consume las SavedVariables que este addon genera.
+Trátalo como una API pública:
 
-- Al **finalizar cada iteración**, agregar al final de `sesion.txt` la cadena de reanudación de la sesión actual con este formato exacto:
+1. **Productor del contrato:** el árbol `registry["Nombre-Reino"]` lo escribe
+   `RD_Utils_Registry.lua` (ítem de menú "Registrar") y el roster de cuenta
+   lo escribe `RD_Utils_Characters.lua`. El portal lo parsea en
+   `src/lib/parser/savedVariables.ts` (+ `src/types/parser.ts`).
+2. **Sincronía obligatoria:** renombrar/mover claves o cambiar tipos de
+   `registry`, `characters`, `bands` o `Guild` exige coordinar el cambio con
+   el portal EN EL MISMO ciclo (y viceversa). El formato espejo vive en el
+   AGENTS.md del portal (§5 y §11).
+3. **Privacidad:** `registry.guild.memberList` (roster GM) NO incluye notas
+   pública/oficial por diseño; mantenerlo así — el portal jamás expone notas
+   de oficio.
+4. **Versionado:** al cambiar el esquema del contrato, incrementar `version`
+   en las entradas de `characters` para que el portal pueda detectar archivos
+   antiguos.
+5. El gate §12 (4bis) y la entrada "Contrato SV con el portal" de
+   `harness/rules.json` ("manual_only") custodian este contrato en cada QA.
 
-    opencode -s <session-id>
+Slash commands vigentes: `/rd`, `/rdc`, `/rdh`, `/rdloot` (`RD_Init.lua`).
 
-- `<session-id>` es el identificador `ses_...` de la sesión en curso. Se obtiene con `opencode session list` (o consultando `~/.local/share/opencode/opencode.db` → tabla `session`). Nunca truncar ni inventar el id.
-- **Conservar el histórico**: ir acumulando la cadena completa de sesiones (de la más antigua a la más nueva), sin borrar entradas previas.
-- El propósito del archivo es poder **reanudar** (`opencode -s <id>`). No sustituir el comando por descripciones: el resumen de estado va bajo el encabezado de contexto, pero la cadena de comandos debe estar siempre presente y actualizada.

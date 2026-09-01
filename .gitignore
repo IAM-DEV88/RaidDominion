@@ -1,10 +1,10 @@
-# Sistema
-.DS_Store
-Thumbs.db
-*.log
+# Todo se ignora por defecto: solo se trackean los archivos propios del addon.
+/*
+!.gitignore
 
-# Editor
-*.swp
-*.swo
-.idea/
-.vscode/
+# Fuente del addon (lua + toc)
+!/RD_*.lua
+!/RaidDominion.toc
+
+# Guía para agentes
+!/AGENTS.md

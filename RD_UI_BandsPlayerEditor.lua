@@ -39,7 +39,7 @@ local function BuildEditor()
     editor:SetFrameStrata("HIGH")
     editor:SetToplevel(true)
     editor:SetClampedToScreen(true)
-    editor:SetSize(400, 500)
+    editor:SetSize(320, 500)
     editor:EnableMouse(true)
     editor:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -50,6 +50,7 @@ local function BuildEditor()
     editor:SetBackdropColor(0, 0, 0, 0.95)
     editor:SetBackdropBorderColor(1, 1, 1, 0.5)
     table.insert(UISpecialFrames, "RaidDominionPlayerEditor")
+    if RD.UIUtils and RD.UIUtils.TrackScale then RD.UIUtils.TrackScale(editor) end
 
     -- Arrastrable desde cualquier zona no interactiva del editor
     editor:SetMovable(true)
@@ -201,12 +202,16 @@ local function BuildEditor()
     -- dentro de un ScrollFrame que lo recorta y scrollea (rueda del ratón/barra).
     local createScroll = RD.ui and RD.ui.widgets and RD.ui.widgets.CreateScrollFrame
     local notesW = (editor:GetWidth() or 400) - 40
-    local notesScroll = createScroll(editor, notesW, 80, 20, -312)
+    -- Alto explícito del campo: desde justo bajo el label Notas (-312) hasta la
+    -- altura del borde superior de los botones inferiores (36px: Guardar/Cancelar,
+    -- 24px de alto, anclados a 12px). Se usa SetHeight explícito (patrón del campo
+    -- Mensaje del spammer): un ancla BOTTOM no estira el ScrollFrame de forma
+    -- fiable en 3.3.5a (el SetSize de CreateScrollFrame gana) y dejaba un hueco
+    -- vacío entre el campo y los botones.
+    local notesH = math.max(80, (editor:GetHeight() or 500) - 312 - 36)
+    local notesScroll = createScroll(editor, notesW, notesH, 20, -312)
     notesScroll:SetPoint("RIGHT", editor, "RIGHT", -20, 0)
-    -- Las notas llenan hasta justo encima de los botones inferiores (sin hueco
-    -- vertical vacío): el BOTTOM a 36px deja el borde inferior a la altura del
-    -- borde superior de los botones (Guardar/Cancelar, 24px, anclados a 12px).
-    notesScroll:SetPoint("BOTTOM", editor, "BOTTOM", 0, 36)
+    notesScroll:SetHeight(notesH)
 
     local notesBox = CreateFrame("EditBox", nil, notesScroll)
     notesBox:SetWidth(notesW)

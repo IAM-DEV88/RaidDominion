@@ -51,7 +51,9 @@ RD_Module_AuraClick.lua
 RD_Module_RosterWatch.lua
 RD_Utils_Assignments.lua
 RD_Utils_Migrations.lua
+RD_Utils_Characters.lua
 RD_Utils_Bands.lua
+RD_Utils_Registry.lua
 RD_Module_Spammer.lua
 RD_Module_RulesSpammer.lua
 RD_Module_Loot.lua

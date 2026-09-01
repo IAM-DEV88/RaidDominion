@@ -3,7 +3,8 @@
     PROPÓSITO: Migraciones y saneos de la DB de RaidDominion (migraciones de
               dominio que la capa de persistencia (RD_Config) no debe conocer:
               canal legacy, siembra de listas, booleanos 1/0, dedup de reglas,
-              sanciones legacy, limpieza de asignaciones huérfanas).
+              sanciones legacy, limpieza de asignaciones huérfanas y registro
+              detallado por personaje).
     API PÚBLICA:
         - RD.utils.migrations:Run(db, defaults)  -- aplica todas (idempotentes)
     EVENTOS: Ninguno (lo invoca RD.config:Load antes de publicar CONFIG_LOADED).
@@ -58,12 +59,42 @@ local function CleanAssignments(db)
     end
 end
 
+-- Migración del registro detallado: antes era un slot único
+-- (db.registry = árbol con .player en la raíz) que se sobrescribía entre
+-- personajes de la misma cuenta; ahora es un contenedor por personaje
+-- ("Nombre-Reino"). El árbol legacy se recoloca bajo SU dueño usando los datos
+-- del propio registro; cualquier entrada ya migrada que conviviera se conserva.
+local function MigrateRegistryPerCharacter(db)
+    local reg = db.registry
+    if type(reg) ~= "table" then return end
+
+    -- ¿Formato nuevo ya? El contenedor por personaje no tiene .player en raíz
+    if type(reg.player) ~= "table" then return end
+
+    local legacy = reg.player
+    local name = tostring(legacy.name or "")
+    local realm = tostring(legacy.realm or "")
+    local key = ((name ~= "") and name or "?") .. "-" .. ((realm ~= "") and realm or "?")
+
+    -- Conserva entradas ya migradas ("Nombre-Reino") que pudieran coexistir
+    local container = {}
+    for k, v in pairs(reg) do
+        if k ~= "player" and type(k) == "string" and type(v) == "table"
+            and string.find(k, "-", 1, true) and v.savedAt then
+            container[k] = v
+        end
+    end
+    container[key] = legacy
+    db.registry = container
+end
+
 -- Aplica todas las migraciones y saneos. Son idempotentes: las de "una sola
 -- vez" usan flags en la DB; el dedup de reglas/mecánicas se ejecuta en cada
 -- carga porque es barato y distintos caminos pueden re-introducir duplicados.
 function Migrations:Run(db, defaults)
     if not db or type(defaults) ~= "table" then return end
 
+    MigrateRegistryPerCharacter(db)
     CleanAssignments(db)
 
     -- Migración (una sola vez): el antiguo default de canal era "SYSTEM";

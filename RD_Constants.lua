@@ -238,6 +238,7 @@ RD.constants = {
             { name = "RaidDominion", tooltip = "Configuración del addon", submenu = "addonOptions" },
         },
         addonOptions = {
+            { name = "Registrar", action = "RegisterPlayer", icon = "Interface\\Icons\\INV_Misc_Book_09", tooltip = "Guardar un registro detallado del jugador en las variables guardadas: clase, equipamiento, asignaciones, bandas, spammers y hermandad (roster completo solo si eres GM)" },
             { name = "Configuración", action = "ToggleConfig", tooltip = "Abrir la ventana de configuración" },
             { name = "Ayuda",         action = "ShowHelp",     tooltip = "Mostrar ayuda del addon" },
             { name = "Recargar",      action = "ReloadUI",     tooltip = "Recargar la interfaz" },
@@ -305,6 +306,12 @@ RD.constants = {
         },
         -- Bandas registradas: nombre, icono, horario, gearscore mínimo y jugadores.
         bands = {},
+        -- Registro detallado POR PERSONAJE generado por "Registrar": contenedor
+        -- con clave "Nombre-Reino" por personaje; lo demás queda compartido.
+        registry = {},
+        -- Personajes detectados de esta cuenta (comparten esta misma DB por ser
+        -- una SavedVariables account-wide): clave "Nombre-Reino".
+        characters = {},
     },
 
     -- Esquema de configuración: la ventana se renderiza a partir de esto

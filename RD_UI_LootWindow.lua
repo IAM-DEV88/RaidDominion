@@ -79,6 +79,7 @@ function Win:Create()
     frame:SetBackdropColor(0, 0, 0, 0.95)
     frame:SetBackdropBorderColor(1, 1, 1, 0.5)
     table.insert(UISpecialFrames, "RaidDominionLoot")
+    if RD.UIUtils and RD.UIUtils.TrackScale then RD.UIUtils.TrackScale(frame) end
 
     -- Título fijo "Gestor de botín" en ambas vistas; la variación entre pestañas
     -- se expresa con las pestañas "Dados" y "Historial" a la derecha del título.
